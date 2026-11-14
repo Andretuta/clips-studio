@@ -1444,7 +1444,7 @@ def _render_files(
     edit assistant): captions, caption_style, caption_lines, crop, filter,
     adjust.
     """
-    from video.filters import combined_chain
+    from video.filters import combined_chain, polish_chain
 
     # Rendering a clip is FFmpeg plus per-frame tracking — minutes each, and a
     # video can queue a dozen. Checking on entry means a cancelled job burns
@@ -1521,7 +1521,8 @@ def _render_files(
     # Color: preset filter (per-clip wins over job/config default) + manual
     # brightness/saturation/contrast adjustments.
     filter_name = opts.get("filter") or config["clips"].get("filter") or "none"
-    vf_extra = combined_chain(filter_name, opts.get("adjust"))
+    # video.polish (denoise + sharpen) first, then the colour look.
+    vf_extra = ",".join(p for p in (polish_chain(config), combined_chain(filter_name, opts.get("adjust"))) if p)
     if landscape:
         fit = (
             "scale=1920:1080:force_original_aspect_ratio=decrease:flags=lanczos,"

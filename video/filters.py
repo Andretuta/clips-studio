@@ -147,3 +147,26 @@ def adjust_chain(adjust: dict | None) -> str:
 def combined_chain(preset: str | None, adjust: dict | None) -> str:
     """Preset look + manual adjustments as one vf fragment."""
     return ",".join(p for p in (filter_chain(preset), adjust_chain(adjust)) if p)
+
+
+def _amount(value, hi: float) -> float:
+    """A polish amount clamped to 0..hi; anything not a number is 0 (off)."""
+    try:
+        return max(0.0, min(hi, float(value)))
+    except (TypeError, ValueError):
+        return 0.0
+
+
+def polish_chain(config: dict) -> str:
+    """video.polish: a light denoise (hqdn3d) and a sharpen (cas) for every
+    render, applied where vf_extra is, i.e. after the crop is scaled to the
+    output size. denoise 0..6 and sharpen 0..1, 0 = off; no block = factory."""
+    polish = (config.get("video") or {}).get("polish") or {}
+    denoise = _amount(polish.get("denoise"), 6.0)
+    sharpen = _amount(polish.get("sharpen"), 1.0)
+    parts = []
+    if denoise > 0:
+        parts.append(f"hqdn3d={denoise:.2f}:{denoise:.2f}:{2 * denoise:.2f}:{2 * denoise:.2f}")
+    if sharpen > 0:
+        parts.append(f"cas=strength={sharpen:.2f}")
+    return ",".join(parts)
