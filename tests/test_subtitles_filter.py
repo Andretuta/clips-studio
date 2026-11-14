@@ -35,17 +35,17 @@ Dialogue: 0,0:00:00.00,0:00:01.00,Default,ola
 
 
 def test_escapes_both_filter_levels():
-    assert subtitles_filter("Corte, do 'Paulinho' [GTA]; parte 1: final.ass") == \
+    assert subtitles_filter("Corte, do 'Paulinho' [GTA]; parte 1: final.ass", fonts_dir=None) == \
         r"subtitles=Corte\, do \\\'Paulinho\\\' \[GTA\]\; parte 1\\: final.ass"
 
 
 def test_escapes_an_equals_sign():
     # "a=b.ass" read as option a, value b.ass ("Option not found").
-    assert subtitles_filter("GTA=top.ass") == r"subtitles=GTA\\=top.ass"
+    assert subtitles_filter("GTA=top.ass", fonts_dir=None) == r"subtitles=GTA\\=top.ass"
 
 
 def test_plain_name_unchanged():
-    assert subtitles_filter("clip_12.ass") == "subtitles=clip_12.ass"
+    assert subtitles_filter("clip_12.ass", fonts_dir=None) == "subtitles=clip_12.ass"
 
 
 def test_ffmpeg_burns_a_title_with_commas_quotes_and_brackets(tmp_path):

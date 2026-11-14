@@ -11,9 +11,14 @@ chat), so an unknown name can never inject filter syntax into FFmpeg.
 
 import math
 import re
+from pathlib import Path
+
+# Caption fonts that ship with the app (not installed on Windows); libass
+# reads them through the subtitles filter's `fontsdir`.
+FONTS_DIR = Path(__file__).resolve().parent.parent / "assets" / "fonts"
 
 
-def subtitles_filter(name: str) -> str:
+def subtitles_filter(name: str, fonts_dir: Path | None = FONTS_DIR) -> str:
     """`subtitles=<name>` with the file name escaped for FFmpeg.
 
     Callers pass a bare file name and run FFmpeg from the captions' folder
@@ -21,10 +26,16 @@ def subtitles_filter(name: str) -> str:
     two levels ("Notes on filtergraph escaping"): first as an option value
     (\\ ' : =), then as part of the filtergraph (\\ ' [ ] , ;). Unescaped, a
     comma in a clip's title reads as the start of the next filter, and
-    "a=b.ass" as option "a".
+    "a=b.ass" as option "a". `fonts_dir` (the bundled caption fonts, by
+    default) goes in as `fontsdir`, escaped the same way.
     """
-    value = re.sub(r"([\\':=])", r"\\\1", name)
-    return "subtitles=" + re.sub(r"([\\'\[\],;])", r"\\\1", value)
+    def option(value: str) -> str:
+        return re.sub(r"([\\':=])", r"\\\1", value)
+
+    args = option(name)
+    if fonts_dir is not None and fonts_dir.is_dir():
+        args += ":fontsdir=" + option(fonts_dir.as_posix())
+    return "subtitles=" + re.sub(r"([\\'\[\],;])", r"\\\1", args)
 
 PRESETS: dict[str, str] = {
     "none": "",

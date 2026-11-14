@@ -22,6 +22,8 @@ from pathlib import Path
 
 import pytest
 
+from video.filters import subtitles_filter
+
 CROPPER = Path(__file__).resolve().parent.parent / "video" / "cropper.py"
 
 
@@ -166,7 +168,7 @@ def test_no_zoom_and_a_zoom_that_stays_9x16_render_exactly_as_before(piped, tmp_
         crop_w = int(crop_h * 9 / 16) // 2 * 2
         # Today's command, as it always was: the crop on the pipe, FFmpeg scales.
         assert cmd[cmd.index("-s") + 1] == f"{crop_w}x{crop_h}"
-        assert cmd[cmd.index("-vf") + 1] == "scale=1080:1920:flags=lanczos,setsar=1,eq=saturation=1.1,subtitles=subs.ass"
+        assert cmd[cmd.index("-vf") + 1] == "scale=1080:1920:flags=lanczos,setsar=1,eq=saturation=1.1," + subtitles_filter("subs.ass")
         assert len(frames) == 12 and len(frames[0]) == crop_w * crop_h * 3
         for slack in (0.0, 1.5):   # at 9:16, and within rounding of it
             width = (crop_w + slack) / 640
@@ -189,7 +191,7 @@ def test_a_wider_crop_is_composed_and_ffmpeg_only_filters_it(piped, tmp_path):
     zoom = [(0.0, 0.316), (0.5, 1.0), (1.2, 1.0)]
     cmd, frames = _render(cropper, seen, clip, {"mode": "track", "path": path, "zoom": zoom}, out, **kw)
     assert cmd[cmd.index("-s") + 1] == "1080x1920"
-    assert cmd[cmd.index("-vf") + 1] == "setsar=1,eq=saturation=1.1,subtitles=subs.ass"   # no scale step
+    assert cmd[cmd.index("-vf") + 1] == "setsar=1,eq=saturation=1.1," + subtitles_filter("subs.ass")   # no scale step
     # Everything else is today's command: input order, maps, yuv420p, cfr, audio from input 1.
     same = [i for i, (a, b) in enumerate(zip(before, cmd)) if a != b]
     assert len(before) == len(cmd) and same == [before.index("-s") + 1, before.index("-vf") + 1]

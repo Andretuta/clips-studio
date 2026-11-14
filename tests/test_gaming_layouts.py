@@ -11,6 +11,7 @@ from pathlib import Path
 import pytest
 
 from gaming import framing, layout
+from video.filters import subtitles_filter
 
 ROOT = Path(__file__).resolve().parent.parent
 W, H = 1920, 1080
@@ -340,7 +341,7 @@ def test_the_graph_places_every_element_at_its_region():
     assert "geq=" in circle and "hypot(X-W/2,Y-H/2)" in circle
     zoom = compose.filter_graph(_plan("fullscreen", cam=None, game_fit="fill"), vf_extra="eq=saturation=1.1",
                                 ass_name="c.ass")
-    assert zoom.endswith(";[v]eq=saturation=1.1[v];[v]subtitles=c.ass[v]")
+    assert zoom.endswith(";[v]eq=saturation=1.1[v];[v]" + subtitles_filter("c.ass") + "[v]")
 
 
 def _ffmpeg_or_skip() -> str:

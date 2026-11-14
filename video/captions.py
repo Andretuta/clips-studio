@@ -28,6 +28,8 @@ DEFAULT_STYLE = {
     "highlight_color": "#FFE600",
     "second_speaker": False,      # another colour when it isn't the main speaker talking (#126)
     "second_speaker_color": "#5CE1FF",
+    "karaoke": False,             # with highlight: the words already said stay lit
+    "pop": False,                 # with highlight: the word being said grows and settles
 }
 
 # Fonts shipped with every stock Windows install, so a burned clip renders
@@ -44,6 +46,8 @@ FONTS = [
     "Georgia",
     "Comic Sans MS",
     "Courier New",
+    # Bundled in assets/fonts (OFL), not installed: libass gets it via fontsdir.
+    "Bebas Neue",
     # Script-capable Windows-stock fonts (auto-selected by language below).
     "Nirmala UI",
     "Yu Gothic UI",
@@ -69,7 +73,7 @@ SCRIPT_FONTS = {
     "ar": "Segoe UI", "fa": "Segoe UI", "ur": "Segoe UI",
 }
 
-_LATIN_ONLY = set(FONTS[:10])
+_LATIN_ONLY = set(FONTS[:FONTS.index("Nirmala UI")])
 
 
 def caption_font_for(language: str, chosen: str | None) -> str | None:
@@ -565,6 +569,8 @@ def _highlighted(
 
     base = tint or _inline_color(opts["color"])
     hot = _inline_color(opts.get("highlight_color", DEFAULT_STYLE["highlight_color"]))
+    grow, settle = (_POP, r"\fscx100\fscy100") if opts.get("pop") else ("", "")
+    karaoke = bool(opts.get("karaoke"))
     events = []
     for i, (w_start, w_end) in enumerate(times):
         # Hold each state until the next word begins, so there is never a
@@ -574,7 +580,9 @@ def _highlighted(
         if seg_end <= seg_start:
             continue
         body = " ".join(
-            (f"{{\\1c{hot}}}{tok}{{\\1c{base}}}" if j == i else tok)
+            f"{{{grow}\\1c{hot}}}{tok}{{{settle}\\1c{base}}}" if j == i
+            else f"{{\\1c{hot}}}{tok}{{\\1c{base}}}" if karaoke and j < i
+            else tok
             for j, tok in enumerate(tokens)
         )
         events.append(
@@ -584,10 +592,15 @@ def _highlighted(
     return events
 
 
+# The word being said grows to 122 % in 70 ms and settles at 112 % (times count
+# from the event's start, which is when that word starts).
+_POP = r"\fscx100\fscy100\t(0,70,\fscx122\fscy122)\t(70,150,\fscx112\fscy112)"
+
+
 def _header(opts: dict, canvas: tuple[int, int] = (1080, 1920)) -> str:
     alignment, margin_v = _POSITIONS.get(opts["position"], _POSITIONS["bottom"])
     color = _ass_color(opts["color"])
-    size = max(40, min(140, int(opts["font_size"])))
+    size = max(40, min(200, int(opts["font_size"])))  # condensed fonts (Bebas) need ~165
     font = opts.get("font") if opts.get("font") in FONTS else "Arial"
     # Style values are calibrated for the 1920-tall Shorts canvas; scale
     # them to whatever frame this clip renders at (e.g. landscape 1080).
