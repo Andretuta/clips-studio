@@ -147,6 +147,16 @@ upload:
                          # pacing limit, not a technical one.
   client_secret: config/client_secret.json   # from Google Cloud Console
 
+mesa:
+  # Approval desk: the folder where another program (e.g. a live recorder)
+  # leaves finished cuts in pendentes/ as an mp4 plus a JSON with titulo,
+  # descricao, hashtags and nota. Approving moves them to aprovados/,
+  # discarding to descartados/. Empty = no desk.
+  dir: ""
+  # The recorder's folder (one subfolder per <platform>_<channel> with .ts
+  # segments), shown in the control room. Empty = no channels shown.
+  gravacoes_dir: ""
+
 feedback:
   # Where the in-app Feedback Hub sends reports (a Cloudflare Worker that
   # files them as GitHub Issues — users need no account; see

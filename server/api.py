@@ -835,6 +835,12 @@ def create_app(config: dict, settings_path: Path) -> FastAPI:
     campaigns_api.install(app, db=db, data_dir=data_dir, publish_worker=publish_worker,
                           session_secret=desktop_session)
 
+    # The approval desk and control room (settings.yaml `mesa:`): cuts another
+    # program leaves in a folder, approved or discarded by moving the files.
+    from server import mesa_api
+
+    mesa_api.install(app, config=config, db=db, data_dir=data_dir, session_secret=desktop_session)
+
     # Streamer integrations such as the OBS plugin: hand over a finished stream,
     # find its VOD, report progress. Its own module for the same reason.
     from server import integrations
