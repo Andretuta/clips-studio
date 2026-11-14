@@ -9,6 +9,7 @@ Preset names are validated against this registry everywhere (API, AI edit
 chat), so an unknown name can never inject filter syntax into FFmpeg.
 """
 
+import math
 import re
 
 
@@ -151,18 +152,23 @@ def combined_chain(preset: str | None, adjust: dict | None) -> str:
 
 
 def _amount(value, hi: float) -> float:
-    """A polish amount clamped to 0..hi; anything not a number is 0 (off)."""
+    """A polish amount clamped to 0..hi; anything not a finite number is 0 (off)."""
     try:
-        return max(0.0, min(hi, float(value)))
+        amount = float(value)
     except (TypeError, ValueError):
         return 0.0
+    if isinstance(value, bool) or not math.isfinite(amount):
+        return 0.0
+    return max(0.0, min(hi, amount))
 
 
 def polish_chain(config: dict) -> str:
     """video.polish: a light denoise (hqdn3d) and a sharpen (cas) for every
     render, applied where vf_extra is, i.e. after the crop is scaled to the
     output size. denoise 0..6 and sharpen 0..1, 0 = off; no block = factory."""
-    polish = (config.get("video") or {}).get("polish") or {}
+    polish = (config.get("video") or {}).get("polish")
+    if not isinstance(polish, dict):
+        polish = {}
     denoise = _amount(polish.get("denoise"), 6.0)
     sharpen = _amount(polish.get("sharpen"), 1.0)
     parts = []

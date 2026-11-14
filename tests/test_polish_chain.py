@@ -31,6 +31,18 @@ def test_clamped_and_bad_values():
     assert polish_chain({"video": {"polish": None}}) == ""
 
 
+@pytest.mark.parametrize("polish", [True, 1.5, "on", [1, 2]])
+def test_a_polish_that_is_not_a_block_is_off(polish):
+    # Hand-editing the block is how a user turns it on; a scalar must not
+    # crash every render.
+    assert polish_chain({"video": {"polish": polish}}) == ""
+
+
+def test_bool_and_non_finite_amounts_are_off():
+    assert polish_chain({"video": {"polish": {"denoise": float("nan"), "sharpen": True}}}) == ""
+    assert polish_chain({"video": {"polish": {"denoise": float("inf"), "sharpen": float("-inf")}}}) == ""
+
+
 def test_ffmpeg_accepts_the_chain():
     binary = ffmpeg()
     if not Path(binary).is_file():
