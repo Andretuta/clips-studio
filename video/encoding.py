@@ -29,6 +29,13 @@ CPU_ARGS = ["-c:v", "libx264", "-preset", "veryfast", "-crf", "20"]
 # vary wildly between driver generations (especially AMF), while plain
 # bitrate control works everywhere. 8 Mbps looks clean for 1080x1920 Shorts.
 _CANDIDATES: dict[str, list[str]] = {
+    # Tried first: adaptive quantization (spatial + temporal), a 32-frame
+    # lookahead, B-frames used as references and a lower cq (more detail in
+    # fast motion). A card or driver that refuses any of
+    # these flags fails the probe and gets the plain set below.
+    "nvenc_hq": ["-c:v", "h264_nvenc", "-preset", "p5", "-tune", "hq", "-rc", "vbr", "-cq", "21",
+                 "-b:v", "0", "-spatial-aq", "1", "-temporal-aq", "1", "-rc-lookahead", "32",
+                 "-bf", "3", "-b_ref_mode", "middle"],
     "nvenc": ["-c:v", "h264_nvenc", "-preset", "p5", "-rc", "vbr", "-cq", "23", "-b:v", "0"],
     "amf": ["-c:v", "h264_amf", "-quality", "quality", "-b:v", "8M", "-maxrate", "12M"],
     "qsv": ["-c:v", "h264_qsv", "-global_quality", "23", "-preset", "medium"],
@@ -69,6 +76,7 @@ def _select(mode: str) -> tuple[str, list[str]]:
     for name, args in _CANDIDATES.items():
         if _probe(args):
             vendor = {
+                "nvenc_hq": "NVIDIA NVENC (tuned)",
                 "nvenc": "NVIDIA NVENC",
                 "amf": "AMD AMF",
                 "qsv": "Intel QSV",
