@@ -52,6 +52,8 @@ function relaxCspForBrowserDev(): Plugin {
             // The engine, plus Vite's own HMR socket on this origin.
             "connect-src 'self' ws: http://127.0.0.1:8765 ws://127.0.0.1:8765; " +
             'media-src http://127.0.0.1:8765; ' +
+            // Thumbnails and frames from the engine, as index.html allows the app.
+            "img-src 'self' data: http://127.0.0.1:8765; " +
             "style-src 'self' 'unsafe-inline'\" />"
         )
     }
