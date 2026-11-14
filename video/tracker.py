@@ -214,23 +214,29 @@ def _get_yunet():
     return det
 
 
-def _yunet_face(roi) -> tuple[int, int, int, int] | None:
-    """The largest confident YuNet face in a colour ROI, in ROI pixels."""
+def _yunet_face(roi) -> tuple[bool, tuple[int, int, int, int] | None]:
+    """(looked, face): the largest confident YuNet face in a colour ROI, in ROI
+    pixels. looked is False when YuNet could not answer (model not installed,
+    ROI under 48 px, OpenCV error) and the caller asks Haar instead. Under
+    ~32 px the network returns rows with a passing score and inf coordinates."""
     det = _get_yunet()
     h, w = roi.shape[:2]
-    if det is None or roi.ndim != 3 or w < 16 or h < 16:
-        return None
-    det.setInputSize((w, h))
-    _, faces = det.detect(roi)
+    if det is None or roi.ndim != 3 or w < 48 or h < 48:
+        return False, None
+    try:
+        det.setInputSize((w, h))
+        _, faces = det.detect(roi)
+    except Exception:
+        return False, None
     if faces is None:
-        return None
-    faces = [f for f in faces if f[14] >= _YUNET_MIN_SCORE]
+        return True, None
+    faces = [f for f in faces if f[14] >= _YUNET_MIN_SCORE and np.isfinite(f[:4]).all()]
     if not faces:
-        return None
+        return True, None
     x, y, fw, fh = (float(v) for v in max(faces, key=lambda f: f[2] * f[3])[:4])
     fx1, fy1 = max(0, int(x)), max(0, int(y))
     fx2, fy2 = min(w, int(x + fw)), min(h, int(y + fh))
-    return (fx1, fy1, fx2, fy2) if fx2 > fx1 and fy2 > fy1 else None
+    return True, ((fx1, fy1, fx2, fy2) if fx2 > fx1 and fy2 > fy1 else None)
 
 
 def _face_box(frame, box) -> tuple[int, int, int, int] | None:
@@ -238,9 +244,10 @@ def _face_box(frame, box) -> tuple[int, int, int, int] | None:
     on the torso, which can sit far from the face — the face box drives both
     framing and the talking detector.
 
-    Detection order: YuNet (a small CNN; finds profile and small faces the
-    cascades miss), then the Haar cascades when YuNet is not installed or
-    finds nothing: frontal face -> left profile -> right profile (the
+    Detection: YuNet (a small CNN; finds profile and small faces the cascades
+    miss, and invents fewer on gameplay), and its answer stands, face or none.
+    The Haar cascades only run when YuNet cannot look (not installed, ROI
+    under 48 px, OpenCV error): frontal face -> left profile -> right profile (the
     profile cascade only knows one side, so the mirrored image covers the
     other). Returns the face box in absolute pixels, or None when no face is
     visible at all (e.g. subject facing away) — the caller then falls back
@@ -252,8 +259,10 @@ def _face_box(frame, box) -> tuple[int, int, int, int] | None:
     roi = frame[ry : y1 + head_h, rx:x2]
     if roi.size == 0:
         return None
-    face = _yunet_face(roi)
-    if face is not None:
+    looked, face = _yunet_face(roi)
+    if looked:
+        if face is None:
+            return None
         fx1, fy1, fx2, fy2 = face
         return (rx + fx1, ry + fy1, rx + fx2, ry + fy2)
     gray = cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY)
