@@ -635,6 +635,7 @@ export default function MultilingualExport({
                 src={player.url}
                 controls
                 autoPlay
+                muted
                 className="h-8 flex-1 min-w-0"
                 onError={() =>
                   setNotice('That voice could not be played — check the Dashboard activity feed.')

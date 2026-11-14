@@ -311,6 +311,7 @@ export default function Mesa({ target, onTargetConsumed, onOpenInStudio }: Props
                 poster={mesa.capaUrl(atual.nome)}
                 controls
                 autoPlay
+                muted
                 loop
                 playsInline
                 className="h-[min(560px,calc(100vh-290px))] min-h-[320px] aspect-[9/16] rounded-2xl bg-black border border-raised"
