@@ -212,6 +212,22 @@ def haar_cascade(filename: str) -> str | None:
     return None
 
 
+YUNET = "face_detection_yunet_2023mar.onnx"
+
+
+def yunet_model() -> str | None:
+    """An absolute path to the YuNet face detector (scripts/fetch_yunet.py), or
+    None when it is not on this machine — face refinement then uses the Haar
+    cascades. Looked for where yolo_weights() looks: a packaged build's
+    weights folder, the repo root and models/."""
+    repo = Path(__file__).resolve().parent.parent
+    for root in [*_search_roots("weights"), repo, repo / "models"]:
+        candidate = Path(root) / YUNET
+        if candidate.is_file():
+            return str(candidate)
+    return None
+
+
 def bundled_whisper_sizes() -> list[str]:
     """Which Whisper sizes this install actually carries.
 

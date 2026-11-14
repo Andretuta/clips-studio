@@ -187,12 +187,60 @@ def _get_cascades():
     return cascades
 
 
+_YUNET_MIN_SCORE = 0.7   # YuNet confidence a face needs to count
+
+
+def _get_yunet():
+    """The YuNet face detector for this thread, or None when its model is not
+    on this machine (scripts/fetch_yunet.py) or will not load. Per thread, like
+    the cascades; a missing model is latched so a long render does not look
+    for the file on every frame."""
+    if getattr(_thread_local, "yunet_missing", False):
+        return None
+    det = getattr(_thread_local, "yunet", None)
+    if det is None:
+        from core.binaries import yunet_model
+
+        path = yunet_model()
+        try:
+            det = cv2.FaceDetectorYN.create(path, "", (320, 320), _YUNET_MIN_SCORE, 0.3, 50) if path else None
+        except cv2.error:
+            det = None
+        if det is None:
+            _thread_local.yunet_missing = True
+            print("      Face refinement: YuNet unavailable — using Haar cascades")
+            return None
+        _thread_local.yunet = det
+    return det
+
+
+def _yunet_face(roi) -> tuple[int, int, int, int] | None:
+    """The largest confident YuNet face in a colour ROI, in ROI pixels."""
+    det = _get_yunet()
+    h, w = roi.shape[:2]
+    if det is None or roi.ndim != 3 or w < 16 or h < 16:
+        return None
+    det.setInputSize((w, h))
+    _, faces = det.detect(roi)
+    if faces is None:
+        return None
+    faces = [f for f in faces if f[14] >= _YUNET_MIN_SCORE]
+    if not faces:
+        return None
+    x, y, fw, fh = (float(v) for v in max(faces, key=lambda f: f[2] * f[3])[:4])
+    fx1, fy1 = max(0, int(x)), max(0, int(y))
+    fx2, fy2 = min(w, int(x + fw)), min(h, int(y + fh))
+    return (fx1, fy1, fx2, fy2) if fx2 > fx1 and fy2 > fy1 else None
+
+
 def _face_box(frame, box) -> tuple[int, int, int, int] | None:
     """Find the face inside a person box. In close-ups the person box centers
     on the torso, which can sit far from the face — the face box drives both
     framing and the talking detector.
 
-    Detection order: frontal face -> left profile -> right profile (the
+    Detection order: YuNet (a small CNN; finds profile and small faces the
+    cascades miss), then the Haar cascades when YuNet is not installed or
+    finds nothing: frontal face -> left profile -> right profile (the
     profile cascade only knows one side, so the mirrored image covers the
     other). Returns the face box in absolute pixels, or None when no face is
     visible at all (e.g. subject facing away) — the caller then falls back
@@ -204,6 +252,10 @@ def _face_box(frame, box) -> tuple[int, int, int, int] | None:
     roi = frame[ry : y1 + head_h, rx:x2]
     if roi.size == 0:
         return None
+    face = _yunet_face(roi)
+    if face is not None:
+        fx1, fy1, fx2, fy2 = face
+        return (rx + fx1, ry + fy1, rx + fx2, ry + fy2)
     gray = cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY)
     cascades = _get_cascades()
     if cascades is None:
