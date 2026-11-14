@@ -89,6 +89,7 @@ export default function Mesa({ target, onTargetConsumed, onOpenInStudio }: Props
   const [sujo, setSujo] = useState(false)
   const [ocupado, setOcupado] = useState(false)
   const [novaTag, setNovaTag] = useState('')
+  const [copia, setCopia] = useState<{ nome: string; texto: string; ok: boolean } | null>(null)
   const video = useRef<HTMLVideoElement>(null)
   const [lista, setLista] = useState<HTMLDivElement | null>(null)
 
@@ -107,6 +108,12 @@ export default function Mesa({ target, onTargetConsumed, onOpenInStudio }: Props
   const cortes = estado?.enabled ? estado.cortes : []
   const idx = Math.max(0, cortes.findIndex((c) => c.nome === nome))
   const atual: Corte | undefined = cortes[idx]
+  const textoPost = rascunho
+    ? [rascunho.titulo.trim(), rascunho.descricao.trim(), rascunho.hashtags.join(' ')]
+        .filter(Boolean)
+        .join('\n\n')
+    : ''
+  const resultadoCopia = copia && copia.nome === atual?.nome && copia.texto === textoPost ? copia : null
 
   // The control room opens the desk on one cut.
   useEffect(() => {
@@ -170,6 +177,17 @@ export default function Mesa({ target, onTargetConsumed, onOpenInStudio }: Props
 
   const abrirEditor = (): void => {
     if (atual?.no_editor && atual.video_id) onOpenInStudio(atual.video_id, atual.clip_id ?? undefined)
+  }
+
+  const copiarPost = async (): Promise<void> => {
+    if (!atual || !textoPost) return
+    const { nome } = atual
+    try {
+      await navigator.clipboard.writeText(textoPost)
+      setCopia({ nome, texto: textoPost, ok: true })
+    } catch {
+      setCopia({ nome, texto: textoPost, ok: false })
+    }
   }
 
   // Bound on every render so the keys always act on the cut on screen.
@@ -382,6 +400,19 @@ export default function Mesa({ target, onTargetConsumed, onOpenInStudio }: Props
                     }}
                     onBlur={addTag}
                   />
+                </div>
+                <div>
+                  <button
+                    type="button"
+                    disabled={!textoPost}
+                    onClick={() => void copiarPost()}
+                    className="btn-ghost w-full border border-raised disabled:opacity-40"
+                  >
+                    {t('Copy post text')}
+                  </button>
+                  <div role="status" className="text-xs text-muted">
+                    {resultadoCopia && (resultadoCopia.ok ? t('Post text copied') : t('Could not copy post text'))}
+                  </div>
                 </div>
                 <div className="flex flex-col gap-2">
                   <span className="label">{t('Where to post')}</span>
