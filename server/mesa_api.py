@@ -180,10 +180,12 @@ def install(app: FastAPI, *, config: dict, db, data_dir, session_secret: str) ->
         agora, achados = time.time(), []
         for pasta in sorted(p for p in gravacoes.iterdir() if p.is_dir()):
             mtimes = [e.stat().st_mtime for e in os.scandir(pasta) if e.name.endswith(".ts")]
-            idade = int(agora - max(mtimes)) if mtimes else None
+            # No segment left (the recorder deletes them once cut into blocks): the folder's own
+            # last change says when it stopped.
+            idade = int(agora - (max(mtimes) if mtimes else pasta.stat().st_mtime))
             plataforma, _, canal = pasta.name.partition("_")
             achados.append({"nome": pasta.name, "plataforma": plataforma, "canal": canal or plataforma,
-                            "gravando": idade is not None and idade < GRAVANDO_S, "ultimo_s": idade})
+                            "gravando": bool(mtimes) and idade < GRAVANDO_S, "ultimo_s": idade})
         return achados
 
     def lives() -> list[dict]:

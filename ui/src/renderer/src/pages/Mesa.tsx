@@ -86,6 +86,10 @@ export default function Mesa({ target, onTargetConsumed, onOpenInStudio }: Props
     setRascunho(atual ? rascunhoDe(atual) : null)
     setSujo(false)
     setNovaTag('')
+    // Keep the chosen cut in view, and the keyboard focus with it when it was in the list.
+    const item = atual ? document.querySelector<HTMLElement>(`[data-corte="${CSS.escape(atual.nome)}"]`) : null
+    item?.scrollIntoView({ block: 'nearest' })
+    if (document.activeElement?.hasAttribute('data-corte')) item?.focus()
   }, [atual?.nome]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const salvar = async (r: Rascunho | null = rascunho, forcar = false): Promise<void> => {
@@ -220,6 +224,7 @@ export default function Mesa({ target, onTargetConsumed, onOpenInStudio }: Props
                   return (
                     <button
                       key={c.nome}
+                      data-corte={c.nome}
                       type="button"
                       onClick={() => setNome(c.nome)}
                       aria-current={sel}

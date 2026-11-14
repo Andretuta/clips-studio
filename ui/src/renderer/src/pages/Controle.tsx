@@ -111,7 +111,7 @@ export default function Controle({ onOpenMesa, onOpenQueue }: Props): JSX.Elemen
   const span = Math.max(eixoFim - eixoIni, 15)
   const passo = span > 360 ? 60 : span > 180 ? 30 : 15
   const marcas: number[] = []
-  for (let m = eixoIni; m <= eixoFim; m += passo) marcas.push(m)
+  for (let m = Math.ceil(eixoIni / passo) * passo; m <= eixoFim; m += passo) marcas.push(m)
   const pos = (min: number): string => `${(100 * (min - eixoIni)) / span}%`
 
   const avisos: Aviso[] = []
@@ -136,7 +136,7 @@ export default function Controle({ onOpenMesa, onOpenQueue }: Props): JSX.Elemen
     avisos.push({ tom: 'warn', titulo: t('The queue is over 30 min behind'), texto: t('Pause one of the lives.') })
   }
   if (!avisos.length) {
-    avisos.push({ tom: 'ok', titulo: t('All working'), texto: `${gravando.length} ${t('channels recording')}` })
+    avisos.push({ tom: 'ok', titulo: t('All working'), texto: `${t('channels recording')}: ${gravando.length}` })
   }
 
   return (
@@ -161,7 +161,7 @@ export default function Controle({ onOpenMesa, onOpenQueue }: Props): JSX.Elemen
 
       <section className="flex flex-col gap-3.5 px-5 py-4 rounded-2xl bg-surface border border-raised">
         <div className="flex flex-wrap items-baseline gap-4">
-          <h3 className="text-base font-bold">{t("Today's lives")}</h3>
+          <h3 className="text-[15px] font-bold">{t("Today's lives")}</h3>
           <span className="text-xs text-muted">{t('each dot is a cut, where it came from in the live')}</span>
           <span className="flex-1" />
           <span className="flex gap-3.5 text-xs text-muted">
@@ -214,10 +214,11 @@ export default function Controle({ onOpenMesa, onOpenQueue }: Props): JSX.Elemen
                       return (
                         <div key={b.inicio}>
                           <div
+                            title={`${b.inicio} · ${b.cortes.length}`}
                             className="absolute inset-y-0 rounded-lg border border-raised bg-raised/50 px-2 py-1 text-[11px] font-semibold text-muted overflow-hidden whitespace-nowrap"
                             style={{ left: pos(ini), width: `calc(${(100 * (BLOCO_S / 60)) / span}% - 4px)` }}
                           >
-                            {b.inicio} · {b.cortes.length}
+                            {span <= 240 && `${b.inicio} · ${b.cortes.length}`}
                           </div>
                           {b.cortes.map((c) => {
                             const f = faixa(c.nota)
@@ -254,7 +255,7 @@ export default function Controle({ onOpenMesa, onOpenQueue }: Props): JSX.Elemen
 
       <div className="grid gap-4 grid-cols-[repeat(auto-fit,minmax(300px,1fr))]">
         <section className="flex flex-col gap-3 px-5 py-4 rounded-2xl bg-surface border border-raised">
-          <h3 className="text-base font-bold">{t('Queue breath')}</h3>
+          <h3 className="text-[15px] font-bold">{t('Queue breath')}</h3>
           <span className={`text-3xl font-bold ${filaSeg > 30 * 60 ? 'text-warn' : ''}`}>
             {filaSeg > 0 ? formatQueueEta(filaSeg) : '0'}
           </span>
@@ -266,7 +267,7 @@ export default function Controle({ onOpenMesa, onOpenQueue }: Props): JSX.Elemen
         </section>
 
         <section className="flex flex-col gap-2.5 px-5 py-4 rounded-2xl bg-surface border border-raised">
-          <h3 className="text-base font-bold">{t('Alerts')}</h3>
+          <h3 className="text-[15px] font-bold">{t('Alerts')}</h3>
           {avisos.map((a) => (
             <button
               key={a.titulo}
@@ -286,7 +287,7 @@ export default function Controle({ onOpenMesa, onOpenQueue }: Props): JSX.Elemen
 
         <section className="flex flex-col gap-2.5 px-5 py-4 rounded-2xl bg-surface border border-raised">
           <div className="flex items-baseline justify-between">
-            <h3 className="text-base font-bold">{t('Best of the lives')}</h3>
+            <h3 className="text-[15px] font-bold">{t('Best of the lives')}</h3>
             <button type="button" className="text-xs font-semibold text-accent" onClick={() => onOpenMesa()}>
               {t('Open the desk')}
             </button>

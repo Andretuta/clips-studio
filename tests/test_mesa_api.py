@@ -291,3 +291,17 @@ def test_video_still_open_is_409_and_nothing_moves(client, saida):
     assert (pendentes(saida) / "kick_a_1.mp4").exists()
     assert (pendentes(saida) / "kick_a_1.json").exists()
     assert not (saida / "aprovados" / "kick_a_1.json").exists()
+
+
+def test_channel_without_segments_is_as_old_as_its_folder(client, gravacoes):
+    """The recorder deletes segments once they are cut into blocks: a folder
+    left empty says when it last changed, so a stopped live still shows."""
+    vazio = gravacoes / "twitch_falamicatv"
+    vazio.mkdir(parents=True)
+    cinco_min = time.time() - 300
+    os.utime(vazio, (cinco_min, cinco_min))
+
+    canal = client.get("/mesa/controle").json()["canais"][0]
+
+    assert canal["gravando"] is False
+    assert 290 <= canal["ultimo_s"] <= 330
