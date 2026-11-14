@@ -14,7 +14,7 @@ import pytest
 
 from core.binaries import ffmpeg
 from core.models import ClipCandidate, Segment
-from video.captions import build_captions, caption_font_for
+from video.captions import build_caption_lines, build_captions, caption_font_for, words_of
 from video.filters import FONTS_DIR, subtitles_filter
 
 GREEN = "&H14FF39&"  # #39FF14 as an inline ASS colour
@@ -60,6 +60,35 @@ def test_pop_grows_only_the_word_being_said(tmp_path):
         assert event.count(r"\t(") == 2
         popped = re.search(re.escape(POP) + r"[^}]*\}(W\d+)\{\\fscx100\\fscy100", event)
         assert popped and popped[1] == f"W{20 + k}"
+
+
+def test_hyphenated_words_share_one_caption_slot_and_animation(tmp_path):
+    fragments = "dê -me faça -se guarda- chuva anti -herói. próximo".split()
+    words = [{"start": 10 + i / 2, "end": 10.5 + i / 2, "word": word}
+             for i, word in enumerate(fragments)]
+    segs = [Segment(start=10, end=14.5, text="dê-me faça-se guarda-chuva anti-herói. próximo", words=words)]
+
+    assert build_caption_lines(segs, CLIP, 4) == [
+        {"start": 0.0, "end": 4.0, "text": "dê-me faça-se guarda-chuva anti-herói."},
+        {"start": 4.0, "end": 4.5, "text": "próximo"},
+    ]
+    assert words_of(segs, CLIP)[0] == {"start": 0.0, "end": 1.0, "word": "dê-me"}
+    path = build_captions(segs, CLIP, tmp_path / "hifen.ass", style={**LIT, "karaoke": True, "pop": True})
+    events = [line for line in path.read_text(encoding="utf-8").splitlines() if line.startswith("Dialogue:")]
+    assert len(events) == 5
+    assert events[0].startswith("Dialogue: 0,0:00:00.00,0:00:01.00,")
+    assert re.sub(r"\{[^}]*\}", "", events[0]).endswith("DÊ-ME FAÇA-SE GUARDA-CHUVA ANTI-HERÓI.")
+
+
+def test_separate_caption_dashes_are_preserved():
+    tokens = ["ele", "-", "sim", "para", "—", "agora", "menos", "-10"]
+    words = [{"start": 10 + i / 2, "end": 10.5 + i / 2, "word": word}
+             for i, word in enumerate(tokens)]
+    segs = [Segment(start=10, end=14, text=" ".join(tokens), words=words)]
+
+    assert [line["text"] for line in build_caption_lines(segs, CLIP, 4)] == [
+        "ele - sim para", "— agora menos -10",
+    ]
 
 
 def test_bebas_neue_is_a_caption_font_and_may_go_past_140(tmp_path):

@@ -2224,8 +2224,10 @@ def create_app(config: dict, settings_path: Path) -> FastAPI:
         from video.captions import clip_words as words_in_clip
 
         data = json.loads(tpath.read_text(encoding="utf-8"))
-        every = (w for seg in data.get("segments", []) for w in seg.get("words") or [])
-        return {"words": words_in_clip(every, row["start_s"], row["end_s"])}
+        return {"words": [
+            word for seg in data.get("segments", [])
+            for word in words_in_clip(seg.get("words") or (), row["start_s"], row["end_s"])
+        ]}
 
     @app.get("/media/{clip_id}")
     def media(clip_id: int):

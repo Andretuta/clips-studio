@@ -13,6 +13,7 @@ enabled).
 """
 
 import re
+from collections.abc import Iterable
 from pathlib import Path
 
 from core.models import ClipCandidate, Segment
@@ -186,7 +187,7 @@ def words_of(segments: list[Segment], candidate: ClipCandidate) -> list[dict]:
     the transcript's timed words, in its order. Saved lines are marked by
     these on both sides, so the editor shows the colour the render burns. A
     segment without word timings has none to give; its lines go by the clock."""
-    return clip_words((w for seg in segments for w in seg.words or ()), candidate.start, candidate.end)
+    return [word for seg in segments for word in clip_words(seg.words or (), candidate.start, candidate.end)]
 
 
 def _turns(turns: list | None) -> list[tuple[float, float, int]]:
@@ -234,12 +235,12 @@ def in_clip(word: dict, start: float, end: float) -> tuple[float, float]:
     return round(max(0.0, word["start"] - start), 2), round(min(end - start, word["end"] - start), 2)
 
 
-def clip_words(words, start: float, end: float) -> list[dict]:
+def clip_words(words: Iterable[dict], start: float, end: float) -> list[dict]:
     """The words said in a clip as the editor's transcript shows them:
     [{"start", "end", "word"}] in clip seconds. `words` is every word of the
     video, in the transcript's order and time."""
     out = []
-    for w in words:
+    for w in _join_hyphenated_words(words):
         if w["end"] > start and w["start"] < end:
             said_from, said_to = in_clip(w, start, end)
             out.append({"start": said_from, "end": said_to, "word": w["word"]})
@@ -640,13 +641,30 @@ def _inline_color(hex_rgb: str) -> str:
     return f"&H{b}{g}{r}&".upper()
 
 
+def _join_hyphenated_words(words: Iterable[dict]) -> list[dict]:
+    """Keep a compound split by the transcriber in one caption slot."""
+    joined: list[dict] = []
+    for word in words:
+        text = word["word"]
+        previous = joined[-1]["word"] if joined else ""
+        starts_with_hyphen = text.startswith("-") and text[1:2].isalpha() and previous[-1:].isalpha()
+        ends_with_hyphen = previous.endswith("-") and previous[-2:-1].isalpha() and text[:1].isalpha()
+        if starts_with_hyphen or ends_with_hyphen:
+            prior = joined[-1]
+            joined[-1] = {**prior, "word": previous + text, "end": max(prior["end"], word["end"])}
+        else:
+            joined.append(word)
+    return joined
+
+
 def _words_in_window(segments: list[Segment], start: float, end: float) -> list[dict]:
     words: list[dict] = []
     for seg in segments:
         if seg.end <= start or seg.start >= end:
             continue
         if seg.words:
-            words.extend(w for w in seg.words if w["end"] > start and w["start"] < end)
+            timed = _join_hyphenated_words(seg.words)
+            words.extend(w for w in timed if w["end"] > start and w["start"] < end)
         else:
             words.extend(_spread_evenly(seg, start, end))
     return sorted(words, key=lambda w: w["start"])
