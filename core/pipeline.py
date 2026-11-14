@@ -1521,12 +1521,8 @@ def _render_files(
     # Color: preset filter (per-clip wins over job/config default) + manual
     # brightness/saturation/contrast adjustments.
     filter_name = opts.get("filter") or config["clips"].get("filter") or "none"
-    vf_extra = combined_chain(filter_name, opts.get("adjust"))
-    # video.polish (denoise + sharpen) at the source's size, before any
-    # upscale: 1/3 of the pixels of a 1080x1920 frame, ~2 s a clip instead
-    # of ~14 s. The tracked path cuts it into the intermediate; a single
-    # encode puts it ahead of its fit.
-    polish = polish_chain(config)
+    # video.polish (denoise + sharpen) first, then the colour look.
+    vf_extra = ",".join(p for p in (polish_chain(config), combined_chain(filter_name, opts.get("adjust"))) if p)
     if landscape:
         fit = (
             "scale=1920:1080:force_original_aspect_ratio=decrease:flags=lanczos,"
@@ -1643,7 +1639,7 @@ def _render_files(
             # Cut a horizontal intermediate, track the subject, render 9:16.
             intermediate = clip_dir / f"{stem}.source.mp4"
             scratch.append(intermediate)
-            cut_clip(source, padded, intermediate, vf_extra=polish)
+            cut_clip(source, padded, intermediate)
 
             if edit is not None:
                 # Apply manual edits BEFORE tracking, so the tracker and
@@ -1737,7 +1733,6 @@ def _render_files(
                     normalize=normalize,
                 )
         else:
-            vf_extra = ",".join(p for p in (polish, vf_extra) if p)
             if edit is not None:
                 # Horizontal (or Vertical Live) output: cut plain first, then
                 # apply edits and burn captions in the same pass (they land
