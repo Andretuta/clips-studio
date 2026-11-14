@@ -58,8 +58,8 @@ transcription:
   model: ""
 
 clips:
-  gaming_no_cam: fullscreen   # gaming clip with no webcam found: fullscreen (game zoomed
-                              # to fill the Short) | blurred (factory: whole game on a blur)
+  gaming_no_cam: blurred      # gaming clip with no webcam found: blurred (factory: whole game
+                              # on a blur) | fullscreen (game zoomed to fill the Short)
   min_score: 55         # discard candidates scored below this (0-100).
                         # Higher = fewer, better clips. Kept generous on
                         # purpose: creators pick what to post — a ~2h stream
@@ -123,10 +123,11 @@ video:
   parallel_renders: 3    # clips rendered at once (one's GPU tracking overlaps
                          # another's NVENC encode). Sized for ~6 CPU cores /
                          # 16GB RAM; raise only with more RAM + spare VRAM.
-  polish:                # after the crop is scaled to the output size:
-    denoise: 1.5         # hqdn3d, 0..6 (0 = off): softens stream compression blocks
-    sharpen: 0.5         # cas, 0..1 (0 = off): contrast-adaptive sharpen
-                         # Remove the block for the factory look.
+  polish:                # after the crop is scaled to the output size; off by default.
+    denoise: 0           # hqdn3d, 0..6 (0 = off): softens stream compression blocks
+    sharpen: 0           # cas, 0..1 (0 = off): contrast-adaptive sharpen
+                         # Measured on 1080p60 clips: sharpen 0.5 ~ +22% render time,
+                         # denoise 1.5 + sharpen 0.5 ~ +43%.
 
 tracking:
   detector: yolov8n-pose.pt  # pose model: head keypoints (nose/eyes/ears) give
