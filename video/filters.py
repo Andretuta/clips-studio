@@ -159,8 +159,8 @@ def _amount(value, hi: float) -> float:
 
 def polish_chain(config: dict) -> str:
     """video.polish: a light denoise (hqdn3d) and a sharpen (cas) for every
-    render, applied where vf_extra is, i.e. after the crop is scaled to the
-    output size. denoise 0..6 and sharpen 0..1, 0 = off; no block = factory."""
+    render, run at the source's resolution before any upscale (core/pipeline.py).
+    denoise 0..6 and sharpen 0..1, 0 = off; no block = factory."""
     polish = (config.get("video") or {}).get("polish") or {}
     denoise = _amount(polish.get("denoise"), 6.0)
     sharpen = _amount(polish.get("sharpen"), 1.0)
