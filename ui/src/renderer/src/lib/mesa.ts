@@ -133,6 +133,8 @@ export const mesa = {
   cortes: () => call<MesaState>('/mesa/cortes'),
   controle: () => call<ControleState>('/mesa/controle'),
   videoUrl: (nome: string) => `${API_BASE}${corte(nome)}/video`,
+  /** A small JPEG of the cut (made once by the engine, cached a week by the browser). */
+  capaUrl: (nome: string) => `${API_BASE}${corte(nome)}/capa`,
   editar: (nome: string, e: Edicao) => call<Corte>(corte(nome), send('PATCH', e), true),
   aprovar: (nome: string, e: Edicao) => call<{ nome: string }>(`${corte(nome)}/aprovar`, send('POST', e), true),
   descartar: (nome: string) => call<{ nome: string }>(`${corte(nome)}/descartar`, send('POST'), true)

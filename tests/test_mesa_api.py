@@ -5,6 +5,7 @@ written the way the cola writes them (an mp4 and a JSON side by side)."""
 
 import json
 import os
+import subprocess
 import time
 from datetime import datetime
 
@@ -153,6 +154,7 @@ def test_unknown_or_unsafe_name_is_404(client, saida, nome):
     (saida / "segredo.json").write_text("{}", encoding="utf-8")
 
     assert client.get(f"/mesa/cortes/{nome}/video").status_code == 404
+    assert client.get(f"/mesa/cortes/{nome}/capa").status_code == 404
     assert client.post(f"/mesa/cortes/{nome}/aprovar", headers=HEADERS).status_code == 404
 
 
@@ -305,3 +307,42 @@ def test_channel_without_segments_is_as_old_as_its_folder(client, gravacoes):
 
     assert canal["gravando"] is False
     assert 290 <= canal["ultimo_s"] <= 330
+
+
+
+# ---- covers (the list's thumbnails) ------------------------------------------------
+
+def _ffmpeg_or_skip() -> str:
+    from core.binaries import ffmpeg
+
+    binary = ffmpeg()
+    if not os.path.isfile(binary):
+        pytest.skip("FFmpeg is not installed here")
+    return binary
+
+
+def test_cover_is_a_small_jpeg_made_once(client, saida, tmp_path):
+    binary = _ffmpeg_or_skip()
+    corte(pendentes(saida), "kick_a_1", inicio=0, fim=2)
+    subprocess.run([binary, "-y", "-v", "error", "-f", "lavfi", "-i", "color=red:s=1080x1920:d=2",
+                    "-pix_fmt", "yuv420p", str(pendentes(saida) / "kick_a_1.mp4")], check=True)
+
+    r = client.get("/mesa/cortes/kick_a_1/capa")
+
+    assert r.status_code == 200
+    assert r.headers["content-type"] == "image/jpeg"
+    assert r.content[:2] == bytes([0xFF, 0xD8])  # JPEG
+    assert "max-age" in r.headers["cache-control"]
+    feitas = list((tmp_path / "previews" / "mesa").glob("*.jpg"))
+    assert len(feitas) == 1
+    assert feitas[0].stat().st_size < 30_000  # a thumbnail, not a 1080x1920 frame
+    antes = feitas[0].stat().st_mtime_ns
+    assert client.get("/mesa/cortes/kick_a_1/capa").content == r.content
+    assert feitas[0].stat().st_mtime_ns == antes  # served from the cache, not made again
+
+
+def test_cover_of_an_unreadable_video_is_404(client, saida):
+    _ffmpeg_or_skip()
+    corte(pendentes(saida), "kick_a_1")  # its mp4 is a few fake bytes
+
+    assert client.get("/mesa/cortes/kick_a_1/capa").status_code == 404

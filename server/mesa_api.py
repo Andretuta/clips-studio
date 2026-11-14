@@ -14,6 +14,7 @@ import json
 import os
 import re
 import shutil
+import subprocess
 import time
 from datetime import datetime
 from pathlib import Path
@@ -128,6 +129,28 @@ def install(app: FastAPI, *, config: dict, db, data_dir, session_secret: str) ->
     @app.get("/mesa/cortes/{nome}/video")
     def video(nome: str):
         return FileResponse(achar(nome).with_suffix(".mp4"), media_type="video/mp4")
+
+    @app.get("/mesa/cortes/{nome}/capa")
+    def capa(nome: str):
+        """A small JPEG of the cut, for the desk's list: made once from a frame
+        of the video and cached on disk, so the list never holds the video
+        open (Windows could then not move it)."""
+        from core.binaries import ffmpeg
+        from sources.preview_frames import made_once
+
+        j = achar(nome)
+        pos = _posicao(_ler(j) or {})
+        quando = (pos["fim_s"] - pos["inicio_s"]) / 2 if pos else 1.0
+
+        def make(part: Path) -> None:
+            r = subprocess.run([ffmpeg(), "-y", "-v", "error", "-ss", f"{quando:.2f}", "-i", str(j.with_suffix(".mp4")),
+                                "-frames:v", "1", "-vf", "scale=216:-2", "-q:v", "5", str(part)],
+                               capture_output=True, text=True)
+            if r.returncode != 0 or not part.exists():
+                raise HTTPException(404, "No frame could be read from this cut")
+
+        return FileResponse(made_once(Path(data_dir) / "previews" / "mesa", f"{nome}.jpg", make),
+                            media_type="image/jpeg", headers={"Cache-Control": "private, max-age=604800"})
 
     @app.patch("/mesa/cortes/{nome}", dependencies=guarded)
     def editar(nome: str, edicao: Edicao):

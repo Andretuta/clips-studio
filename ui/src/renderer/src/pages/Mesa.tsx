@@ -43,6 +43,38 @@ function digitando(e: KeyboardEvent): boolean {
   return !!el && (el.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(el.tagName))
 }
 
+/** A cut's thumbnail that is only asked for while it is in (or near) the visible
+ *  part of the list, and dropped from the page once it scrolls away. The image
+ *  stays in the browser's cache (and the engine's), so coming back is instant. */
+function Capa({ nome, lista }: { nome: string; lista: HTMLElement | null }): JSX.Element {
+  const caixa = useRef<HTMLSpanElement>(null)
+  const [visivel, setVisivel] = useState(false)
+  const [falhou, setFalhou] = useState(false)
+  useEffect(() => {
+    const el = caixa.current
+    if (!el || !lista) return
+    const io = new IntersectionObserver(([e]) => setVisivel(e.isIntersecting), {
+      root: lista,
+      rootMargin: '300px 0px'
+    })
+    io.observe(el)
+    return () => io.disconnect()
+  }, [lista])
+  return (
+    <span ref={caixa} className="shrink-0 w-[34px] h-[60px] rounded-md bg-raised overflow-hidden">
+      {visivel && !falhou && (
+        <img
+          src={mesa.capaUrl(nome)}
+          alt=""
+          decoding="async"
+          className="size-full object-cover"
+          onError={() => setFalhou(true)}
+        />
+      )}
+    </span>
+  )
+}
+
 function Kbd({ k, escuro }: { k: string; escuro?: boolean }): JSX.Element {
   return (
     <kbd className={`px-1.5 rounded text-[11px] font-normal ${escuro ? 'bg-black/20' : 'bg-raised text-muted'}`}>{k}</kbd>
@@ -58,6 +90,7 @@ export default function Mesa({ target, onTargetConsumed, onOpenInStudio }: Props
   const [ocupado, setOcupado] = useState(false)
   const [novaTag, setNovaTag] = useState('')
   const video = useRef<HTMLVideoElement>(null)
+  const [lista, setLista] = useState<HTMLDivElement | null>(null)
 
   const carregar = useCallback(() => {
     mesa
@@ -218,7 +251,7 @@ export default function Mesa({ target, onTargetConsumed, onOpenInStudio }: Props
                 <h3 className="font-bold">{t('On the desk')}</h3>
                 <span className="text-xs text-muted">{t('best score first')}</span>
               </div>
-              <div className="flex-1 overflow-y-auto px-3 pb-3 space-y-1">
+              <div ref={setLista} className="flex-1 overflow-y-auto px-3 pb-3 space-y-1">
                 {cortes.map((c) => {
                   const sel = c.nome === atual.nome
                   return (
@@ -232,12 +265,11 @@ export default function Mesa({ target, onTargetConsumed, onOpenInStudio }: Props
                         sel ? 'border-accent bg-raised' : 'border-transparent hover:bg-raised/60'
                       }`}
                     >
-                      <span className={`shrink-0 w-9 text-center rounded px-1 font-bold text-xs ${FAIXA_CHIP[faixa(c.nota)]}`}>
-                        {c.nota ?? '–'}
-                      </span>
-                      <span className="min-w-0 flex flex-col gap-0.5">
+                      <Capa nome={c.nome} lista={lista} />
+                      <span className="min-w-0 flex flex-col gap-1">
                         <span className="text-xs font-semibold leading-snug line-clamp-2">{c.titulo || c.nome}</span>
-                        <span className="text-[11px] text-muted">
+                        <span className="flex items-center gap-1.5 text-[11px] text-muted">
+                          <span className={`rounded px-1 font-bold ${FAIXA_CHIP[faixa(c.nota)]}`}>{c.nota ?? '–'}</span>
                           {c.streamer}
                           {c.live && ` · ${c.live.fim_s - c.live.inicio_s} s`}
                         </span>
@@ -258,6 +290,7 @@ export default function Mesa({ target, onTargetConsumed, onOpenInStudio }: Props
                 key={atual.nome}
                 ref={video}
                 src={mesa.videoUrl(atual.nome)}
+                poster={mesa.capaUrl(atual.nome)}
                 controls
                 autoPlay
                 loop
