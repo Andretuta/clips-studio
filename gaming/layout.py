@@ -248,14 +248,25 @@ def _zoom(src_w: int, src_h: int, aspect: float, align: str, cams: list, panels:
     return None
 
 
+def _game_alone(name) -> str:
+    """name if it is a layout that shows the game alone (Fullscreen, Blurred), else Blurred."""
+    return name if isinstance(name, str) and PRESETS.get(name, {}).get("type") == "full" else "blurred"
+
+
+def no_cam_preset(config: dict) -> str:
+    """clips.gaming_no_cam: the layout a gaming clip gets when no webcam is
+    found. Factory (and anything that isn't a game-alone layout) is Blurred."""
+    return _game_alone((config.get("clips") or {}).get("gaming_no_cam"))
+
+
 def resolve(settings: dict) -> dict:
     """A clip's gaming settings with a preset that can actually be drawn.
 
     Settings from before layouts existed (cam_position / game_fit, no preset)
     become Half, which is what they rendered as. A layout that needs a box it
-    doesn't have falls back: no webcam -> the game alone (Blurred, or
-    Fullscreen if it was zoomed), no Game UI box -> Split, no second webcam ->
-    the one-webcam version."""
+    doesn't have falls back: no webcam -> the game alone (s["no_cam"], from
+    clips.gaming_no_cam, else Blurred), no Game UI box -> Split, no second
+    webcam -> the one-webcam version."""
     s = dict(settings or {})
     preset = s.get("preset")
     if preset not in PRESETS:
@@ -265,9 +276,9 @@ def resolve(settings: dict) -> dict:
     spec = PRESETS[preset]
     roles = _roles(spec)
     if "cam" in roles and not s.get("cam"):
-        # No webcam: the game alone, whole on a blur. (Fullscreen is its own
-        # choice; a zoomed 9:16 cut of a wide game loses most of it.)
-        preset = "blurred"
+        # No webcam: the game alone. Blurred (whole on a blur) unless the
+        # config picked Fullscreen; a zoomed 9:16 cut of a wide game loses most of it.
+        preset = _game_alone(s.get("no_cam"))
     elif "ui" in roles and not s.get("ui_box"):
         preset = "split"
     elif "cam2" in roles and not s.get("cam2"):

@@ -226,7 +226,7 @@ def render(intermediate: Path, output: Path, g: dict, config: dict, ass_path: Pa
     src_w, src_h = probe_size(intermediate)
     if "panels" not in g:
         g = {**g, "panels": _panels(intermediate)}
-    settings = {**g, "cam": list(use) if use else None}
+    settings = {**g, "cam": list(use) if use else None, "no_cam": layout.no_cam_preset(config)}
     if whole:
         settings["game_fit"] = "fit"
         if use is None:
