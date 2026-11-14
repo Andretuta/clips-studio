@@ -1,14 +1,15 @@
 @import 'tailwindcss';
 
-/* Navy + sky design tokens (see DESIGN-V2.md, "Visual theme") */
+/* Graphite + amber design tokens (the approval desk's look, used app-wide) */
 @theme {
-  --color-base: #0a1628;
-  --color-surface: #13243d;
-  --color-raised: #1c3354;
-  --color-accent: #38bdf8;
-  --color-accent-strong: #0ea5e9;
-  --color-ink: #f1f5f9;
-  --color-muted: #94a3b8;
+  --color-base: #0f1012;
+  --color-surface: #17181b;
+  --color-raised: #222327;
+  --color-accent: #ffb020;
+  --color-accent-strong: #f59e0b;
+  --color-on-accent: #2b1d00;
+  --color-ink: #f5f3ee;
+  --color-muted: #a9a7a1;
   --color-success: #34d399;
   --color-warn: #fbbf24;
   --color-error: #f87171;
@@ -43,7 +44,7 @@ body {
   @apply bg-surface rounded-xl p-4 border border-raised/60;
 }
 .btn-accent {
-  @apply px-4 py-2 rounded-lg font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed bg-accent text-base hover:bg-accent-strong;
+  @apply px-4 py-2 rounded-lg font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed bg-accent text-on-accent hover:bg-accent-strong;
 }
 .btn-ghost {
   @apply px-4 py-2 rounded-lg font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed bg-raised text-ink hover:bg-raised/70;

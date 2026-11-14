@@ -274,9 +274,10 @@ def test_control_room_lists_the_best_pending_cuts(client, saida):
     for i, nota in enumerate([40, 90, 60, 75, 82, 55, 70]):
         corte(pendentes(saida), f"kick_a_{i}", nota=nota)
 
-    melhores = client.get("/mesa/controle").json()["melhores"]
+    body = client.get("/mesa/controle").json()
 
-    assert [c["nota"] for c in melhores] == [90, 82, 75, 70, 60]
+    assert [c["nota"] for c in body["melhores"]] == [90, 82, 75, 70, 60]
+    assert body["contagens"]["pendentes"] == 7
 
 
 @pytest.mark.skipif(os.name != "nt", reason="only Windows refuses to move a file that is open")

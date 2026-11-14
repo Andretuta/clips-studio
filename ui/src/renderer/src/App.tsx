@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react'
 import Dashboard from './pages/Dashboard'
 import ClipStudio from './pages/ClipStudio'
+import Controle from './pages/Controle'
 import Creators from './pages/Creators'
 import Marketplace from './pages/Marketplace'
+import Mesa from './pages/Mesa'
 import Models from './pages/Models'
 import Queue from './pages/Queue'
 import Settings from './pages/Settings'
@@ -13,6 +15,7 @@ import SetupWizard, { setupDone } from './components/SetupWizard'
 import UpdateBanner from './components/UpdateBanner'
 import { activeLocale, t } from './lib/i18n'
 import { api } from './lib/api'
+import { mesa } from './lib/mesa'
 import type { StudioEvent } from './lib/types'
 import { useEvents } from './lib/useEvents'
 import { useQueueNotifications } from './lib/queueNotifications'
@@ -20,11 +23,14 @@ import { ApprovalCards, ClipUpdatesProvider } from './components/ApprovalCard'
 import { OPEN_MARKETPLACE, checkOnlineListAtStart } from './lib/plugins'
 import mascot from './assets/mascot.png'
 
-type Page = 'dashboard' | 'queue' | 'watch' | 'studio' | 'creators' | 'marketplace' | 'models' | 'settings'
+type Page = 'mesa' | 'controle' | 'dashboard' | 'queue' | 'watch' | 'studio' | 'creators' | 'marketplace' | 'models' | 'settings'
 
 const GITHUB_URL = 'https://github.com/ColinGPT9/clips-studio'
 
 const NAV: { id: Page; label: string; icon: string }[] = [
+  // The approval desk and control room (settings.yaml `mesa:`), shown only when on.
+  { id: 'mesa', label: 'Approval desk', icon: '✓' },
+  { id: 'controle', label: 'Control room', icon: '◈' },
   { id: 'dashboard', label: 'Dashboard', icon: '◧' },
   { id: 'queue', label: 'Queue', icon: '≡' },
   { id: 'watch', label: 'Watched channels', icon: '◎' },
@@ -48,6 +54,27 @@ export default function App(): JSX.Element {
   const [page, setPage] = useState<Page>('dashboard')
   const [studioTarget, setStudioTarget] = useState<StudioTarget | null>(null)
   const [creatorTarget, setCreatorTarget] = useState<number | null>(null)
+  const [mesaTarget, setMesaTarget] = useState<string | null>(null)
+  // Whether the approval desk is on: then it is the first screen. Asked until
+  // the engine answers, since it may still be starting with the window.
+  const [mesaOn, setMesaOn] = useState(false)
+  useEffect(() => {
+    let id: ReturnType<typeof setTimeout>
+    const ask = (): void => {
+      mesa
+        .cortes()
+        .then((s) => {
+          if (!s.enabled) return
+          setMesaOn(true)
+          setPage((p) => (p === 'dashboard' ? 'mesa' : p))
+        })
+        .catch(() => {
+          id = setTimeout(ask, 5000)
+        })
+    }
+    ask()
+    return () => clearTimeout(id)
+  }, [])
   // First run: walk the creator through what the installer can't bundle
   // (Ollama, a model) before they hit a video that fails for want of it.
   // Settings can re-open it, so this is not a one-shot.
@@ -177,7 +204,7 @@ export default function App(): JSX.Element {
           </div>
         </div>
         <nav className="flex-1 px-3 space-y-1">
-          {NAV.map((item) => (
+          {NAV.filter((item) => mesaOn || (item.id !== 'mesa' && item.id !== 'controle')).map((item) => (
             <button
               key={item.id}
               onClick={() => setPage(item.id)}
@@ -229,6 +256,18 @@ export default function App(): JSX.Element {
       </aside>
       <main className="flex-1 overflow-y-auto flex flex-col">
         <UpdateBanner />
+        {page === 'mesa' && (
+          <Mesa target={mesaTarget} onTargetConsumed={() => setMesaTarget(null)} onOpenInStudio={openInStudio} />
+        )}
+        {page === 'controle' && (
+          <Controle
+            onOpenMesa={(nome) => {
+              setMesaTarget(nome ?? null)
+              setPage('mesa')
+            }}
+            onOpenQueue={() => setPage('queue')}
+          />
+        )}
         {page === 'dashboard' && <Dashboard onOpenInStudio={openInStudio} />}
         {page === 'queue' && <Queue onOpenInStudio={(videoId) => openInStudio(videoId)} />}
         {page === 'watch' && (

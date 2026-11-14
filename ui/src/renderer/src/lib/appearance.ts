@@ -24,7 +24,7 @@ export const FONTS = [
 export const DEFAULT_APPEARANCE: Appearance = {
   font: FONTS[0].value,
   scale: 100,
-  textColor: '#f1f5f9'
+  textColor: '#f5f3ee'
 }
 
 const KEY = 'clips-studio-appearance'

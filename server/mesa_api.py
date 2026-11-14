@@ -114,15 +114,16 @@ def install(app: FastAPI, *, config: dict, db, data_dir, session_secret: str) ->
         return sum(1 for j in jsons(estado)
                    if str((_ler(j, precisa_video=False) or {}).get("decidido_em", "")).startswith(hoje))
 
+    def contagens(cortes: list[dict]) -> dict:
+        return {"pendentes": len(cortes), "aprovados_hoje": decididos_hoje("aprovado"),
+                "descartados_hoje": decididos_hoje("descartado"), "aprovados": len(jsons("aprovado"))}
+
     @app.get("/mesa/cortes")
     def listar():
         if not base:
             return {"enabled": False}
         cortes = pendentes()
-        return {"enabled": True, "cortes": cortes,
-                "contagens": {"pendentes": len(cortes), "aprovados_hoje": decididos_hoje("aprovado"),
-                              "descartados_hoje": decididos_hoje("descartado"),
-                              "aprovados": len(jsons("aprovado"))}}
+        return {"enabled": True, "cortes": cortes, "contagens": contagens(cortes)}
 
     @app.get("/mesa/cortes/{nome}/video")
     def video(nome: str):
@@ -206,4 +207,6 @@ def install(app: FastAPI, *, config: dict, db, data_dir, session_secret: str) ->
     def controle():
         if not base:
             return {"enabled": False}
-        return {"enabled": True, "canais": canais(), "lives": lives(), "melhores": pendentes()[:5]}
+        cortes = pendentes()
+        return {"enabled": True, "canais": canais(), "lives": lives(), "melhores": cortes[:5],
+                "contagens": contagens(cortes)}
