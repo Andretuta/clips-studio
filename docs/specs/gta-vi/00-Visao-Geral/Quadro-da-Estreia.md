@@ -21,13 +21,10 @@ kanban-plugin: board
 - [ ] Bloco com ID estável, sem apagar quando vier sem job_id; isolar segmento corrompido; órfãos pela identidade completa #P0 #R06 [spec](../02-Captura-e-fila/03-gravacao-e-entrega.md)
 - [ ] Twitch Helix: paginação, renovar categorias, respeitar `Ratelimit-Reset` no 429; domínio exato nas URLs #P0 #R07 [spec](../02-Captura-e-fila/02-descoberta-de-lives.md)
 - [ ] Orçamento de disco e fila por tipo; compilado não tira vaga da captura #P0 #R08 [spec](../02-Captura-e-fila/04-fila-e-armazenamento.md)
-- [ ] Ensaio de falhas: motor parado, fila cheia, resposta perdida — o mesmo bloco volta com uma tarefa só #P0 [spec](../05-Operacao/10-observabilidade-e-operacao.md)
 
 
 ## A fazer · P1
 
-- [ ] Whisper perdeu a fala do clipe 158: transcreveu 4,4 s de 25,5 s, e a legenda PT some depois disso #P1 [spec](../02-Captura-e-fila/02-descoberta-de-lives.md)
-- [ ] Hashtags fora do tema nos clipes do garimpeiro (#hambúrguer, #cinema): incluir o jogo (#GTA6/#GTAV) no título e nas hashtags #P1 [spec](../02-Captura-e-fila/02-descoberta-de-lives.md)
 - [ ] Corrigir os seis grupos das 119 falhas da suíte ampla: resolver i18n nos testes Node primeiro, isolar .venv/config/intérprete e verificar legendas antes de mudar expectativas #P1 [relatório](../90-Auditorias/suite-completa-2026-11-16.md)
 
 - [ ] Medir Whisper + render com um bloco real de 5 min (tempo, RAM, VRAM) #P1 [spec](../03-Producao-de-clips/05-ia-e-transcricao.md)
@@ -46,9 +43,11 @@ kanban-plugin: board
 ## Fazendo
 
 
-
 ## Feito
 
+- [x] Ensaio de falhas: motor parado, fila cheia, resposta perdida — o mesmo bloco volta com uma tarefa só #P0 #antigravity [spec](../05-Operacao/10-observabilidade-e-operacao.md) (`c6ede52`; Cola `5ab6354`) @{2026-11-16}
+- [x] Whisper perdeu a fala do clipe 158: transcreveu 4,4 s de 25,5 s → `beam_size=5` na GPU + VAD `0.3` (16 trechos até 25,2 s) #P1 #antigravity [spec](../03-Producao-de-clips/05-ia-e-transcricao.md) (`35a226b`) @{2026-11-16}
+- [x] Hashtags fora do tema nos clipes do garimpeiro: incluir o jogo (#GTA6/#GTAV) no título e nas hashtags até o sidecar entregue #P1 #antigravity [spec](../02-Captura-e-fila/02-descoberta-de-lives.md) (Cola `5ab6354`) @{2026-11-16}
 - [x] Marca CG ligada por padrão nos cortes da Cola: a entrega grava `cortes_gamer_watermark: true` e a caixa já vem marcada na Mesa; 70 testes da Cola verdes #P0 #claude [spec](../02-Captura-e-fila/02-descoberta-de-lives.md) (Cola dca570b) @{2026-11-16}
 - [x] Ensaio ponta a ponta pelo garimpeiro: 2 clipes da Twitch → tarefas 74–77 → `saida/pendentes` → Mesa em 6 min; MP4 1080×1920 com áudio e karaokê verde em PT; marca CG conferida numa cópia #P0 #claude [spec](../02-Captura-e-fila/02-descoberta-de-lives.md) @{2026-11-16}
 - [x] Cola reiniciada como `andre`: o laço de 15/11 rodava como `CodexSandboxOffline` (sandbox do Codex, sem internet) e o garimpeiro dava `WinError 10013`; às 19h04 mandou 2 clipes [spec](../02-Captura-e-fila/02-descoberta-de-lives.md) @{2026-11-16}

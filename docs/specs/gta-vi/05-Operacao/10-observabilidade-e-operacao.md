@@ -45,3 +45,24 @@ Enviar logs a serviços públicos, abrir porta na internet e alterar ou repetir 
 ## Notas
 
 Se o motor não estiver atendendo, o diagnóstico usa o coletor local e os registros persistidos. Relaciona-se aos achados R01, R02, R10 e R14.
+
+### Ensaio de falhas: motor parado, fila cheia e resposta perdida (16/11/2026)
+
+Commits: `clips-kitty` `c6ede52` · `cola` `5ab6354`.
+
+- **Defeitos encontrados na causa raiz:**
+  1. `POST /videos/local` (`clips-kitty/server/api.py`) não consultava `queue.duplicate_of(d, vid)`, permitindo enfileirar o mesmo bloco duas vezes se a primeira resposta se perdesse.
+  2. Tanto `POST /jobs` quanto `POST /videos/local` verificavam `queue.capacity(d) <= 0` antes de `queue.duplicate_of(d, vid)`: se a tentativa anterior tivesse ocupado a 5ª vaga (`MAX_ACTIVE = 5`), o reenvio após timeout recebia HTTP `409` em vez de `already_queued` com `queued_job_id`.
+  3. Na Cola, HTTP `429` não disparava `QueueFull` (`cola/kitty.py`); e, quando o motor já havia concluído a tarefa entre o timeout e a retomada (`already_processed`), `garimpeiro.py` e `gravador.py` não recuperavam o `job_id` pelo `video_id`. Além disso, `gravador.py` apagava o bloco `.mp4` mesmo quando a resposta vinha sem `job_id` nem confirmação de duplicata.
+- **Correções:**
+  - `clips-kitty/server/api.py`: `duplicate_of` movido para antes da checagem de capacidade em `POST /jobs` e adicionado antes da capacidade em `POST /videos/local`.
+  - `cola/cola/estado.py`, `kitty.py`, `garimpeiro.py`, `gravador.py`: tabela `tentativas` registra envios iniciados; `409` e `429` levantam `QueueFull`; `already_queued` usa `queued_job_id`; `already_processed` com tentativa ativa recupera o `job_id` via `GET /jobs` (`job_for_video`); `gravador.py` preserva o bloco em disco em qualquer erro ou resposta inesperada.
+- **Comandos e resultados:**
+  - Suíte da Cola (`D:/clipador-gta6/clips-kitty/.venv/Scripts/python.exe -m pytest -p no:cacheprovider -q` em `D:\clipador-gta6\cola`): **79 aprovados** em 161,25 s (inclui `test_outage_leaves_clip_unsent_and_retries_once`, `test_lost_response_recovers_already_queued_and_already_done_without_duplicating`, `test_block_lost_response_recovers_job_without_duplicating_or_losing_block` e `test_block_waits_on_429_and_is_kept_on_unexpected_reply`).
+  - Suíte direcionada do motor (`.../python.exe -m pytest -p no:cacheprovider -q tests/test_api_contract.py tests/test_local_upload.py tests/test_transcript_repair.py tests/test_whisper_gpu_libraries.py tests/test_cancel.py` em `D:\clipador-gta6\clips-kitty`): **77 aprovados** (inclui `test_reposting_same_local_file_recovers_queued_job_even_when_queue_full`).
+  - Ensaio isolado contra `clips-kitty` real (`uvicorn` + `create_app` na porta `127.0.0.1:8766`, dados em `D:\clipador-gta6\cache\ensaio-falhas`, encerrado e limpo ao final, sem tocar na `8765`):
+    - **(a) Motor parado:** `garimpeiro.run_once` e `gravador._send_blocks` falharam com `ConnectionError` sem marcar enviado nem apagar o bloco; quando a porta `8766` subiu, criaram **1 tarefa** cada.
+    - **(b) Fila cheia (409 real com 5 vagas ocupadas):** ambos mantiveram clipe e bloco pendentes; ao liberar a fila, criaram **1 tarefa** cada.
+    - **(c) Resposta perdida (timeout pós-POST na 5ª vaga `queued` e também já `done`):** no retorno sem timeout, o motor respondeu `already_queued` (mesmo com fila cheia) ou `already_processed`; a Cola recuperou o mesmo `job_id`, não abriu tarefa duplicada e `entrega.tick` gerou **1 MP4 + 1 JSON** cada em `saida/pendentes`.
+- **Observação operacional:** o motor vivo (`127.0.0.1:8765`) e a Cola ao vivo continuam com o código anterior até serem recarregados pelo operador.
+

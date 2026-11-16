@@ -70,5 +70,17 @@ O que o ensaio mostrou:
 - **Decisão do usuário (16/11, 19h20):** marca ligada por padrão. Desde a Cola `dca570b`, `_copy` grava `cortes_gamer_watermark: true` no JSON de todo corte entregue, traduzido ou não. A caixa já vem marcada na Mesa, e a marca entra ao aprovar; dá para desmarcar num corte. O teste `test_pt_clip_is_copied_with_sidecar` confere a chave, e a suíte da Cola passou com 70 testes. A Cola foi recarregada às 19h26. Os 107 cortes que já estavam na Mesa (inclusive o 158 e o 159) continuam sem a chave e precisam da caixa marcada à mão.
 - **A marca funciona quando aplicada:** `video_editor.cortes_gamer.render` rodou sobre uma cópia do 159 fora da Mesa, em 13 s. Saiu o logo CG com `@CortesGameroffc` na faixa do jogo, e a duração e o áudio ficaram iguais. A Mesa não foi tocada.
 - **Outro:** não entra porque `clips.outro: false` no `settings.yaml` local. Foi escolha de configuração, não falha.
-- **Qualidade:** o Whisper perdeu a maior parte da fala do clipe 158. As hashtags geradas não citam o jogo: #hambúrguer, #churrasco e #comerporansiedade no 159; #cinema e #contagemregressiva no 158.
+- **Qualidade:** o Whisper perdeu a maior parte da fala do clipe 158 (corrigido em `35a226b`, detalhe na [spec 05](../03-Producao-de-clips/05-ia-e-transcricao.md)). As hashtags geradas não citam o jogo: #hambúrguer, #churrasco e #comerporansiedade no 159; #cinema e #contagemregressiva no 158.
 - **Detalhe interno:** a pasta em `data/clips` leva o nome de quem criou o clipe na Twitch (`unspeakableglitched`, `SherrieBifana`), não o do streamer. A entrega usa o `broadcaster_name` da Cola, então o nome final sai certo.
+
+### Tag do jogo (#GTA6/#GTAV) no título e nas hashtags (16/11/2026)
+
+Commit: `cola` `5ab6354`.
+
+- **Causa raiz:** o garimpeiro descartava o mapeamento `game_id → nome do jogo` após consultar a Twitch Helix e chamava `POST /jobs` sem `hashtags`; além disso, para clipes em inglês, o passo `POST /translate` reescrevia título e hashtags sem receber tags obrigatórias do jogo.
+- **Correção:**
+  - `cola/garimpeiro.py` + `cola/kitty.py`: `game_hashtag()` converte `"Grand Theft Auto VI"` → `#GTA6` e `"Grand Theft Auto V"` → `#GTAV` (com fallback alfanumérico); `run_once` passa `hashtags=[tag]` em `submit_url` e grava `"jogo"` em `meta`.
+  - `cola/gravador.py`: armazena `_canal_jogo` a partir da consulta ao vivo da Twitch e grava `"jogo"` no `meta` dos blocos.
+  - `cola/entrega.py` (`_with_game_tag` em `_copy`): garante `#GTA6`/`#GTAV` no `titulo` (respeitando o limite de 100 caracteres) e em `hashtags` (sem duplicar caso já exista em outra capitalização), inclusive após tradução EN→PT, além de salvar `"jogo"` no sidecar `.json`.
+- **Testes:** `test_gta6_clip_passes_gta6_hashtag_and_game_meta`, `test_job_recorded_for_delivery`, `test_submit_url_includes_hashtags_when_given`, `test_delivered_sidecar_includes_game_tag_in_title_and_hashtags` e `test_game_tag_is_not_duplicated_and_fits_title_limit` dentro da suíte da Cola (**79 aprovados**). A Cola em execução precisa ser recarregada para valer em produção.
+
