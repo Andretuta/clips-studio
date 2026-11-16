@@ -1,10 +1,13 @@
-// Runs only in the development host with --verificar.
+// Injetado apenas quando a janela recebe --verificar (debug ou release).
 document.addEventListener('DOMContentLoaded', async () => {
-  const report = {}
+  const report = { origin: window.location.origin }
   let preview
+  let finished = false
   const timer = setTimeout(() => finish(false, 'timeout'), 20000)
 
   function finish(ok, reason) {
+    if (finished) return
+    finished = true
     clearTimeout(timer)
     if (reason) report.error = reason
     if (preview) {
@@ -25,9 +28,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     // A chave de sessão chega pelo comando do Tauri e o motor a aceita numa rota protegida.
     const sessao = await window.__TAURI__.core.invoke('sessao_motor')
     report.sessao = (await fetch(`${api}/diagnostics/errors`, { headers: { 'X-Clips-Kitty-Session': sessao } })).status
-    report.react = Boolean(document.querySelector('#root')?.children.length)
+    while (!document.querySelector('#root')?.children.length && !finished) {
+      await new Promise(resolve => setTimeout(resolve, 50))
+    }
+    if (finished) return
+    report.react = true
     const first = cortes[0]
-    if (!first) return finish(false, 'mesa_vazia')
+    if (!first) {
+      report.preview = 'sem_cortes'
+      return finish(Boolean(report.engine && report.react && report.sessao === 200))
+    }
 
     preview = document.createElement('video')
     preview.muted = true
@@ -43,9 +53,10 @@ document.addEventListener('DOMContentLoaded', async () => {
       report.react = Boolean(document.querySelector('#root')?.children.length)
       report.width = preview.videoWidth
       report.muted = preview.muted
+      report.preview = 'quadro_decodificado'
       finish(Boolean(report.engine && report.react && report.width > 0 && report.muted && report.sessao === 200))
     })
   } catch (error) {
-    finish(false, error.name)
+    finish(false, `${error.name}: ${error.message}`.slice(0, 300))
   }
 }, { once: true })

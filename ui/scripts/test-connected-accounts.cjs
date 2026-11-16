@@ -11,8 +11,12 @@ const source = fs.readFileSync(path.join(__dirname, '../src/renderer/src/lib/con
 const compiled = ts.transpileModule(source, {
   compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 }
 }).outputText
+const compiledPlugins = ts.transpileModule(
+  fs.readFileSync(path.join(__dirname, '../src/renderer/src/lib/plugins.ts'), 'utf8'), {
+    compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 }
+  }).outputText
 
-function client(session = 'desktop-session') {
+function client(session = 'desktop-session', tauri = false) {
   const calls = []
   const events = []
   let response = { ok: true, status: 200, json: async () => ({ ok: true }) }
@@ -20,11 +24,30 @@ function client(session = 'desktop-session') {
   const context = {
     exports: module.exports,
     require: (name) => {
+      if (name === './i18n') return { t: (message) => message }
+      if (name === './plugins') {
+        const bridge = { exports: {} }
+        vm.runInNewContext(compiledPlugins, {
+          ...context,
+          exports: bridge.exports,
+          require: (dependency) => {
+            if (dependency === 'react') return require('react')
+            // These selectors are only called by unrelated Marketplace hooks.
+            if (dependency === './marketplace' || dependency === './steps') return {}
+            return context.require(dependency)
+          }
+        })
+        return bridge.exports
+      }
       assert.equal(name, './api')
       return { API_BASE: 'http://127.0.0.1:8765' }
     },
     window: {
-      studio: { pluginSession: async () => session },
+      studio: tauri ? {} : { pluginSession: async () => session },
+      __TAURI__: tauri ? { core: { invoke: async (command) => {
+        assert.equal(command, 'sessao_motor')
+        return session
+      } } } : undefined,
       dispatchEvent: (event) => events.push(event.type)
     },
     fetch: async (url, init) => {
@@ -36,10 +59,23 @@ function client(session = 'desktop-session') {
     Event: class Event { constructor(type) { this.type = type } }
   }
   vm.runInNewContext(compiled, context)
-  return { ...module.exports, calls, events, respond: (value) => { response = value } }
+  return { ...module.exports, calls, events, respond: (value) => { response = value },
+    setSession: (value) => { session = value } }
 }
 
 async function main() {
+  // A Tauri window has no Electron preload. Both clients must use the native
+  // session bridge, including a rotated session after an engine restart.
+  const native = client('native-session', true)
+  await native.connectedAccounts.status()
+  assert.equal(native.calls[0].init.headers['X-Clips-Kitty-Session'], 'native-session')
+  native.setSession('rotated-session')
+  await native.streamWorkflows.streams('twitch:123')
+  assert.equal(native.calls[1].init.headers['X-Clips-Kitty-Session'], 'rotated-session')
+  const nativeAbsent = client('', true)
+  await assert.rejects(nativeAbsent.connectedAccounts.status(), (error) => error.code === 'no_session')
+  assert.equal(nativeAbsent.calls.length, 0)
+
   const absent = client('')
   await assert.rejects(absent.connectedAccounts.status(), /requires the Clips Kitty desktop app/)
   await assert.rejects(absent.streamWorkflows.startMonitor('twitch:123'), /requires the Clips Kitty desktop app/)

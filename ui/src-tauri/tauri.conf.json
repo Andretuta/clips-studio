@@ -4,7 +4,8 @@
   "identifier": "local.clipador.tauri",
   "version": "0.1.0",
   "build": {
-    "devUrl": "http://localhost:5173"
+    "devUrl": "http://localhost:5173",
+    "frontendDist": "../out/renderer"
   },
   "app": {
     "withGlobalTauri": true,
@@ -13,9 +14,8 @@
       "capabilities": [
         {
           "identifier": "sessao-do-motor",
-          "description": "A interface servida pelo Vite em localhost:5173 lê a chave de sessão do motor local.",
+          "description": "A interface empacotada no binário lê a chave de sessão do motor local. Sem o campo remote, a permissão vale só para o código embutido — é o caminho do app instalado.",
           "windows": ["clipador"],
-          "remote": { "urls": ["http://localhost:5173/*"] },
           "permissions": ["allow-sessao-motor"]
         }
       ]

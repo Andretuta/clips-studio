@@ -1,5 +1,6 @@
 import { t as tr } from "./i18n"
 import { API_BASE } from './api'
+import { sessionSecret } from './plugins'
 
 /** Account metadata only. OAuth credentials remain in the trusted engine. */
 export interface ConnectedAccount {
@@ -118,7 +119,7 @@ async function authenticatedRequest<T>(
   path: string,
   init: RequestInit = {}
 ): Promise<T> {
-  const session = await window.studio?.pluginSession?.()
+  const session = await sessionSecret()
   if (!session) {
     throw new AccountRequestError('Managing connected accounts requires the Clips Kitty desktop app.', 0, 'no_session')
   }

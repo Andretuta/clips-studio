@@ -69,6 +69,8 @@ A 6 Mb/s, uma hora de captura usa aproximadamente 2,7 GB por canal, antes de sob
 
 ## Verificação executada
 
+- **16/11 à tarde — revisão Tauri com Antigravity Gemini 4 Hydrogen em xhigh, integração pelo Codex.** Revisão somente leitura sobre `bea3eea` e alterações locais. Foram corrigidos: capability remota 5173 embutida no release, navegação por prefixo, divergência `cfg(debug_assertions)`/`cfg(dev)`, autenticação de contas sem ponte Tauri e falta de Rust/temporários no D: no roteiro. O instalador foi desativado por padrão. O teste do cliente reproduziu `no_session` antes da correção e passou depois; typecheck e build do frontend passaram. Build nativo, ensaio sem Vite e inspeção visual da Mesa passaram: origem `http://tauri.localhost`, sessão 200 e quadro de vídeo de 1080 px no mudo. A suíte completa do motor segue em execução com uma falha registrada e sem resultado final confirmado. Esses ajustes não encerram R01, R02 nem o achado Electron R03. Detalhes na [spec 01](../01-Arquitetura/01-desktop-e-api.md).
+
 - **100 testes do motor** passaram no primeiro subconjunto. A suíte de Mesa, eventos, editor e publicação teve **213 aprovados e seis falhas**. As falhas são do carregamento da tradução no teste do painel, registradas no R17. **68 testes da Cola** e o `npm run typecheck` passaram.
 - Verifiquei a ACL efetiva e o listener do motor sem abrir os arquivos de credenciais. Rodei auditorias de versão sem atualizar o ambiente do Clipador.
 - O levantamento fica no repositório local. O fork público está com Issues desativado e não há tracker configurado no projeto que abrange motor e Cola.

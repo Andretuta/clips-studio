@@ -17,6 +17,8 @@ O modo restrito foi desativado neste cofre para permitir plugins da comunidade. 
 
 ## Integrações externas
 
+**Antigravity no T3 (16/11).** Gemini 4 Hydrogen foi delegado com `thinking_level: xhigh` para revisão somente leitura do Tauri e da sessão. O Codex principal integra os achados, executa os testes e atualiza o cofre; o revisor não disputa arquivos com os implementadores. A evidência está na [spec 01](../01-Arquitetura/01-desktop-e-api.md) e na [auditoria](../90-Auditorias/rev-code-review.md).
+
 A execução de plugins da comunidade está habilitada para este cofre. Nenhuma conta de armazenamento, GitHub, IA externa ou sincronização foi conectada aqui. Conexões com esses serviços dependem de escolher o provedor e autorizar a conta dentro do próprio serviço.
 
 > **Manutenção do Kanban:** o catálogo oficial atualmente indica que o plugin está procurando novos mantenedores. Seus quadros permanecem em Markdown no cofre, mesmo que no futuro você troque de plugin.
