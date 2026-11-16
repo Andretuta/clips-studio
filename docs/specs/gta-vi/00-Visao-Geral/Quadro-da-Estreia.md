@@ -47,6 +47,7 @@ kanban-plugin: board
 
 ## Feito
 
+- [x] Claude e Codex na mesma raiz pelo T3: projeto registrado em `D:\clipador-gta6` com os botões "Estado do cofre" e "Health do motor", protocolo de dupla no `AGENTS.md` e briefing do Codex por `.claude/hooks/estado.py` [spec](Plugins-do-Cofre.md) @{2026-11-16}
 - [x] R09: login, limite ou crédito da IA não gasta tentativa nem apaga a fonte; volta a cada 30 min (Cola 66cced8) @{2026-11-16}
 - [x] Janela Tauri com a chave de sessão do motor: aprovar, descartar e editar na Mesa; perfil WebView2 no D; `--verificar` com `sessao: 200` (672a7ce, Cola 7f04de7) @{2026-11-16}
 - [x] Duração do bloco vem da Cola (`bloco_s`) e a Mesa e o Controle desenham 300 s ou 960 s conforme o corte (353ae66, Cola 60a3131) @{2026-11-16}
@@ -54,7 +55,7 @@ kanban-plugin: board
 - [x] Trabalho do Codex commitado no branch `codex-estreia`: `clips-kitty` em 141a687 mais o cofre, e a Cola em dc23621, sem push @{2026-11-16}
 - [x] Fonte da estreia escolhida: só o garimpeiro (GTA V e VI, 50+ visualizações), sem canais fixos no gravador @{2026-11-16}
 - [x] Cofre ligado ao Claude: regras + hooks em `D:/clipador-gta6/.claude`, quadro Kanban e desenho Excalidraw @{2026-11-16}
-- [x] Testes do código atual: 215 do motor, 68 da Cola e typecheck verdes @{2026-11-16}
+- [x] Testes do código atual: 215 do motor, 70 da Cola e typecheck verdes @{2026-11-16}
 - [x] Análise visual em lotes: pico de RAM 333 → 38 MiB, tempo 3,48 → 1,61 s @{2026-11-16}
 - [x] Protótipo Tauri 2 abriu o React, listou a Mesa e tocou a prévia @{2026-11-16}
 - [x] Compilado 16:9 exportado com ordem, 1920 × 1080, 30 fps e áudio
