@@ -6,7 +6,6 @@ kanban-plugin: board
 
 ## Depende do usuário
 
-- [ ] Reiniciar a Cola para valer o garimpeiro: fechar a janela "Cola" e rodar `D:\clipador-gta6\cola\iniciar.cmd cola`. O processo de 15/11 ainda usa BaianoTV no LoL #P0 [estado](ESTADO-OPERACIONAL.md)
 - [ ] Conectar YouTube e/ou TikTok (Composio ou OAuth direto) e fazer um envio privado de ensaio #P1 [spec](../04-Mesa-e-publicacao/09-publicacao-e-contas.md)
 - [ ] Ligar a autorização de automação do plano ChatGPT se a Cola for processar sozinha #P1 [spec](../03-Producao-de-clips/05-ia-e-transcricao.md)
 - [ ] R01: rodar os 3 comandos `icacls` do estado operacional (dá controle total ao `andre`, corta a herança do D: e tira `Usuários autenticados` e `Usuários`) #P0 #R01 [estado](ESTADO-OPERACIONAL.md)
@@ -16,18 +15,20 @@ kanban-plugin: board
 
 ## A fazer · P0 (antes da estreia)
 
+- [ ] Marca CG desligada por padrão nos cortes da Cola: aprovar na Mesa sem marcar a caixa sai sem `@CortesGameroffc` (decidir: ligar por padrão na entrega da Cola) #P0 [spec](../02-Captura-e-fila/02-descoberta-de-lives.md)
 - [ ] Exigir sessão nas mutações da API (fila, publicação) e nas leituras sensíveis #P0 #R02 [spec](../01-Arquitetura/01-desktop-e-api.md)
 - [ ] Cola: tirar concatenação e envio do tique; prazos e concorrência por recurso #P0 #R04 [spec](../02-Captura-e-fila/03-gravacao-e-entrega.md)
 - [ ] Motor: reservar vaga e bytes antes de importar o bloco #P0 #R05 [spec](../02-Captura-e-fila/04-fila-e-armazenamento.md)
 - [ ] Bloco com ID estável, sem apagar quando vier sem job_id; isolar segmento corrompido; órfãos pela identidade completa #P0 #R06 [spec](../02-Captura-e-fila/03-gravacao-e-entrega.md)
 - [ ] Twitch Helix: paginação, renovar categorias, respeitar `Ratelimit-Reset` no 429; domínio exato nas URLs #P0 #R07 [spec](../02-Captura-e-fila/02-descoberta-de-lives.md)
 - [ ] Orçamento de disco e fila por tipo; compilado não tira vaga da captura #P0 #R08 [spec](../02-Captura-e-fila/04-fila-e-armazenamento.md)
-- [ ] Ensaio ponta a ponta pelo garimpeiro: 1º clipe da Twitch → tarefa → corte na Mesa → MP4 com áudio #P0 [estado](ESTADO-OPERACIONAL.md)
 - [ ] Ensaio de falhas: motor parado, fila cheia, resposta perdida — o mesmo bloco volta com uma tarefa só #P0 [spec](../05-Operacao/10-observabilidade-e-operacao.md)
 
 
 ## A fazer · P1
 
+- [ ] Whisper perdeu a fala do clipe 158: transcreveu 4,4 s de 25,5 s, e a legenda PT some depois disso #P1 [spec](../02-Captura-e-fila/02-descoberta-de-lives.md)
+- [ ] Hashtags fora do tema nos clipes do garimpeiro (#hambúrguer, #cinema): incluir o jogo (#GTA6/#GTAV) no título e nas hashtags #P1 [spec](../02-Captura-e-fila/02-descoberta-de-lives.md)
 - [ ] Corrigir os seis grupos das 119 falhas da suíte ampla: resolver i18n nos testes Node primeiro, isolar .venv/config/intérprete e verificar legendas antes de mudar expectativas #P1 [relatório](../90-Auditorias/suite-completa-2026-11-16.md)
 
 - [ ] Medir Whisper + render com um bloco real de 5 min (tempo, RAM, VRAM) #P1 [spec](../03-Producao-de-clips/05-ia-e-transcricao.md)
@@ -49,6 +50,8 @@ kanban-plugin: board
 
 ## Feito
 
+- [x] Ensaio ponta a ponta pelo garimpeiro: 2 clipes da Twitch → tarefas 74–77 → `saida/pendentes` → Mesa em 6 min; MP4 1080×1920 com áudio e karaokê verde em PT; marca CG conferida numa cópia #P0 #claude [spec](../02-Captura-e-fila/02-descoberta-de-lives.md) @{2026-11-16}
+- [x] Cola reiniciada como `andre`: o laço de 15/11 rodava como `CodexSandboxOffline` (sandbox do Codex, sem internet) e o garimpeiro dava `WinError 10013`; às 19h04 mandou 2 clipes [spec](../02-Captura-e-fila/02-descoberta-de-lives.md) @{2026-11-16}
 - [x] Motor reiniciado às 15h03 (análise em lotes e `bloco_s` ativos) e janela Tauri empacotada aberta na Mesa [estado](ESTADO-OPERACIONAL.md) @{2026-11-16}
 - [x] Tauri empacotado sem Vite, sessão local e contas conectadas; revisão Hydrogen xhigh integrada e Mesa inspecionada #P1 #codex [spec](../01-Arquitetura/01-desktop-e-api.md) (14cc0e5; Cola 27079eb) @{2026-11-16}
 
