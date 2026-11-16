@@ -1,0 +1,4 @@
+# Código dos plugins (reinstala pela loja do Obsidian) e layout da janela
+.obsidian/workspace*.json
+.obsidian/plugins/*/main.js
+.obsidian/plugins/*/styles.css
