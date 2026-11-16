@@ -15,7 +15,6 @@ kanban-plugin: board
 
 ## A fazer · P0 (antes da estreia)
 
-- [ ] Marca CG desligada por padrão nos cortes da Cola: aprovar na Mesa sem marcar a caixa sai sem `@CortesGameroffc` (decidir: ligar por padrão na entrega da Cola) #P0 [spec](../02-Captura-e-fila/02-descoberta-de-lives.md)
 - [ ] Exigir sessão nas mutações da API (fila, publicação) e nas leituras sensíveis #P0 #R02 [spec](../01-Arquitetura/01-desktop-e-api.md)
 - [ ] Cola: tirar concatenação e envio do tique; prazos e concorrência por recurso #P0 #R04 [spec](../02-Captura-e-fila/03-gravacao-e-entrega.md)
 - [ ] Motor: reservar vaga e bytes antes de importar o bloco #P0 #R05 [spec](../02-Captura-e-fila/04-fila-e-armazenamento.md)
@@ -50,6 +49,7 @@ kanban-plugin: board
 
 ## Feito
 
+- [x] Marca CG ligada por padrão nos cortes da Cola: a entrega grava `cortes_gamer_watermark: true` e a caixa já vem marcada na Mesa; 70 testes da Cola verdes #P0 #claude [spec](../02-Captura-e-fila/02-descoberta-de-lives.md) (Cola dca570b) @{2026-11-16}
 - [x] Ensaio ponta a ponta pelo garimpeiro: 2 clipes da Twitch → tarefas 74–77 → `saida/pendentes` → Mesa em 6 min; MP4 1080×1920 com áudio e karaokê verde em PT; marca CG conferida numa cópia #P0 #claude [spec](../02-Captura-e-fila/02-descoberta-de-lives.md) @{2026-11-16}
 - [x] Cola reiniciada como `andre`: o laço de 15/11 rodava como `CodexSandboxOffline` (sandbox do Codex, sem internet) e o garimpeiro dava `WinError 10013`; às 19h04 mandou 2 clipes [spec](../02-Captura-e-fila/02-descoberta-de-lives.md) @{2026-11-16}
 - [x] Motor reiniciado às 15h03 (análise em lotes e `bloco_s` ativos) e janela Tauri empacotada aberta na Mesa [estado](ESTADO-OPERACIONAL.md) @{2026-11-16}
