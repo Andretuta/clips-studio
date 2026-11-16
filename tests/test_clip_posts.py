@@ -254,7 +254,15 @@ def _panel(tmp_path, body: str, data):
         pytest.skip("Node isn't available")
     lib = Path(__file__).resolve().parent.parent / "ui" / "src" / "renderer" / "src" / "lib"
     module = tmp_path / "uploadpost.ts"
-    module.write_text((lib / "uploadpost.ts").read_text(encoding="utf-8"), encoding="utf-8")
+    source = (lib / "uploadpost.ts").read_text(encoding="utf-8")
+    # The real lib/i18n.ts needs Vite (JSON locales, localStorage). These cases check the
+    # panel's logic on the English source strings, so t() here only fills {0}, {1}, ...
+    module.write_text(source.replace('from "./i18n"', 'from "./i18n.ts"'), encoding="utf-8")
+    (tmp_path / "i18n.ts").write_text(
+        "export function t(source: string, ...values: unknown[]): string {\n"
+        "  return source.replace(/\\{(\\d+)\\}/g, (token, i: string) =>\n"
+        "    Number(i) < values.length ? String(values[Number(i)]) : token)\n"
+        "}\n", encoding="utf-8")
     script = (
         f"const m = await import({json.dumps(module.as_uri())});"
         f"const data = {json.dumps(data)};"
