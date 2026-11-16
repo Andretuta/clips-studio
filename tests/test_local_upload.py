@@ -174,3 +174,31 @@ def test_a_slow_source_is_converted_in_the_job(api, tmp_path):
     path = _h265(tmp_path)
     convert_slow_source(SimpleNamespace(path=path, video_id="local_x"), load_config(BUNDLED_CONFIG))
     assert source_codec(path) == "h264"
+
+
+def test_reposting_same_local_file_recovers_queued_job_even_when_queue_full(api, tmp_path):
+    from core import queue
+
+    client, _ = api
+    path = _video(tmp_path, "640x360")
+    first = client.post("/videos/local", json={"path": path}).json()
+    job_id, video_id = first["job_id"], first["video_id"]
+
+    # Fill the remaining queue capacity up to MAX_ACTIVE.
+    for i in range(queue.MAX_ACTIVE - 1):
+        res = client.post("/jobs", json={"url": f"https://www.youtube.com/watch?v=testFill{i:03d}"})
+        assert res.status_code == 200 and res.json()["job_id"]
+
+    # Queue is full for new videos, yet retrying the same block recovers its job_id.
+    new_vid = client.post("/jobs", json={"url": "https://www.youtube.com/watch?v=overflow999"})
+    assert new_vid.status_code == 409
+
+    retry_local = client.post("/videos/local", json={"path": path})
+    assert retry_local.status_code == 200
+    assert retry_local.json() == {
+        "job_id": None, "already_queued": True, "video_id": video_id, "queued_job_id": job_id,
+    }
+    retry_url = client.post("/jobs", json={"url": "https://www.youtube.com/watch?v=testFill000"})
+    assert retry_url.status_code == 200
+    assert retry_url.json()["already_queued"] is True and isinstance(retry_url.json()["queued_job_id"], int)
+

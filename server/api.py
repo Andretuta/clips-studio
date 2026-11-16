@@ -1054,18 +1054,20 @@ def create_app(config: dict, settings_path: Path) -> FastAPI:
         payload = _process_options(body, {"url": body.url, "force": body.force}, data_dir=data_dir)
         d = db()
         try:
+            # Same video already waiting or running: with a queue the likely
+            # mistake is pasting a link twice into a batch, and processing it
+            # twice costs an hour and produces duplicate clips. Checked before
+            # capacity so a retry whose first response was lost recovers its
+            # queued_job_id even when that job took the last slot.
+            existing = queue.duplicate_of(d, vid) if vid else None
+            if existing is not None:
+                return {"job_id": None, "already_queued": True, "video_id": vid,
+                        "queued_job_id": existing}
             if queue.capacity(d) <= 0:
                 raise HTTPException(
                     409,
                     f"the queue is full ({queue.MAX_ACTIVE} videos) — let one finish or remove one first",
                 )
-            # Same video already waiting or running: with a queue the likely
-            # mistake is pasting a link twice into a batch, and processing it
-            # twice costs an hour and produces duplicate clips.
-            existing = queue.duplicate_of(d, vid) if vid else None
-            if existing is not None:
-                return {"job_id": None, "already_queued": True, "video_id": vid,
-                        "queued_job_id": existing}
             # `identify` returns None for anything without an extractable
             # video id (a channel page, a live URL, a typo). The column is NOT
             # NULL, so passing None through turns a perfectly ordinary link
@@ -1171,6 +1173,12 @@ def create_app(config: dict, settings_path: Path) -> FastAPI:
             # two seconds with nothing made and no word why (#98).
             if not body.force and not body.longform and d.shorts_made(vid):
                 return {"job_id": None, "already_processed": True, "video_id": vid}
+            # Same local block already waiting or running: return its job id
+            # instead of queueing a second run (e.g. Cola retry after timeout).
+            existing = queue.duplicate_of(d, vid)
+            if existing is not None:
+                return {"job_id": None, "already_queued": True, "video_id": vid,
+                        "queued_job_id": existing}
             if queue.capacity(d) <= 0:
                 raise HTTPException(
                     409,
