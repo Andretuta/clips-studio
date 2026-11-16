@@ -91,7 +91,15 @@ def test_lists_pending_cuts_best_score_first(client, saida):
     primeiro = body["cortes"][0]
     assert primeiro["titulo"] == "titulo kick_b_2"
     assert primeiro["nota"] == 74
-    assert primeiro["live"] == {"bloco": "18:25", "inicio_s": 320, "fim_s": 356}
+    assert primeiro["live"] == {"bloco": "18:25", "inicio_s": 320, "fim_s": 356, "bloco_s": 960}
+
+
+def test_live_position_uses_the_block_length_the_recorder_wrote(client, saida):
+    corte(pendentes(saida), "kick_a_1", inicio=20, fim=50, bloco_s=300)
+
+    assert client.get("/mesa/cortes").json()["cortes"][0]["live"]["bloco_s"] == 300
+    bloco = client.get("/mesa/controle").json()["lives"][0]["blocos"][0]
+    assert bloco["dur_s"] == 300
 
 
 def test_says_whether_the_clip_is_still_in_the_editor(client, saida):
@@ -266,6 +274,7 @@ def test_todays_lives_group_cuts_by_streamer_and_block(client, saida):
     assert [lv["streamer"] for lv in lives] == ["jhowrj"]
     blocos = lives[0]["blocos"]
     assert [b["inicio"] for b in blocos] == ["18:25", "18:41"]
+    assert [b["dur_s"] for b in blocos] == [960, 960]  # cortes antigos, sem bloco_s: blocos de 16 min
     primeiro = {c["nome"]: c for c in blocos[0]["cortes"]}
     assert primeiro["kick_a_1"] == {"nome": "kick_a_1", "inicio_s": 320, "fim_s": 356, "nota": 70,
                                     "estado": "pendente"}

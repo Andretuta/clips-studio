@@ -2,7 +2,7 @@ import { t as tr } from "../lib/i18n"
 import { useEffect, useState } from 'react'
 import { api } from '../lib/api'
 import { t } from '../lib/i18n'
-import { BLOCO_S, FAIXA_CHIP, FAIXA_PONTO, faixa, mesa, type ControleState } from '../lib/mesa'
+import { FAIXA_CHIP, FAIXA_PONTO, faixa, mesa, type ControleState } from '../lib/mesa'
 import { formatQueueEta } from '../lib/queue'
 import type { QueueSnapshot } from '../lib/types'
 
@@ -18,6 +18,9 @@ const minutos = (hhmm: string): number => {
   const [h, m] = hhmm.split(':').map(Number)
   return h * 60 + m
 }
+
+// An engine started before dur_s existed doesn't send it; its cuts all came from 16-minute blocks.
+const durMin = (b: { dur_s?: number }): number => (b.dur_s ?? 960) / 60
 const hora = (min: number): string =>
   `${String(Math.floor(min / 60) % 24).padStart(2, '0')}:${String(Math.round(min) % 60).padStart(2, '0')}`
 
@@ -105,7 +108,7 @@ export default function Controle({ onOpenMesa, onOpenQueue }: Props): JSX.Elemen
   let eixoFim = 0
   if (inicios.length) {
     eixoIni = Math.floor(Math.min(...inicios) / 15) * 15
-    eixoFim = Math.max(...inicios) + BLOCO_S / 60
+    eixoFim = Math.max(...lives.flatMap((lv) => lv.blocos.map((b) => minutos(b.inicio) + durMin(b))))
     if (gravando.length) eixoFim = Math.max(eixoFim, agoraMin)
     eixoFim = Math.ceil(eixoFim / 15) * 15
   }
@@ -217,7 +220,7 @@ export default function Controle({ onOpenMesa, onOpenQueue }: Props): JSX.Elemen
                           <div
                             title={`${b.inicio} · ${b.cortes.length}`}
                             className="absolute inset-y-0 rounded-lg border border-raised bg-raised/50 px-2 py-1 text-[11px] font-semibold text-muted overflow-hidden whitespace-nowrap"
-                            style={{ left: pos(ini), width: tr("calc({0}% - 4px)", (100 * (BLOCO_S / 60)) / span) }}
+                            style={{ left: pos(ini), width: tr("calc({0}% - 4px)", (100 * durMin(b)) / span) }}
                           >
                             {span <= 240 && `${b.inicio} · ${b.cortes.length}`}
                           </div>

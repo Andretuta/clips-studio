@@ -13,6 +13,8 @@ export interface PosicaoLive {
   bloco: string
   inicio_s: number
   fim_s: number
+  /** Length of that block in seconds (960 for cuts older than the 4 + 1 min blocks). */
+  bloco_s: number
 }
 
 export interface Corte {
@@ -66,7 +68,7 @@ export interface CorteNaLive {
 export interface Live {
   streamer: string
   plataforma: string | null
-  blocos: { inicio: string; cortes: CorteNaLive[] }[]
+  blocos: { inicio: string; dur_s: number; cortes: CorteNaLive[] }[]
 }
 
 export type ControleState =
@@ -81,9 +83,6 @@ export interface Edicao {
   cortes_gamer_watermark?: boolean
   cortes_gamer_style?: CortesGamerStyle
 }
-
-// ponytail: the recorder's block length (16 min); read it from the engine if it ever changes.
-export const BLOCO_S = 960
 
 export const DESTINOS = [
   { id: 'tiktok', label: 'TikTok' },

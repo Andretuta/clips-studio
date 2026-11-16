@@ -4,7 +4,6 @@ import { t } from '../lib/i18n'
 import { CortesGamerOverlay, CortesGamerSliders, CortesGamerToggle, DEFAULT_CORTES_GAMER_STYLE } from '../components/CortesGamerWatermark'
 import type { CortesGamerStyle } from '../lib/types'
 import {
-  BLOCO_S,
   DESTINOS,
   FAIXA_CHIP,
   FAIXA_PONTO,
@@ -242,6 +241,7 @@ export default function Mesa({ target, onTargetConsumed, onOpenInStudio }: Props
   const marcas = atual?.live
     ? cortes.filter((c) => c.streamer === atual.streamer && c.live?.bloco === atual.live?.bloco)
     : []
+  const blocoS = atual?.live?.bloco_s ?? 960
 
   return (
     <div className="flex-1 flex flex-col min-h-0">
@@ -346,7 +346,7 @@ export default function Mesa({ target, onTargetConsumed, onOpenInStudio }: Props
                   <div className="flex justify-between text-[11px] text-muted">
                     <span>{atual.live.bloco}</span>
                     <span>{t('Where it came from in the live')}</span>
-                    <span>{somaHora(atual.live.bloco, BLOCO_S)}</span>
+                    <span>{somaHora(atual.live.bloco, blocoS)}</span>
                   </div>
                   <div className="relative h-[18px] rounded-md bg-raised">
                     {marcas.map((c) => (
@@ -357,8 +357,8 @@ export default function Mesa({ target, onTargetConsumed, onOpenInStudio }: Props
                         onClick={() => setNome(c.nome)}
                         className="absolute top-1 bottom-1 min-w-[3px] rounded-sm"
                         style={{
-                          left: `${(100 * (c.live?.inicio_s ?? 0)) / BLOCO_S}%`,
-                          width: `${(100 * ((c.live?.fim_s ?? 0) - (c.live?.inicio_s ?? 0))) / BLOCO_S}%`,
+                          left: `${(100 * (c.live?.inicio_s ?? 0)) / blocoS}%`,
+                          width: `${(100 * ((c.live?.fim_s ?? 0) - (c.live?.inicio_s ?? 0))) / blocoS}%`,
                           background: c.nome === atual.nome ? 'var(--color-accent)' : FAIXA_PONTO[faixa(c.nota)],
                           opacity: c.nome === atual.nome ? 1 : 0.55
                         }}

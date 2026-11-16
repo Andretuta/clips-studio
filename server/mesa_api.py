@@ -67,7 +67,9 @@ def _posicao(d: dict) -> dict | None:
     m = ORIGEM.search(str(d.get("arquivo_original") or ""))
     if not m:
         return None
-    return {"data": m["data"], "bloco": f"{m['hh']}:{m['mm']}", "inicio_s": int(m["ini"]), "fim_s": int(m["fim"])}
+    # bloco_s: the Cola writes it since the 4 + 1 min blocks; older cuts came from 16-minute blocks.
+    return {"data": m["data"], "bloco": f"{m['hh']}:{m['mm']}", "inicio_s": int(m["ini"]), "fim_s": int(m["fim"]),
+            "bloco_s": int(d.get("bloco_s") or 960)}
 
 
 def _hoje() -> str:
@@ -102,7 +104,7 @@ def install(app: FastAPI, *, config: dict, db, data_dir, session_secret: str) ->
 
     def view(nome: str, d: dict, no_editor: bool) -> dict:
         pos = _posicao(d)
-        live = {k: pos[k] for k in ("bloco", "inicio_s", "fim_s")} if pos else None
+        live = {k: pos[k] for k in ("bloco", "inicio_s", "fim_s", "bloco_s")} if pos else None
         return {"nome": nome, **{k: d.get(k) for k in CAMPOS}, "no_editor": no_editor, "live": live}
 
     def pendentes() -> list[dict]:
@@ -265,8 +267,9 @@ def install(app: FastAPI, *, config: dict, db, data_dir, session_secret: str) ->
                     "streamer": d.get("streamer") or "?", "plataforma": d.get("plataforma"), "blocos": {}})
                 live["blocos"].setdefault(pos["bloco"], []).append(
                     {"nome": j.stem, "inicio_s": pos["inicio_s"], "fim_s": pos["fim_s"], "nota": d.get("nota"),
-                     "estado": estado})
-        return [{**lv, "blocos": [{"inicio": b, "cortes": sorted(cs, key=lambda c: c["inicio_s"])}
+                     "estado": estado, "bloco_s": pos["bloco_s"]})
+        return [{**lv, "blocos": [{"inicio": b, "dur_s": max(c.pop("bloco_s") for c in cs),
+                                   "cortes": sorted(cs, key=lambda c: c["inicio_s"])}
                                   for b, cs in sorted(lv["blocos"].items())]}
                 for _, lv in sorted(por_streamer.items())]
 
