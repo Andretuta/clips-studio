@@ -305,6 +305,28 @@ def test_nested_shapes_are_compared_field_by_field(old, new, ok):
 # ---- what the stable calls do ------------------------------------------------
 
 
+@pytest.mark.parametrize("origin, allowed", [
+    ("http://localhost:5173", True),
+    ("http://127.0.0.1:5173", True),
+    ("http://tauri.localhost", True),
+    ("https://attacker.example", False),
+])
+def test_cors_allows_desktop_and_dev_origins_only(client, origin, allowed):
+    preflight = client.options("/jobs", headers={
+        "Origin": origin,
+        "Access-Control-Request-Method": "POST",
+        "Access-Control-Request-Headers": "content-type,x-clips-kitty-session",
+    })
+    assert preflight.status_code == (200 if allowed else 400)
+    response = client.get("/health", headers={"Origin": origin})
+    assert response.status_code == 200
+    for result in (preflight, response):
+        assert result.headers.get("access-control-allow-origin") == (origin if allowed else None)
+    if allowed:
+        assert "POST" in preflight.headers["access-control-allow-methods"].split(", ")
+        assert "x-clips-kitty-session" in preflight.headers["access-control-allow-headers"]
+
+
 def test_health_reports_the_api_version(client):
     from server.api import API_VERSION
 
