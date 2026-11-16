@@ -6,7 +6,6 @@ kanban-plugin: board
 
 ## Depende do usuário
 
-- [ ] Reiniciar o motor para ativar `c6ede52` (duplicata antes de fila cheia) e `35a226b` (Whisper beam 5 + VAD 0,3) #P0 [estado](ESTADO-OPERACIONAL.md)
 - [ ] Conectar YouTube e/ou TikTok (Composio ou OAuth direto) e fazer um envio privado de ensaio #P1 [spec](../04-Mesa-e-publicacao/09-publicacao-e-contas.md)
 - [ ] Ligar a autorização de automação do plano ChatGPT se a Cola for processar sozinha #P1 [spec](../03-Producao-de-clips/05-ia-e-transcricao.md)
 - [ ] R01: rodar os 3 comandos `icacls` do estado operacional (dá controle total ao `andre`, corta a herança do D: e tira `Usuários autenticados` e `Usuários`) #P0 #R01 [estado](ESTADO-OPERACIONAL.md)
@@ -46,6 +45,7 @@ kanban-plugin: board
 
 ## Feito
 
+- [x] Motor reiniciado às 20h39 com `c6ede52` e `35a226b`, como `andre`, pelo laço do `iniciar.cmd` #P0 #claude [estado](ESTADO-OPERACIONAL.md) @{2026-11-16}
 - [x] Revisão da rodada Hydrogen: guarda de resposta perdida corrigida (adotava job alheio), custo do Whisper medido em bloco de 5 min e Cola recarregada #P0 #claude [spec](../05-Operacao/10-observabilidade-e-operacao.md) (Cola c6093ab) @{2026-11-16}
 - [x] Consumo Electron × Tauri medido na Mesa: memória privada 805 → 352 MiB, processos 15 → 9, runtime 259 → 9 MiB #P1 #claude [spec](../01-Arquitetura/01-desktop-e-api.md) (afbb0a1) @{2026-11-16}
 - [x] Ensaio de falhas: motor parado, fila cheia, resposta perdida — o mesmo bloco volta com uma tarefa só #P0 #antigravity [spec](../05-Operacao/10-observabilidade-e-operacao.md) (`c6ede52`; Cola `5ab6354`) @{2026-11-16}
