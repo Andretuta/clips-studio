@@ -60,7 +60,8 @@ def _suggestion_promise() -> str:
     """The one sentence that says when a suggested edit reaches a clip, as
     the app shows it (ui/src/renderer/src/lib/marketplace.ts)."""
     marketplace = (ROOT / "ui" / "src" / "renderer" / "src" / "lib" / "marketplace.ts").read_text(encoding="utf-8")
-    m = re.search(r"export const SUGGESTION_PROMISE =\s*'([^']*)'", marketplace)
+    # The i18n pass wraps the sentence in tr("…"); older builds had a bare '…'.
+    m = re.search(r"export const SUGGESTION_PROMISE =\s*(?:tr\()?[\"']([^\"']*)[\"']", marketplace)
     assert m, "SUGGESTION_PROMISE is not in marketplace.ts"
     return m.group(1)
 
