@@ -67,3 +67,26 @@ A solução deve manter prévias no mudo e interfaces em português do Brasil. A
 - Aprovação, descarte, publicação, importação e OAuth não foram executados neste aceite. O ensaio de mídia usa um elemento de vídeo silenciado próprio; a captura visual comprova a Mesa montada com a prévia, sem substituir o ensaio completo do editor.
 
 Commits desta entrega: `clips-kitty 14cc0e5` (empacotamento, sessão, teste e evidências) e `cola 27079eb` (Rust e temporários no D: no lançador). Sem push.
+
+## Consumo: Electron contra Tauri (16/11/2026, 19h40)
+
+Mesma tela nos dois, a Mesa com 107 cortes. Medido pela árvore de processos de cada app, somando a raiz e todos os filhos (`Get-Process`: `PrivateMemorySize64` e `WorkingSet64`).
+
+| Medida | Electron hoje (`cola\abrir-app.cmd` → `npm run dev`) | Tauri empacotado | Diferença |
+| --- | --- | --- | --- |
+| Memória privada | 805 MiB | 352 MiB | −453 MiB (−56%) |
+| Memória residente (WS) | 964 MiB | 221 MiB | −743 MiB (−77%)¹ |
+| Processos | 15 (5 electron, 4 node, esbuild, cmd/conhost) | 9 (7 msedgewebview2, exe, conhost) | −6 |
+| Runtime do app em disco | 259 MiB (`node_modules/electron/dist`) + `node_modules` (0,50 GiB) | 9,0 MiB (`clipador-tauri.exe`, React embutido) | −250 MiB só no runtime |
+
+¹ O Tauri estava aberto em segundo plano havia horas, com o WS já aparado pelo Windows. O Electron foi medido 60 s depois de abrir. Por isso a comparação justa é a da memória privada.
+
+- **De onde vem o ganho:** comparando só o motor do navegador, os dois ficam parecidos: Electron com 362 MiB privados e WebView2 mais o exe com 345 MiB. A economia está em não precisar de Node, Vite e esbuild rodando (426 MiB privados), porque o executável já leva o frontend dentro. De quebra, a porta 5173 não fica aberta e nenhum processo pode se passar pela interface.
+- **Abertura:** o Electron mostrou a janela em 21 s, contando o `npm run dev`. O Tauri rodou o `--verificar` completo em 18 s: origem, motor, sessão 200, React e um quadro de vídeo decodificado (relatório em `cache/tauri-verificacao-1945.json`). As medidas não são equivalentes; o Tauri faz mais coisas nesse tempo.
+- **Custo, só no build:**
+  - `D:\rust`: 5,79 GiB;
+  - `cache\tauri-target`: 3,71 GiB (pode ser limpo, guardando o exe);
+  - `cache\tauri-cargo`: 0,31 GiB;
+  - perfil do WebView2: 0,18 GiB.
+- **Para liberar no C::** a cópia antiga em `C:\Users\andre\.rustup` + `.cargo` soma 1,72 GiB, já com cartão P2 no quadro.
+- **Fora do Rust, mas do mesmo plano:** a análise visual em lotes do motor (Python) caiu de 333 para 38 MiB de pico.
