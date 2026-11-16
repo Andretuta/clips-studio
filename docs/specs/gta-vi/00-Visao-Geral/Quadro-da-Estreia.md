@@ -9,7 +9,6 @@ kanban-plugin: board
 - [ ] Reiniciar a Cola para valer o garimpeiro: fechar a janela "Cola" e rodar `D:\clipador-gta6\cola\iniciar.cmd cola`. O processo de 15/11 ainda usa BaianoTV no LoL #P0 [estado](ESTADO-OPERACIONAL.md)
 - [ ] Conectar YouTube e/ou TikTok (Composio ou OAuth direto) e fazer um envio privado de ensaio #P1 [spec](../04-Mesa-e-publicacao/09-publicacao-e-contas.md)
 - [ ] Ligar a autorização de automação do plano ChatGPT se a Cola for processar sozinha #P1 [spec](../03-Producao-de-clips/05-ia-e-transcricao.md)
-- [ ] Reiniciar o motor (análise em lotes, `bloco_s` na Mesa) e abrir de novo a janela Tauri ou o app #P1 [estado](ESTADO-OPERACIONAL.md)
 - [ ] R01: rodar os 3 comandos `icacls` do estado operacional (dá controle total ao `andre`, corta a herança do D: e tira `Usuários autenticados` e `Usuários`) #P0 #R01 [estado](ESTADO-OPERACIONAL.md)
 - [ ] Opcional: apagar a cópia antiga do rustup em `C:\Users\andre\.rustup` + `.cargo` (1,6 GB) e o perfil WebView2 antigo do Tauri no C: (137 MB) #P2
 - [ ] Push para o GitHub: `gta6-melhorias` (9 commits) e o novo `codex-estreia` #P2
@@ -50,6 +49,7 @@ kanban-plugin: board
 
 ## Feito
 
+- [x] Motor reiniciado às 15h03 (análise em lotes e `bloco_s` ativos) e janela Tauri empacotada aberta na Mesa [estado](ESTADO-OPERACIONAL.md) @{2026-11-16}
 - [x] Tauri empacotado sem Vite, sessão local e contas conectadas; revisão Hydrogen xhigh integrada e Mesa inspecionada #P1 #codex [spec](../01-Arquitetura/01-desktop-e-api.md) (14cc0e5; Cola 27079eb) @{2026-11-16}
 
 - [x] Motor: aceitar a origem `http://tauri.localhost` no CORS, para a janela empacotada falar com a API #P1 #codex [spec](../01-Arquitetura/01-desktop-e-api.md) (bea3eea) @{2026-11-16}

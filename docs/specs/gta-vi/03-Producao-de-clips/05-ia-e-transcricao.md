@@ -31,6 +31,7 @@ Persistir etapas reaproveitáveis, relatar a causa de espera e retomar o process
 - Validar modelo, pesos locais e dependências CUDA no ensaio. Informar quando o processamento usar CPU, cache ou download. Validar cache pela identidade da fonte e opções de transcrição.
 - Aplicar prazos e cancelamento a chamadas externas. Classificar falhas transitórias, quota com data, login e entrada inválida. Pausar e retomar no instante apropriado à classificação.
 - Definir a política de automação do ChatGPT para o caminho agendado e para o ingresso da Cola. Respeitar limites do plano e qualquer troca de provedor autorizada.
+  - **Conferido no código em 16/11, 18h40.** A autorização de automação só é exigida quando o job chega com `origin` igual a `watch` ou `stream` (`server/jobs.py`, `_check_plan`; a recusa está em `llm/signin/chatgpt.py`, `check_job`). Esse campo só é definido por `server/automation.py` (canais vigiados) e `server/integrations.py`. O garimpeiro da Cola posta em `/jobs` sem `origin` (`cola/kitty.py`, `submit_url`), então a chave desligada **não bloqueia a estreia**. Contrapartida: os jobs da Cola rodam sem supervisão mas não se declaram assim, e o consentimento que o app pede para uso desacompanhado do plano não os vê. Isso é decisão de política do usuário, não defeito técnico.
 - Tratar título, descrição e chat como dados da fonte. O texto da análise pode recomendar cortes. Publicar ou alterar a operação exige ação apropriada em etapa própria.
 
 ## Decisões de teste
