@@ -1,3 +1,4 @@
+import { t as tr } from "../lib/i18n"
 import { t } from '../lib/i18n'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import NoClipsExplanation from '../components/NoClipsExplanation'
@@ -70,7 +71,7 @@ export default function ClipStudio({
       if (selectedClip === clipId) setSelectedClip(null)
       setClips((cur) => cur.filter((c) => c.id !== clipId)) // drop it immediately
     } catch (e) {
-      window.alert(`Could not delete: ${e instanceof Error ? e.message : String(e)}`)
+      window.alert(tr("Could not delete: {0}", e instanceof Error ? e.message : String(e)))
     }
   }
 
@@ -80,7 +81,7 @@ export default function ClipStudio({
       const updated = await api.patchClip(clip.id, { exported: !clip.exported_at })
       setClips((cur) => cur.map((c) => (c.id === updated.id ? updated : c)))
     } catch (e) {
-      window.alert(`Could not update: ${e instanceof Error ? e.message : String(e)}`)
+      window.alert(tr("Could not update: {0}", e instanceof Error ? e.message : String(e)))
     }
   }
 
@@ -210,7 +211,7 @@ export default function ClipStudio({
     for (const v of shownVideos) {
       const channel = (v.channel_name || '').trim()
       const key = v.creator_id != null ? `creator:${v.creator_id}` : channel ? `channel:${channel}` : ''
-      const label = (v.creator_name || '').trim() || channel || 'Other videos'
+      const label = (v.creator_name || '').trim() || channel || tr("Other videos")
       const group = byCreator.get(key) ?? { key, label, list: [] }
       group.list.push(v)
       byCreator.set(key, group)
@@ -284,14 +285,13 @@ export default function ClipStudio({
 
   return (
     <div className="p-6 space-y-5">
-      <h2 className="text-2xl font-bold">Clip Editor</h2>
+      <h2 className="text-2xl font-bold">{tr("Clip Editor")}</h2>
 
       <ProcessingBar />
 
       {videos.length === 0 ? (
         <div className="card text-muted text-sm">
-          No videos yet — head to the <span className="text-accent">Dashboard</span> and paste a
-          link to make clips.
+          {tr("No videos yet — head to the")} <span className="text-accent">{tr("Dashboard")}</span> {tr("and paste a link to make clips.")}
         </div>
       ) : (
         <input
@@ -363,8 +363,8 @@ export default function ClipStudio({
                 {(
                   [
                     ['all', 'All'],
-                    ['shorts', '📱 Shorts'],
-                    ['longform', '▭ Longform']
+                    ['shorts', tr("📱 Shorts")],
+                    ['longform', tr("▭ Longform")]
                   ] as const
                 ).map(([value, label]) => (
                   <button
@@ -386,11 +386,11 @@ export default function ClipStudio({
                 disabled={exportingAll || toExport.length === 0}
                 title={
                   toExport.length === 0
-                    ? 'Every clip here is already starred as exported'
-                    : `Export the ${toExport.length} clip${toExport.length === 1 ? '' : 's'} here that are not starred yet`
+                    ? tr("Every clip here is already starred as exported")
+                    : tr("Export the {0} clip{1} here that are not starred yet", toExport.length, toExport.length === 1 ? '' : 's')
                 }
               >
-                {exportingAll ? 'Exporting…' : `Export all (${toExport.length})`}
+                {exportingAll ? tr("Exporting…") : tr("Export all ({0})", toExport.length)}
               </button>
               {/* Deliberately not styled as a twin of Export beside it.
                   Export writes files you can delete; this posts publicly and
@@ -402,16 +402,16 @@ export default function ClipStudio({
                   className="btn-ghost !py-1 !px-3 text-xs"
                   onClick={() => setPublishing(true)}
                   disabled={shownClips.length === 0}
-                  title={`Publish the ${shownClips.length} clip${shownClips.length === 1 ? '' : 's'} shown here to your social accounts`}
+                  title={tr("Publish the {0} clip{1} shown here to your social accounts", shownClips.length, shownClips.length === 1 ? '' : 's')}
                 >
-                  {`Publish all (${shownClips.length}) ↗`}
+                  {tr("Publish all ({0}) ↗", shownClips.length)}
                 </button>
                 <button
                   className="btn-ghost !py-1 !px-3 text-xs"
                   onClick={() => setShowSchedule(true)}
                   title={t("When each scheduled post is due, and what actually posted")}
                 >
-                  Schedule
+                  {tr("Schedule")}
                 </button>
                 </>
               )}
@@ -454,7 +454,7 @@ export default function ClipStudio({
                 onPublish={publishReady ? () => setPublishOne(current) : undefined}
               />
             ) : (
-              <div className="card text-muted text-sm">Select a clip to preview and edit it.</div>
+              <div className="card text-muted text-sm">{tr("Select a clip to preview and edit it.")}</div>
             )}
           </div>
         </div>

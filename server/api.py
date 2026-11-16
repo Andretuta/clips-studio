@@ -30,6 +30,7 @@ from core.paths import discard, picked_file, safe_name
 from core.state import StateDB
 from server.events import broadcaster
 from server.jobs import Worker
+from video_editor.cortes_gamer import CortesGamerStyle, picture_band
 
 # Version of the supported API described in docs/API.md. Bumped only when a
 # supported endpoint changes shape, never for additions.
@@ -52,6 +53,8 @@ class JobIn(BaseModel):
     sport: dict | str | None = None  # the Sports toggle: {name, highlights, period, teams} (sports/)
     longform: dict | None = None  # {"mode": short_clips|clips_140|highlights|edited_stream}
     watermark_profile_id: int | None = None  # branding profile applied to all clips
+    cortes_gamer_watermark: bool | None = None
+    cortes_gamer_style: CortesGamerStyle | None = None
     podcast: bool | None = None   # multi-cam podcast: letterbox, no subject tracking
     vertical_live: bool | None = None  # an already-composed 9:16 live: keep its layout, no face tracking
     gaming: bool | None = None  # Gaming / Split-Screen: webcam over the game, or the game alone
@@ -95,6 +98,8 @@ class JobPatch(BaseModel):
     sport: dict | str | None = None
     longform: dict | None = None
     watermark_profile_id: int | None = None
+    cortes_gamer_watermark: bool | None = None
+    cortes_gamer_style: CortesGamerStyle | None = None
     podcast: bool | None = None
     vertical_live: bool | None = None
     gaming: bool | None = None
@@ -133,6 +138,8 @@ class BatchItemIn(BaseModel):
     sport: dict | str | None = None
     longform: dict | None = None
     watermark_profile_id: int | None = None
+    cortes_gamer_watermark: bool | None = None
+    cortes_gamer_style: CortesGamerStyle | None = None
     podcast: bool | None = None
     vertical_live: bool | None = None
     gaming: bool | None = None
@@ -186,6 +193,8 @@ class PreviewIn(BaseModel):
     crop: str | None = None             # pending layout (track/letterbox/center)
     caption_style: dict | None = None   # pending caption font/size/etc.
     watermark: dict | None = None       # pending branding config (or {} to clear)
+    cortes_gamer_watermark: bool | None = None
+    cortes_gamer_style: CortesGamerStyle | None = None
     normalize_audio: bool | None = None  # pending loudness-matching toggle
     # pending Gaming / Reaction split (gaming/run.py keys), or gaming_off to
     # preview the clip without it
@@ -248,6 +257,8 @@ class LocalVideoIn(BaseModel):
     # name, so listing them here is all that is needed.
     longform: dict | None = None
     watermark_profile_id: int | None = None
+    cortes_gamer_watermark: bool | None = None
+    cortes_gamer_style: CortesGamerStyle | None = None
     filter: str | None = None
     min_score: int | None = None
     focus: str | None = None
@@ -574,6 +585,10 @@ def _process_options(body, into: dict | None = None, data_dir: Path | None = Non
             payload[field] = choices
     if getattr(body, "watermark_profile_id", None):
         payload["watermark_profile_id"] = body.watermark_profile_id
+    if getattr(body, "cortes_gamer_watermark", None) is not None:
+        payload["cortes_gamer_watermark"] = body.cortes_gamer_watermark
+    if getattr(body, "cortes_gamer_style", None) is not None:
+        payload["cortes_gamer_style"] = body.cortes_gamer_style.model_dump()
     if getattr(body, "filter", None):
         from video.filters import is_valid
 
@@ -813,6 +828,12 @@ def create_app(config: dict, settings_path: Path) -> FastAPI:
 
     desktop_session = plugins_api.install(app, data_dir=data_dir, config=config, app_version=app_version)
 
+    from server import diagnostics_api
+
+    recorder_log = (config.get("diagnostics") or {}).get("recorder_log")
+    diagnostics_api.install(app, data_dir=data_dir, recorder_log=Path(recorder_log) if recorder_log else None,
+                            session_secret=desktop_session)
+
     # Account connections belong to the desktop engine. Watches, the UI and
     # other integrations share this service; no plugin implements OAuth.
     from server import connected_accounts_api
@@ -840,6 +861,11 @@ def create_app(config: dict, settings_path: Path) -> FastAPI:
     from server import mesa_api
 
     mesa_api.install(app, config=config, db=db, data_dir=data_dir, session_secret=desktop_session)
+
+    from server import compilation_api, composio_api
+
+    compilation_api.install(app, config=config, db=db, data_dir=data_dir, worker=worker)
+    composio_api.install(app, db=db, data_dir=data_dir, publish_worker=publish_worker)
 
     # Streamer integrations such as the OBS plugin: hand over a finished stream,
     # find its VOD, report progress. Its own module for the same reason.
@@ -1947,6 +1973,10 @@ def create_app(config: dict, settings_path: Path) -> FastAPI:
         if body.watermark is not None:
             # {} clears the watermark for this clip; a dict sets it.
             opts["watermark"] = body.watermark or None
+        if body.cortes_gamer_watermark is not None:
+            opts["cortes_gamer_watermark"] = body.cortes_gamer_watermark
+        if body.cortes_gamer_style is not None:
+            opts["cortes_gamer_style"] = body.cortes_gamer_style.model_dump()
         if body.normalize_audio is not None:
             opts["normalize_audio"] = body.normalize_audio
         if body.gaming_off:
@@ -2229,6 +2259,10 @@ def create_app(config: dict, settings_path: Path) -> FastAPI:
             for word in words_in_clip(seg.get("words") or (), row["start_s"], row["end_s"])
         ]}
 
+    @app.get("/media/{clip_id}/picture")
+    def media_picture(clip_id: int):
+        return {"band": picture_band(Path(media(clip_id).path))}
+
     @app.get("/media/{clip_id}")
     def media(clip_id: int):
         d = db()
@@ -2504,6 +2538,12 @@ def create_app(config: dict, settings_path: Path) -> FastAPI:
         return exported
 
     # ---- watermark & branding ------------------------------------------------
+
+    @app.get("/branding/cortes-gamer.png")
+    def cortes_gamer_badge():
+        from video_editor.cortes_gamer import BADGE
+
+        return FileResponse(BADGE, media_type="image/png")
 
     @app.get("/branding")
     def list_branding():

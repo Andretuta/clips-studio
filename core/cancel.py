@@ -9,6 +9,7 @@ progress hook and render loop), raising CancelledError to unwind cleanly.
 import subprocess
 import threading
 import time
+from collections.abc import Callable
 
 _lock = threading.Lock()
 _cancelled: set[str] = set()
@@ -96,11 +97,14 @@ def wait(thread: threading.Thread, timeout: float | None = None, video_id: str |
         thread.join(left)
 
 
-def run(cmd: list[str]) -> subprocess.CompletedProcess:
+def run(
+    cmd: list[str], *, consume_stdout: Callable[[bytes], None] | None = None
+) -> subprocess.CompletedProcess:
     """subprocess.run(cmd, capture_output=True) for a long FFmpeg pass,
     except that the process is stopped and CancelledError raised as soon as
     the video being processed is cancelled, rather than decoding the rest of
-    a long video for nobody."""
+    a long video for nobody. A stdout consumer receives chunks as they arrive
+    and leaves CompletedProcess.stdout empty."""
     proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     errors: list[bytes] = []
     reader = threading.Thread(target=lambda: errors.append(proc.stderr.read()), daemon=True)
@@ -111,11 +115,15 @@ def run(cmd: list[str]) -> subprocess.CompletedProcess:
             chunk = proc.stdout.read1(1 << 20)
             if not chunk:
                 break
-            chunks.append(chunk)
             check_active()
-    except CancelledError:
+            if consume_stdout is None:
+                chunks.append(chunk)
+            else:
+                consume_stdout(chunk)
+    except BaseException:
         proc.kill()
         proc.wait()
+        reader.join(5)
         raise
     proc.wait()
     reader.join(5)

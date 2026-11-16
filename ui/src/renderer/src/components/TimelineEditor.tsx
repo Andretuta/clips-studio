@@ -1,3 +1,4 @@
+import { t as tr } from "../lib/i18n"
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { api } from '../lib/api'
 import { t } from '../lib/i18n'
@@ -13,6 +14,7 @@ import type {
   TranslationPreview,
   UsedSuggestions,
   WatermarkConfig,
+  CortesGamerStyle,
   Word
 } from '../lib/types'
 import FeatureBoundary from './FeatureBoundary'
@@ -44,6 +46,7 @@ import { PRESETS } from '../lib/gamingLayout'
 import { compactEdits, fixSpeakers, groupWords, paintTurns, tagLines } from '../lib/speakerTurns'
 import MultilingualExport from './MultilingualExport'
 import WatermarkControls, { DEFAULT_WATERMARK } from './WatermarkControls'
+import { CortesGamerSliders, CortesGamerToggle, DEFAULT_CORTES_GAMER_STYLE } from './CortesGamerWatermark'
 import {
   Badge,
   Ban,
@@ -84,13 +87,13 @@ type Tab =
   | 'youtube'
   | 'uploadpost'
 const TABS: { id: Tab; label: string; icon: JSX.Element }[] = [
-  { id: 'captions', label: 'Captions', icon: <span className="font-bold text-[11px] leading-none">Aa</span> },
-  { id: 'subtitles', label: 'Subtitles', icon: <span className="font-bold text-[11px] leading-none">文</span> },
-  { id: 'audio', label: 'Audio', icon: <Note /> },
-  { id: 'motion', label: 'Effects', icon: <Zap /> },
-  { id: 'watermark', label: 'Watermark', icon: <Badge /> },
-  { id: 'color', label: 'Color', icon: <Palette /> },
-  { id: 'ai', label: 'AI edit', icon: <Sparkle /> }
+  { id: 'captions', label: tr("Captions"), icon: <span className="font-bold text-[11px] leading-none">Aa</span> },
+  { id: 'subtitles', label: tr("Subtitles"), icon: <span className="font-bold text-[11px] leading-none">文</span> },
+  { id: 'audio', label: tr("Audio"), icon: <Note /> },
+  { id: 'motion', label: tr("Effects"), icon: <Zap /> },
+  { id: 'watermark', label: tr("Watermark"), icon: <Badge /> },
+  { id: 'color', label: tr("Color"), icon: <Palette /> },
+  { id: 'ai', label: tr("AI edit"), icon: <Sparkle /> }
 ]
 
 /** Appended only when YouTube publishing is switched on in Settings.
@@ -112,7 +115,7 @@ const YOUTUBE_TAB: { id: Tab; label: string; icon: JSX.Element } = {
  *  connected" is an advertisement, not a feature. */
 const UPLOADPOST_TAB: { id: Tab; label: string; icon: JSX.Element } = {
   id: 'uploadpost',
-  label: 'Publish',
+  label: tr("Publish"),
   icon: <span className="font-bold text-[11px] leading-none">↗</span>
 }
 
@@ -206,18 +209,18 @@ function removedRanges(keep: Range[], duration: number): Range[] {
 
 /** One line saying what a split clip's layout and webcam are. */
 function describeSplit(g: GamingSettings, pending: boolean): string {
-  const name = PRESETS[g.used_preset ?? g.preset ?? 'half']?.label ?? 'Split'
+  const name = PRESETS[g.used_preset ?? g.preset ?? 'half']?.label ?? tr("Split")
   const gameTop = g.order ? g.order === 'game_top' : g.cam_position === 'bottom'
-  const camera = `${name}, ${gameTop ? 'game on top' : 'camera on top'}`
-  const shown = g.game_fit === 'fill' ? 'zoomed to fill' : 'shown whole on a blur'
-  const game = g.game_box ? `game area drawn by you, ${shown}` : `game ${shown}`
+  const camera = `${name}, ${gameTop ? tr("game on top") : tr("camera on top")}`
+  const shown = g.game_fit === 'fill' ? tr("zoomed to fill") : tr("shown whole on a blur")
+  const game = g.game_box ? tr("game area drawn by you, {0}", shown) : tr("game {0}", shown)
   if (g.by === 'user') {
     if (g.cam === null) return `No webcam: the game fills the screen (${game}).`
     return `Webcam set by you, ${camera}, ${game}.`
   }
   if (g.by === 'creator') return `Using the split saved for this creator, ${camera}.`
-  if (pending || !g.layout) return 'The webcam is found when this clip renders.'
-  if (!g.used_cam) return 'No webcam found: the game fills the screen. Set it by hand if there is one.'
+  if (pending || !g.layout) return tr("The webcam is found when this clip renders.")
+  if (!g.used_cam) return tr("No webcam found: the game fills the screen. Set it by hand if there is one.")
   return `Webcam found automatically, ${camera}, ${game}.`
 }
 
@@ -230,6 +233,10 @@ export default function TimelineEditor({
   onTranslationPreview,
   watermark,
   setWatermark,
+  cortesGamer,
+  setCortesGamer,
+  cortesGamerStyle,
+  setCortesGamerStyle,
   tabRequest
 }: {
   clip: Clip
@@ -241,6 +248,10 @@ export default function TimelineEditor({
   onTranslationPreview: (p: TranslationPreview | null) => void
   watermark: WatermarkConfig | null
   setWatermark: (w: WatermarkConfig | null) => void
+  cortesGamer: boolean
+  setCortesGamer: (on: boolean) => void
+  cortesGamerStyle: CortesGamerStyle
+  setCortesGamerStyle: (style: CortesGamerStyle) => void
   /** Lets the editor header open a tab. `n` increments on every press so
    *  clicking the same button twice still re-opens it; activeTab lives here,
    *  and lifting it out just for one button would be a lot of plumbing. */
@@ -445,14 +456,14 @@ export default function TimelineEditor({
       const inNewMute =
         e.mutes.some(([a, b]) => tOrig >= a - 0.02 && tOrig <= b + 0.02) &&
         !(baked?.mutes ?? []).some(([a, b]) => tOrig >= a && tOrig <= b)
-      el.muted = e.mute_all || inNewMute
-      if (!el.muted) el.volume = Math.max(0, Math.min(1, e.volume))
+      // Keep the player's mute control separate from the edits being previewed.
+      const volume = e.mute_all || inNewMute ? 0 : Math.max(0, Math.min(1, e.volume))
+      if (el.volume !== volume) el.volume = volume
       el.playbackRate = Math.max(0.25, (e.speed ?? 1) / (baked?.speed ?? 1))
     }
     raf = requestAnimationFrame(tick)
     return () => {
       cancelAnimationFrame(raf)
-      el.muted = false
       el.volume = 1
       el.playbackRate = 1
     }
@@ -656,13 +667,13 @@ export default function TimelineEditor({
       })
     }
     if (ranges.length !== keep.length) push({ ...edit, keep: ranges })
-    setNotice(`Removed ${ranges.length - keep.length} pause(s)`)
+    setNotice(tr("Removed {0} pause(s)", ranges.length - keep.length))
   }
 
   const censorProfanity = (): void => {
     const flagged = words.filter((w) => PROFANITY.has(normToken(w.word)) && !wordMuted(w))
     if (flagged.length === 0) {
-      setNotice('No flagged words found in this clip')
+      setNotice(tr("No flagged words found in this clip"))
       return
     }
     push({
@@ -681,7 +692,7 @@ export default function TimelineEditor({
         )
       ]
     })
-    setNotice(`Muted ${flagged.length} flagged word(s) — audio + captions clean after Apply`)
+    setNotice(tr("Muted {0} flagged word(s) — audio + captions clean after Apply", flagged.length))
   }
 
   // A word mute silences the word and hides it in the captions. Its rules
@@ -849,7 +860,12 @@ export default function TimelineEditor({
   const styleDirty = JSON.stringify(captionStyle) !== JSON.stringify(storedStyle)
   const captionsDirty = captionsOn !== storedCaptionsOn
   const wmDirty = JSON.stringify(watermark) !== JSON.stringify(storedWatermark)
+  const storedCortesGamer = Boolean(clip.render_opts?.cortes_gamer_watermark)
+  const storedCGStyle = clip.render_opts?.cortes_gamer_style ?? DEFAULT_CORTES_GAMER_STYLE
+  const cgStyleDirty = cortesGamerStyle.size !== storedCGStyle.size || cortesGamerStyle.opacity !== storedCGStyle.opacity
+  const cortesGamerDirty = cortesGamer !== storedCortesGamer || cgStyleDirty
   const dirty =
+    cortesGamerDirty ||
     layoutDirty ||
     gamingDirty ||
     (rememberGaming && !!gaming) ||
@@ -868,6 +884,7 @@ export default function TimelineEditor({
       o: captionsOn,
       w: wordEdits,
       m: watermark,
+      cg: [cortesGamer, cortesGamerStyle],
       k: speakerDirty ? currentEdits : null
     })
   const draftStale = draftActive && draftEditJson !== pendingJson()
@@ -960,7 +977,7 @@ export default function TimelineEditor({
 
   const updatePreview = async (): Promise<void> => {
     setBusy(true)
-    setNotice('Rendering preview (real render — same framing as the export, up to a minute)…')
+    setNotice(tr("Rendering preview (real render — same framing as the export, up to a minute)…"))
     try {
       const res = await api.previewClip(
         clip.id,
@@ -971,11 +988,13 @@ export default function TimelineEditor({
         wmDirty ? (watermark ?? {}) : undefined,
         gamingDirty ? gaming : undefined,
         speakerDirty ? pendingSpeakerEdits() : undefined,
-        captionsDirty ? captionsOn : undefined
+        captionsDirty ? captionsOn : undefined,
+        cortesGamerDirty ? cortesGamer : undefined,
+        cgStyleDirty ? cortesGamerStyle : undefined
       )
       setDraftEditJson(pendingJson())
       onPreview(res.url)
-      setNotice('Preview loaded — this is exactly how the export will look')
+      setNotice(tr("Preview loaded — this is exactly how the export will look"))
     } catch (e) {
       setNotice(String(e))
     } finally {
@@ -1072,6 +1091,8 @@ export default function TimelineEditor({
     if (styleDirty) renderOpts.caption_style = captionStyle
     if (captionsDirty) renderOpts.captions = captionsOn
     if (wmDirty) renderOpts.watermark = watermark
+    if (cortesGamerDirty) renderOpts.cortes_gamer_watermark = cortesGamer
+    if (cgStyleDirty) renderOpts.cortes_gamer_style = cortesGamerStyle
     const lines = pendingCaptionLines()
     if (lines) renderOpts.caption_lines = lines
     // The whole list, always: an empty one means no fix is left.
@@ -1177,7 +1198,7 @@ export default function TimelineEditor({
     setNotice('')
     try {
       await api.rerenderClip(clip.id)
-      setNotice('Making the clip again with your saved edits — re-rendering…')
+      setNotice(tr("Making the clip again with your saved edits — re-rendering…"))
       onChanged()
     } catch (e) {
       setNotice(String(e))
@@ -1210,7 +1231,7 @@ export default function TimelineEditor({
       // when the render is done, and the editor follows it.
       backToOriginal()
       setNotice(
-        (cleared ? 'Restoring original — re-rendering…' : 'Applying edits — re-rendering…') + remembered
+        (cleared ? tr("Restoring original — re-rendering…") : tr("Applying edits — re-rendering…")) + remembered
       )
       onChanged()
     } catch (e) {
@@ -1304,7 +1325,7 @@ export default function TimelineEditor({
           e.preventDefault()
           const w = words.find((x) => playhead >= x.start - 0.05 && playhead <= x.end + 0.05)
           if (w) toggleWord(w)
-          else setNotice('No transcript word at the playhead to mute')
+          else setNotice(tr("No transcript word at the playhead to mute"))
           break
         }
         case 'Delete':
@@ -1344,7 +1365,7 @@ export default function TimelineEditor({
           >
             <div className="flex items-center justify-between mb-3">
               <p className="font-semibold inline-flex items-center gap-2">
-                <Keyboard size={16} /> Keyboard shortcuts
+                <Keyboard size={16} /> {tr("Keyboard shortcuts")}
               </p>
               <button
                 className="text-muted hover:text-ink text-lg leading-none px-1"
@@ -1357,17 +1378,17 @@ export default function TimelineEditor({
             <dl className="text-sm space-y-1.5">
               {(
                 [
-                  ['Space / K', 'Play or pause'],
-                  ['J / L', 'Back / forward 1 second'],
-                  ['← / →', 'Step 0.1s (hold Shift for 1s)'],
-                  ['S', 'Split at the playhead'],
-                  ['I', 'Trim the start to the playhead'],
-                  ['O', 'Trim the end to the playhead'],
-                  ['M', 'Mute / un-mute the word at the playhead'],
-                  ['Delete', 'Delete the section at the playhead'],
-                  ['+ / −', 'Zoom the timeline (or Ctrl+scroll on it)'],
-                  ['Ctrl + Z', 'Undo'],
-                  ['?', 'Show or hide this list']
+                  [tr("Space / K"), tr("Play or pause")],
+                  ['J / L', tr("Back / forward 1 second")],
+                  ['← / →', tr("Step 0.1s (hold Shift for 1s)")],
+                  ['S', tr("Split at the playhead")],
+                  ['I', tr("Trim the start to the playhead")],
+                  ['O', tr("Trim the end to the playhead")],
+                  ['M', tr("Mute / un-mute the word at the playhead")],
+                  [tr("Delete"), tr("Delete the section at the playhead")],
+                  ['+ / −', tr("Zoom the timeline (or Ctrl+scroll on it)")],
+                  ['Ctrl + Z', tr("Undo")],
+                  ['?', tr("Show or hide this list")]
                 ] as const
               ).map(([k, what]) => (
                 <div key={k} className="flex items-center gap-3">
@@ -1381,7 +1402,7 @@ export default function TimelineEditor({
               ))}
             </dl>
             <p className="text-[11px] text-muted/70 mt-3">
-              Shortcuts are ignored while you&apos;re typing in a text field.
+              {tr("Shortcuts are ignored while you&apos;re typing in a text field.")}
             </p>
           </div>
         </div>
@@ -1389,7 +1410,7 @@ export default function TimelineEditor({
 
       <div className="flex items-center justify-between">
         <p className="font-medium text-sm inline-flex items-center gap-1.5">
-          <Film size={15} /> Edit video
+          <Film size={15} /> {tr("Edit video")}
         </p>
         <div className="flex gap-3 text-xs items-center">
           <button
@@ -1398,7 +1419,7 @@ export default function TimelineEditor({
             title={t("Keyboard shortcuts (?)")}
             aria-label={t("Show keyboard shortcuts")}
           >
-            <Keyboard /> Shortcuts
+            <Keyboard /> {tr("Shortcuts")}
           </button>
           <button
             className="text-muted hover:text-ink disabled:opacity-40 inline-flex items-center gap-1.5"
@@ -1406,7 +1427,7 @@ export default function TimelineEditor({
             onClick={undo}
             title={t("Undo (Ctrl+Z)")}
           >
-            <UndoIcon /> Undo
+            <UndoIcon /> {tr("Undo")}
           </button>
           <button
             className="text-muted hover:text-red-400"
@@ -1418,6 +1439,8 @@ export default function TimelineEditor({
               setCaptionStyle({ ...DEFAULT_CAPTION_STYLE, ...(clip.render_opts?.caption_style ?? {}) })
               setCaptionsOn(storedCaptionsOn)
               setWatermark(clip.render_opts?.watermark ?? null)
+              setCortesGamer(storedCortesGamer)
+              setCortesGamerStyle(storedCGStyle)
               setWordEdits([])
               setEditingWord(null)
               setSpeakerEdits(null)
@@ -1431,7 +1454,7 @@ export default function TimelineEditor({
               setHistory((h) => withoutMarks(h.filter((step) => 'edit' in step)))
             }}
           >
-            Reset
+            {tr("Reset")}
           </button>
         </div>
       </div>
@@ -1452,7 +1475,7 @@ export default function TimelineEditor({
       <div className="space-y-1">
         <div className="flex items-center gap-1.5 text-xs">
           <span className="text-muted mr-auto">
-            Timeline · Ctrl+scroll to zoom{zoom > 1 ? ' · scroll to move around' : ''}
+            {tr("Timeline · Ctrl+scroll to zoom")}{zoom > 1 ? tr(" · scroll to move around") : ''}
           </span>
           <button
             className="bg-raised w-6 h-6 rounded hover:bg-raised/70 disabled:opacity-40 leading-none"
@@ -1539,7 +1562,7 @@ export default function TimelineEditor({
             {/* trim handles */}
             <div
               className="absolute top-4 bottom-0 w-2 bg-accent rounded-l-md cursor-ew-resize"
-              style={{ left: `calc(${pct(keep[0][0])} - 4px)` }}
+              style={{ left: tr("calc({0} - 4px)", pct(keep[0][0])) }}
               onPointerDown={(e) => {
                 e.stopPropagation()
                 dragging.current = 'start'
@@ -1549,7 +1572,7 @@ export default function TimelineEditor({
             />
             <div
               className="absolute top-4 bottom-0 w-2 bg-accent rounded-r-md cursor-ew-resize"
-              style={{ left: `calc(${pct(keep[keep.length - 1][1])} - 4px)` }}
+              style={{ left: tr("calc({0} - 4px)", pct(keep[keep.length - 1][1])) }}
               onPointerDown={(e) => {
                 e.stopPropagation()
                 dragging.current = 'end'
@@ -1582,21 +1605,21 @@ export default function TimelineEditor({
           onClick={() => trimToPlayhead('start')}
           title={t("Set the clip's START to the playhead (I)")}
         >
-          <TrimStart /> Trim start here
+          <TrimStart /> {tr("Trim start here")}
         </button>
         <button
           className="bg-raised px-2.5 py-1.5 rounded-md hover:bg-raised/70 inline-flex items-center gap-1.5"
           onClick={() => trimToPlayhead('end')}
           title={t("Set the clip's END to the playhead (O)")}
         >
-          <TrimEnd /> Trim end here
+          <TrimEnd /> {tr("Trim end here")}
         </button>
         <button
           className="bg-raised px-2.5 py-1.5 rounded-md hover:bg-raised/70 inline-flex items-center gap-1.5"
           onClick={splitAtPlayhead}
           title={t("Split the section at the playhead (S)")}
         >
-          <Scissors /> Split at playhead
+          <Scissors /> {tr("Split at playhead")}
         </button>
         <button
           className="bg-raised px-2.5 py-1.5 rounded-md hover:bg-raised/70 disabled:opacity-40 inline-flex items-center gap-1.5"
@@ -1604,7 +1627,7 @@ export default function TimelineEditor({
           onClick={deleteSelected}
           title={t("Delete the section the playhead is in (Delete)")}
         >
-          <Trash /> Delete section
+          <Trash /> {tr("Delete section")}
         </button>
         <button
           className="bg-raised px-2.5 py-1.5 rounded-md hover:bg-raised/70 disabled:opacity-40 inline-flex items-center gap-1.5"
@@ -1612,7 +1635,7 @@ export default function TimelineEditor({
           onClick={tightenPauses}
           title={t("Automatically remove silences longer than 0.6s")}
         >
-          <Zap /> Tighten pauses
+          <Zap /> {tr("Tighten pauses")}
         </button>
         <button
           className="bg-raised px-2.5 py-1.5 rounded-md hover:bg-raised/70 disabled:opacity-40 inline-flex items-center gap-1.5"
@@ -1620,10 +1643,10 @@ export default function TimelineEditor({
           onClick={censorProfanity}
           title={t("Mute every swear word — audio silenced and captions censored (f**k), so platforms can't flag either")}
         >
-          <Ban /> Censor swearing
+          <Ban /> {tr("Censor swearing")}
         </button>
         <span className="text-muted self-center ml-auto tabular-nums">
-          {keep.reduce((s, [a, b]) => s + (b - a), 0).toFixed(1)}s / {duration.toFixed(1)}s
+          {keep.reduce((s, [a, b]) => s + (b - a), 0).toFixed(1)}{tr("s /")} {duration.toFixed(1)}s
         </span>
       </div>
 
@@ -1632,7 +1655,7 @@ export default function TimelineEditor({
         {tabs.map((t) => {
           const changed =
             (t.id === 'captions' && (styleDirty || captionsDirty || wordEdits.length > 0 || speakerDirty)) ||
-            (t.id === 'watermark' && wmDirty) ||
+            (t.id === 'watermark' && (wmDirty || cortesGamerDirty)) ||
             (t.id === 'motion' &&
               ((edit.speed ?? 1) !== 1 || !!edit.hook || !!edit.music || layoutDirty || gamingDirty))
           return (
@@ -1669,7 +1692,7 @@ export default function TimelineEditor({
               title={t("Fix words the transcription got wrong — the burned caption text updates on Apply")}
             >
               <Pencil className="mr-1.5" />
-              Edit caption text{mode === 'text' ? ' — ON' : ''}
+              {tr("Edit caption text")}{mode === 'text' ? tr(" — ON") : ''}
             </button>
             {/* Only with "Second speaker in another colour" on for this clip. */}
             {speakerOn && words.length > 0 && (
@@ -1687,12 +1710,12 @@ export default function TimelineEditor({
                 }`}
                 title={
                   canFixSpeakers
-                    ? 'Put right who is talking: switch words to the other speaker’s colour, or back'
-                    : 'Apply once with “Second speaker in another colour” ticked, so the second voice is found. Then fix it here.'
+                    ? tr("Put right who is talking: switch words to the other speaker’s colour, or back")
+                    : tr("Apply once with “Second speaker in another colour” ticked, so the second voice is found. Then fix it here.")
                 }
               >
                 <Chat className="mr-1.5" />
-                Fix speakers{mode === 'speaker' ? ' — ON' : ''}
+                {tr("Fix speakers")}{mode === 'speaker' ? tr(" — ON") : ''}
               </button>
             )}
             {mode === 'speaker' && (
@@ -1702,7 +1725,7 @@ export default function TimelineEditor({
                   className="text-xs px-2.5 py-1 rounded-md bg-raised text-muted hover:text-ink"
                   title={t("Switch every caption of this clip: for when the wrong person was taken as the main speaker, or the whole clip is the other one")}
                 >
-                  Swap speakers
+                  {tr("Swap speakers")}
                 </button>
                 {fixedByHand && (
                   <button
@@ -1710,7 +1733,7 @@ export default function TimelineEditor({
                     className="text-xs px-2.5 py-1 rounded-md bg-raised text-muted hover:text-ink"
                     title={t("Drop every fix made by hand on this clip and go by what was heard")}
                   >
-                    Back to automatic
+                    {tr("Back to automatic")}
                   </button>
                 )}
               </>
@@ -1718,11 +1741,11 @@ export default function TimelineEditor({
             <span className="text-[11px] text-muted">
               {mode === 'speaker'
                 ? fixing.whole
-                  ? 'Click a word to switch who says its caption.'
-                  : 'Click a word to switch who says it. Shift-click switches every word up to it.'
+                  ? tr("Click a word to switch who says its caption.")
+                  : tr("Click a word to switch who says it. Shift-click switches every word up to it.")
                 : mode === 'text'
-                  ? 'Click a word below to retype it. Click the button again when done.'
-                  : 'Click a word to mute it (audio silent, caption censored).'}
+                  ? tr("Click a word below to retype it. Click the button again when done.")
+                  : tr("Click a word to mute it (audio silent, caption censored).")}
             </span>
           </div>
           <div
@@ -1752,7 +1775,7 @@ export default function TimelineEditor({
                       if (!wordBoxDone.current) keepWord(w, editingWord.value)
                     }}
                     className="text-xs mr-1 w-24 bg-raised border border-accent rounded px-1"
-                    aria-label={`Correct the word ${w.word}`}
+                    aria-label={tr("Correct the word {0}", w.word)}
                   />
                 )
               }
@@ -1787,23 +1810,23 @@ export default function TimelineEditor({
                   // through, and the two are one CSS property.
                   style={
                     theirs && !inRemoved
-                      ? { borderBottom: `2px solid ${captionStyle.second_speaker_color}`, borderRadius: 0 }
+                      ? { borderBottom: tr("2px solid {0}", captionStyle.second_speaker_color), borderRadius: 0 }
                       : undefined
                   }
                   title={
                     mode === 'speaker'
                       ? !fixable
-                        ? 'No caption holds this word'
+                        ? tr("No caption holds this word")
                         : theirs
-                          ? 'The other speaker says this — click to make it the main speaker’s'
-                          : 'The main speaker says this — click to make it the other speaker’s'
+                          ? tr("The other speaker says this — click to make it the main speaker’s")
+                          : tr("The main speaker says this — click to make it the other speaker’s")
                       : mode === 'text'
                         ? corrected
-                          ? `Caption says “${corrected.to}” — click to change`
-                          : 'Click to retype this word'
+                          ? tr("Caption says “{0}” — click to change", corrected.to)
+                          : tr("Click to retype this word")
                         : muted
-                          ? 'Un-mute this word (audio and caption come back)'
-                          : 'Mute this word — audio goes silent and the caption shows it censored (f**k)'
+                          ? tr("Un-mute this word (audio and caption come back)")
+                          : tr("Mute this word — audio goes silent and the caption shows it censored (f**k)")
                   }
                 >
                   {corrected?.to ?? w.word}
@@ -1826,9 +1849,9 @@ export default function TimelineEditor({
               checked={captionsOn}
               onChange={(e) => setCaptionsOn(e.target.checked)}
             />
-            Captions
+            {tr("Captions")}
           </label>
-          <p className="label mb-2">Caption font &amp; style</p>
+          <p className="label mb-2">{tr("Caption font &amp; style")}</p>
           <CaptionStyleControls
             idPrefix={`clip-${clip.id}`}
             style={captionStyle}
@@ -1853,12 +1876,21 @@ export default function TimelineEditor({
       {/* watermark / branding for this clip */}
       {activeTab === 'watermark' && (
         <div className="border border-raised/60 rounded-lg p-3 space-y-2">
+          <CortesGamerToggle checked={cortesGamer} onChange={setCortesGamer} />
+          {cortesGamer && <CortesGamerSliders value={cortesGamerStyle} onChange={setCortesGamerStyle} disabled={busy} />}
+          {cortesGamerDirty && (
+            <p className="text-xs text-muted">
+              {storedCortesGamer && !draftActive && 'Atualize a prévia para ver o novo ajuste. '}
+              Aplique as alterações para gravar o ajuste no MP4.
+            </p>
+          )}
+          <div className="border-t border-raised/60" />
           {!watermark ? (
             <button
               className="bg-raised px-2.5 py-1.5 rounded-md text-xs hover:bg-raised/70"
               onClick={() => setWatermark({ ...DEFAULT_WATERMARK })}
             >
-              + Add a watermark to this clip
+              {tr("+ Add a watermark to this clip")}
             </button>
           ) : (
             <>
@@ -1868,7 +1900,7 @@ export default function TimelineEditor({
                   onClick={() => setWatermark(null)}
                   title={t("Remove the watermark from this clip")}
                 >
-                  Remove watermark
+                  {tr("Remove watermark")}
                 </button>
               </div>
               <WatermarkControls
@@ -1876,7 +1908,7 @@ export default function TimelineEditor({
                 landscape={isLandscape}
                 onChange={(patch) => setWatermark({ ...(watermark ?? DEFAULT_WATERMARK), ...patch })}
               />
-              <p className="text-[11px] text-muted/70">Tip: drag it on the preview to place it exactly.</p>
+              <p className="text-[11px] text-muted/70">{tr("Tip: drag it on the preview to place it exactly.")}</p>
             </>
           )}
         </div>
@@ -1911,7 +1943,7 @@ export default function TimelineEditor({
             }
           }}
         >
-          {tightening ? 'Finding…' : 'Trim pauses & filler'}
+          {tightening ? tr("Finding…") : tr("Trim pauses & filler")}
         </button>
         {tightenNote && <span className="text-muted">{tightenNote}</span>}
         <label
@@ -1923,10 +1955,10 @@ export default function TimelineEditor({
             checked={edit.mute_all}
             onChange={(e) => push({ ...edit, mute_all: e.target.checked })}
           />
-          Mute all
+          {tr("Mute all")}
         </label>
         <label className="flex items-center gap-1.5">
-          Volume
+          {tr("Volume")}
           <input
             type="range"
             min={0}
@@ -1941,7 +1973,7 @@ export default function TimelineEditor({
         </label>
         {(['fade_in', 'fade_out'] as const).map((k) => (
           <label key={k} className="flex items-center gap-1.5">
-            {k === 'fade_in' ? 'Fade in' : 'Fade out'}
+            {k === 'fade_in' ? tr("Fade in") : tr("Fade out")}
             <select
               value={edit[k]}
               onChange={(e) => push({ ...edit, [k]: Number(e.target.value) })}
@@ -1959,20 +1991,20 @@ export default function TimelineEditor({
 
       {/* layout override (vertical Shorts only) — in the Effects tab */}
       {activeTab === 'motion' && !isLandscape && isVerticalLive && (
-        <p className="text-xs text-muted">Layout: Vertical Live keeps the stream’s own 9:16 layout.</p>
+        <p className="text-xs text-muted">{tr("Layout: Vertical Live keeps the stream’s own 9:16 layout.")}</p>
       )}
       {activeTab === 'motion' && !isLandscape && !isVerticalLive && (
         <div className="flex items-center gap-2 text-xs flex-wrap">
-          <span className="text-muted">Layout</span>
+          <span className="text-muted">{tr("Layout")}</span>
           {(
             [
-              ['track', 'Auto (AI)', 'The AI picks: subject tracking or letterbox as needed'],
-              ['letterbox', 'Letterbox', 'Force the FULL frame on a blurred backdrop — use when the crop cuts someone off'],
-              ['center', 'Center', 'Static center crop, no tracking'],
+              ['track', tr("Auto (AI)"), tr("The AI picks: subject tracking or letterbox as needed")],
+              ['letterbox', tr("Letterbox"), tr("Force the FULL frame on a blurred backdrop — use when the crop cuts someone off")],
+              ['center', tr("Center"), tr("Static center crop, no tracking")],
               [
                 'split',
-                'Gaming / Reaction',
-                'A gaming or reaction layout: the streamer’s webcam with the game or the video they’re reacting to (Split, Half, Small facecam and more)'
+                tr("Gaming / Reaction"),
+                tr("A gaming or reaction layout: the streamer’s webcam with the game or the video they’re reacting to (Split, Half, Small facecam and more)")
               ]
             ] as const
           ).map(([value, label, tip]) => (
@@ -1998,7 +2030,7 @@ export default function TimelineEditor({
             </button>
           ))}
           {(layoutDirty || gamingDirty) && (
-            <span className="text-muted">— shows in “Update preview”, saved on Apply</span>
+            <span className="text-muted">{tr("— shows in “Update preview”, saved on Apply")}</span>
           )}
         </div>
       )}
@@ -2006,9 +2038,9 @@ export default function TimelineEditor({
         <div className="flex items-center gap-2 text-xs flex-wrap">
           <span className="text-muted">{describeSplit(gaming, gamingDirty)}</span>
           <button className="btn-ghost !py-1" onClick={() => setGamingOpen(true)}>
-            Change layout…
+            {tr("Change layout…")}
           </button>
-          {rememberGaming && <span className="text-accent">Will be remembered for this creator</span>}
+          {rememberGaming && <span className="text-accent">{tr("Will be remembered for this creator")}</span>}
         </div>
       )}
       {gamingOpen && gaming && (
@@ -2030,7 +2062,7 @@ export default function TimelineEditor({
         <div className="space-y-2 text-xs">
         <div className="flex items-center gap-3 flex-wrap">
           <label className="flex items-center gap-1.5">
-            Speed
+            {tr("Speed")}
             <select
               value={edit.speed ?? 1}
               onChange={(e) => push({ ...edit, speed: Number(e.target.value) })}
@@ -2044,7 +2076,7 @@ export default function TimelineEditor({
             </select>
           </label>
           <label className="flex items-center gap-1.5 flex-1 min-w-48">
-            Hook title
+            {tr("Hook title")}
             <input
               value={edit.hook?.text ?? ''}
               placeholder={t("big top text for the first seconds, e.g. WAIT FOR IT…")}
@@ -2077,7 +2109,7 @@ export default function TimelineEditor({
         </div>
         <div className="flex items-center gap-3 flex-wrap">
           <label className="flex items-center gap-1.5 flex-1 min-w-56">
-            Music
+            {tr("Music")}
             <input
               value={edit.music?.path ?? ''}
               placeholder={t("background music — loops under the clip")}
@@ -2115,7 +2147,7 @@ export default function TimelineEditor({
             title={t("Choose a music file from your computer")}
           >
             <Folder className="mr-1.5" />
-            Browse…
+            {tr("Browse…")}
           </button>
           {edit.music && (
             <>
@@ -2138,7 +2170,7 @@ export default function TimelineEditor({
                   checked={edit.music.duck}
                   onChange={(e) => push({ ...edit, music: { ...edit.music!, duck: e.target.checked } })}
                 />
-                Duck under voice
+                {tr("Duck under voice")}
               </label>
             </>
           )}
@@ -2179,8 +2211,7 @@ export default function TimelineEditor({
         <FeatureBoundary name="Upload-Post publishing">
           {dirty ? (
             <p className="text-sm text-muted">
-              Apply your edits first — publishing sends the rendered file, so unsaved
-              trims would not be in it.
+              {tr("Apply your edits first — publishing sends the rendered file, so unsaved trims would not be in it.")}
             </p>
           ) : (
             <UploadPostPanel
@@ -2207,10 +2238,10 @@ export default function TimelineEditor({
           title={t("Renders the clip for real with ALL pending changes — same framing/zoom, tracking, captions, hook, music and speed as the final export. Can take up to a minute.")}
         >
           {busy ? (
-            'Rendering…'
+            tr("Rendering…")
           ) : (
             <span className="inline-flex items-center gap-1.5">
-              <Refresh /> Update preview
+              <Refresh /> {tr("Update preview")}
             </span>
           )}
         </button>
@@ -2219,12 +2250,12 @@ export default function TimelineEditor({
             className="text-xs text-muted hover:text-ink inline-flex items-center gap-1.5"
             onClick={backToOriginal}
           >
-            <Film /> Show rendered clip
+            <Film /> {tr("Show rendered clip")}
           </button>
         )}
         {draftStale && (
           <span className="text-xs text-yellow-400">
-            Edits changed since this draft — update the preview
+            {tr("Edits changed since this draft — update the preview")}
           </span>
         )}
       </div>
@@ -2233,15 +2264,13 @@ export default function TimelineEditor({
         className="btn-accent w-full disabled:opacity-40"
         disabled={busy || !dirty}
         onClick={apply}
-        title={dirty ? 'Re-render the clip with your changes' : 'No changes yet — edit something first'}
+        title={dirty ? tr("Re-render the clip with your changes") : tr("No changes yet — edit something first")}
       >
-        {busy ? 'Queuing…' : dirty ? 'Apply edits (re-render)' : 'Apply edits — no changes yet'}
+        {busy ? tr("Queuing…") : dirty ? tr("Apply edits (re-render)") : tr("Apply edits — no changes yet")}
       </button>
       {notice && <p className="text-xs text-muted">{notice}</p>}
       <p className="text-[11px] text-muted/70">
-        Cuts, mutes and speed are simulated instantly as you play. For the TRUE result — updated
-        caption text, hook title, music, exact framing — press “Update preview” (a real render,
-        up to a minute). Nothing is final until Apply.
+        {tr("Cuts, mutes and speed are simulated instantly as you play. For the TRUE result — updated caption text, hook title, music, exact framing — press “Update preview” (a real render, up to a minute). Nothing is final until Apply.")}
       </p>
     </div>
   )

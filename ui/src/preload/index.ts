@@ -4,6 +4,8 @@ import { contextBridge, ipcRenderer } from 'electron'
 
 contextBridge.exposeInMainWorld('studio', {
   platform: process.platform,
+  setInterfaceLanguage: (language: string): Promise<void> =>
+    ipcRenderer.invoke('interface-language', language),
   // Native audio-file picker (editor's background-music field).
   pickAudioFile: (): Promise<string | null> => ipcRenderer.invoke('pick-audio-file'),
   // Native video-file picker (Dashboard "upload a video file").

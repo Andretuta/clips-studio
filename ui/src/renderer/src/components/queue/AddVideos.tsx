@@ -1,8 +1,10 @@
+import { t as tr } from "../../lib/i18n"
 import { useEffect, useState } from 'react'
 import { api } from '../../lib/api'
 import type { CaptionStyle, JobOptions, PipelineChoice } from '../../lib/types'
 import CaptionStyleControls, { DEFAULT_CAPTION_STYLE } from '../CaptionStyleControls'
 import BrandingEditor, { setWatermarkEnabled, watermarkSelection } from '../WatermarkCard'
+import { CortesGamerSliders, DEFAULT_CORTES_GAMER_STYLE } from '../CortesGamerWatermark'
 import GamingLayoutEditor from '../GamingLayoutEditor'
 import SportFields from '../SportFields'
 import PipelineFields from '../PipelineFields'
@@ -36,11 +38,11 @@ import { t } from '../../lib/i18n'
 const DRAFT_KEY = 'queue-draft'
 
 const REASONS: Record<string, string> = {
-  already_processed: 'already processed',
-  already_queued: 'already in the queue',
-  unrecognized: 'not a link Clips Kitty recognises',
-  bad_option: 'a setting on this video was rejected',
-  queue_full: 'the queue is full — let one finish first'
+  already_processed: tr("already processed"),
+  already_queued: tr("already in the queue"),
+  unrecognized: tr("not a link Clips Kitty recognises"),
+  bad_option: tr("a setting on this video was rejected"),
+  queue_full: tr("the queue is full — let one finish first")
 }
 
 /** One video being set up. Owns its own options object, so editing this
@@ -75,6 +77,7 @@ type ToggleKey =
   | 'steps'
   | 'edit'
   | 'watermark'
+  | 'cortes_gamer_watermark'
 
 /** Each of these decides what the frame is, so only one can be on. */
 const LAYOUT_MODES = ['podcast', 'vertical_live', 'gaming', 'longform'] as const
@@ -86,72 +89,78 @@ const TOGGLES: { key: ToggleKey; label: string; hint: string; title: string }[] 
   {
     key: 'long_clips',
     label: '60s+',
-    hint: '(TikTok monetization)',
+    hint: tr("(TikTok monetization)"),
     title:
-      'TikTok monetization requires videos over 1 minute. On: this video’s clips run 61-180s. Off: a natural 10-60s.'
+      tr("TikTok monetization requires videos over 1 minute. On: this video’s clips run 61-180s. Off: a natural 10-60s.")
   },
   {
     key: 'longform',
-    label: 'Longform',
-    hint: '(16:9 clips)',
+    label: tr("Longform"),
+    hint: tr("(16:9 clips)"),
     title:
-      'Makes 16:9 clips for YouTube and X. Leave it off for 9:16 Shorts, from any video: a normal 16:9 video makes 9:16 Shorts with this off. Horizontal 1920x1080 outputs using the same AI.'
+      tr("Makes 16:9 clips for YouTube and X. Leave it off for 9:16 Shorts, from any video: a normal 16:9 video makes 9:16 Shorts with this off. Horizontal 1920x1080 outputs using the same AI.")
   },
   {
     key: 'vertical_live',
-    label: 'Vertical Live',
-    hint: '(already-vertical video)',
+    label: tr("Vertical Live"),
+    hint: tr("(already-vertical video)"),
     title:
-      'Only for a video that is already vertical (9:16). Leave it off to make 9:16 Shorts from a normal 16:9 video: that is the default. For a livestream that was already vertical when it was streamed (a YouTube vertical live, the vertical feed of a Twitch or Streamlabs dual-format stream, or a downloaded Instagram/TikTok live). Keeps the stream’s own 9:16 layout: no face tracking or reframing. The moments are still picked the usual way.'
+      tr("Only for a video that is already vertical (9:16). Leave it off to make 9:16 Shorts from a normal 16:9 video: that is the default. For a livestream that was already vertical when it was streamed (a YouTube vertical live, the vertical feed of a Twitch or Streamlabs dual-format stream, or a downloaded Instagram/TikTok live). Keeps the stream’s own 9:16 layout: no face tracking or reframing. The moments are still picked the usual way.")
   },
   {
     key: 'podcast',
-    label: 'Podcast',
-    hint: '(multi-cam)',
+    label: tr("Podcast"),
+    hint: tr("(multi-cam)"),
     title:
-      'For multi-camera podcasts (cuts between angles, several people). Frames shot by shot: each camera shot gets one steady crop centered on whoever is talking, and cuts land directly on the speaker’s face — no panning, no split screens. Leave OFF for normal one-camera streams.'
+      tr("For multi-camera podcasts (cuts between angles, several people). Frames shot by shot: each camera shot gets one steady crop centered on whoever is talking, and cuts land directly on the speaker’s face — no panning, no split screens. Leave OFF for normal one-camera streams.")
   },
   {
     key: 'gaming',
-    label: 'Gaming / Reaction',
+    label: tr("Gaming / Reaction"),
     hint: '(split-screen)',
     title:
-      'For game streams and reaction videos: the streamer’s webcam in the top half, the game (or the video they’re reacting to) in the bottom half. With no webcam, the game fills the screen. The streamer is whoever is talking, never the biggest face. Fix a clip in the editor by drawing the webcam and game area.'
+      tr("For game streams and reaction videos: the streamer’s webcam in the top half, the game (or the video they’re reacting to) in the bottom half. With no webcam, the game fills the screen. The streamer is whoever is talking, never the biggest face. Fix a clip in the editor by drawing the webcam and game area.")
   },
   {
     key: 'sport',
-    label: 'Sports',
+    label: tr("Sports"),
     hint: '(match)',
     title:
-      'For a match or a game (Soccer, Basketball): its moments (goals and saves, or dunks, threes, blocks and the reactions to them) are found from the crowd, the commentary and the scoreboard, one clip per moment with its build-up, and the 9:16 crop follows the play. Choose the sport and which moments to keep below.'
+      tr("For a match or a game (Soccer, Basketball): its moments (goals and saves, or dunks, threes, blocks and the reactions to them) are found from the crowd, the commentary and the scoreboard, one clip per moment with its build-up, and the 9:16 crop follows the play. Choose the sport and which moments to keep below.")
   },
   {
     key: 'pipeline',
-    label: 'Pipeline',
+    label: tr("Pipeline"),
     hint: '(Marketplace)',
     title:
-      'A pipeline you installed from the Marketplace finds this video’s moments its own way; Clips Kitty still cuts, frames and captions the clips. Not with Sports or Longform. Choose which pipeline below.'
+      tr("A pipeline you installed from the Marketplace finds this video’s moments its own way; Clips Kitty still cuts, frames and captions the clips. Not with Sports or Longform. Choose which pipeline below.")
   },
   {
     key: 'steps',
-    label: 'Rate & understand',
+    label: tr("Rate & understand"),
     hint: '(Marketplace)',
     title:
-      'Plugins you installed from the Marketplace look at the moments once they’re found, by Clips Kitty, Sports, Gaming scoring or a pipeline. One that understands says what happens in each moment, so the titles, descriptions and hashtags can say it. One that rates gives each moment its own score, which decides which clips are made and their order. Clips Kitty does any step you leave to it. Not with Longform.'
+      tr("Plugins you installed from the Marketplace look at the moments once they’re found, by Clips Kitty, Sports, Gaming scoring or a pipeline. One that understands says what happens in each moment, so the titles, descriptions and hashtags can say it. One that rates gives each moment its own score, which decides which clips are made and their order. Clips Kitty does any step you leave to it. Not with Longform.")
   },
   {
     key: 'edit',
-    label: 'Suggest edits',
+    label: tr("Suggest edits"),
     hint: '(Marketplace)',
     title:
-      'Plugins you installed from the Marketplace look at each clip Clips Kitty is about to make and suggest edits: cuts, mutes, fades, speed, a hook title or the layout. Suggestions wait for you in the editor. Clips Kitty doesn’t put a suggestion into a clip until you use it in the editor and apply your edits (Apply edits, or Apply edits & upload). Not with Longform.'
+      tr("Plugins you installed from the Marketplace look at each clip Clips Kitty is about to make and suggest edits: cuts, mutes, fades, speed, a hook title or the layout. Suggestions wait for you in the editor. Clips Kitty doesn’t put a suggestion into a clip until you use it in the editor and apply your edits (Apply edits, or Apply edits & upload). Not with Longform.")
+  },
+  {
+    key: 'cortes_gamer_watermark',
+    label: 'Marca d’água Cortes Gamer',
+    hint: '',
+    title: 'Grava o logo e @CortesGameroffc em pontos diferentes dentro do vídeo.'
   },
   {
     key: 'watermark',
-    label: 'Watermark',
-    hint: '(branding)',
+    label: tr("Watermark"),
+    hint: tr("(branding)"),
     title:
-      'Burn your logo / channel handle into every clip of this video. Configure the branding profile below.'
+      tr("Burn your logo / channel handle into every clip of this video. Configure the branding profile below.")
   }
 ]
 
@@ -697,6 +706,8 @@ export default function AddVideos({ onAdded }: { onAdded?: () => void }): JSX.El
       const first = editUsable.find((p) => next.gaming || p.category !== 'gaming')
       if (on && !next.edit?.length && first) next.edit = [{ id: first.id }]
       else if (!on) delete next.edit
+    } else if (key === 'cortes_gamer_watermark') {
+      next.cortes_gamer_watermark = on
     } else if (key === 'watermark') {
       const { profileId } = watermarkSelection()
       if (on && profileId) next.watermark_profile_id = profileId
@@ -837,6 +848,7 @@ export default function AddVideos({ onAdded }: { onAdded?: () => void }): JSX.El
     if (key === 'pipeline') return Boolean(o.pipeline)
     if (key === 'steps') return Boolean(o.rate?.length || o.understand?.length)
     if (key === 'edit') return Boolean(o.edit?.length)
+    if (key === 'cortes_gamer_watermark') return Boolean(o.cortes_gamer_watermark)
     return Boolean(o.watermark_profile_id)
   }
 
@@ -957,7 +969,7 @@ export default function AddVideos({ onAdded }: { onAdded?: () => void }): JSX.El
               {slot.path ? (
                 <input
                   className="input w-72 max-w-full"
-                  aria-label={`Title for video ${n + 1}`}
+                  aria-label={tr("Title for video {0}", n + 1)}
                   title={slot.path}
                   value={slot.title}
                   placeholder={t('Video title')}
@@ -967,7 +979,7 @@ export default function AddVideos({ onAdded }: { onAdded?: () => void }): JSX.El
                 <input
                   className="input w-72 max-w-full"
                   placeholder={t('Paste a YouTube, Twitch, or Kick URL…')}
-                  aria-label={`Video URL ${n + 1}`}
+                  aria-label={tr("Video URL {0}", n + 1)}
                   value={slot.url}
                   onChange={(e) =>
                     patch(slot.key, {
@@ -1035,7 +1047,7 @@ export default function AddVideos({ onAdded }: { onAdded?: () => void }): JSX.El
                     }`}
                     title={
                       needsProfile
-                        ? 'Create a branding profile below first — there is no logo to burn in yet.'
+                        ? tr("Create a branding profile below first — there is no logo to burn in yet.")
                         : onlyThePipeline
                           ? t(
                               'The only plugin you can use to rate or understand moments is this video’s Pipeline, and it can’t also be chosen here. Install or turn on another one in the Marketplace, or choose a different Pipeline.'
@@ -1081,6 +1093,15 @@ export default function AddVideos({ onAdded }: { onAdded?: () => void }): JSX.El
                 </button>
               )}
             </div>
+
+            {slot.options.cortes_gamer_watermark && (
+              <div className="mt-2">
+                <CortesGamerSliders
+                  value={slot.options.cortes_gamer_style ?? DEFAULT_CORTES_GAMER_STYLE}
+                  onChange={(style) => patchOptions(slot.key, { cortes_gamer_style: style })}
+                />
+              </div>
+            )}
 
             {slot.options.sport && offered.length > 0 && (
               <div className="flex items-center gap-3 flex-wrap mt-2">
@@ -1200,12 +1221,12 @@ export default function AddVideos({ onAdded }: { onAdded?: () => void }): JSX.El
                       // Not remembered for next time; this video still gets it.
                     }
                   }}
-                  aria-label={`Longform output type for video ${n + 1}`}
+                  aria-label={tr("Longform output type for video {0}", n + 1)}
                 >
-                  <option value="short_clips">Short Clips (up to 60s, horizontal)</option>
-                  <option value="clips_140">Clips (up to 140s — X/Twitter)</option>
-                  <option value="highlights">Highlights (best-of, 8-20 min by quality)</option>
-                  <option value="edited_stream">Edited Stream (downtime removed)</option>
+                  <option value="short_clips">{tr("Short Clips (up to 60s, horizontal)")}</option>
+                  <option value="clips_140">{tr("Clips (up to 140s — X/Twitter)")}</option>
+                  <option value="highlights">{tr("Highlights (best-of, 8-20 min by quality)")}</option>
+                  <option value="edited_stream">{tr("Edited Stream (downtime removed)")}</option>
                 </select>
                 <label
                   className="flex items-center gap-2 text-sm cursor-pointer"
@@ -1289,7 +1310,7 @@ export default function AddVideos({ onAdded }: { onAdded?: () => void }): JSX.El
                 <input
                   className="input !w-80 max-w-full"
                   placeholder={t('Where the live was streamed (optional)')}
-                  aria-label={`Original link for video ${n + 1}`}
+                  aria-label={tr("Original link for video {0}", n + 1)}
                   value={slot.sourceUrl ?? ''}
                   onChange={(e) => patch(slot.key, { sourceUrl: e.target.value })}
                 />
@@ -1331,8 +1352,8 @@ export default function AddVideos({ onAdded }: { onAdded?: () => void }): JSX.El
             disabled={!hasFiles}
             title={
               hasFiles
-                ? 'Files these uploads under this creator in your library and the Creators tab. Leave blank to skip.'
-                : 'For uploaded files only — a downloaded video brings its own channel name'
+                ? tr("Files these uploads under this creator in your library and the Creators tab. Leave blank to skip.")
+                : tr("For uploaded files only — a downloaded video brings its own channel name")
             }
             value={hasFiles ? channel : ''}
             onChange={(e) => {

@@ -1,3 +1,4 @@
+import { t as tr } from "./i18n"
 import type { StudioEvent } from './types'
 
 /** Folds WebSocket progress events into one overall job progress value
@@ -15,28 +16,28 @@ export interface JobProgress {
 }
 
 const STAGES: Record<string, { base: number; weight: number; label: string }> = {
-  download: { base: 0.0, weight: 0.15, label: 'Downloading video' },
-  downloaded: { base: 0.15, weight: 0.0, label: 'Downloaded' },
-  transcribe: { base: 0.15, weight: 0.25, label: 'Transcribing speech' },
-  signals: { base: 0.4, weight: 0.05, label: 'Analyzing audio & visuals' },
-  analyze: { base: 0.45, weight: 0.2, label: 'Finding the best moments' },
+  download: { base: 0.0, weight: 0.15, label: tr("Downloading video") },
+  downloaded: { base: 0.15, weight: 0.0, label: tr("Downloaded") },
+  transcribe: { base: 0.15, weight: 0.25, label: tr("Transcribing speech") },
+  signals: { base: 0.4, weight: 0.05, label: tr("Analyzing audio & visuals") },
+  analyze: { base: 0.45, weight: 0.2, label: tr("Finding the best moments") },
   // Ranking used to be inside `analyze`, and reported nothing. The bar
   // reached the end of analyze and sat at 70% through one LLM call per batch
   // of finalists, which on a CPU-only machine looks exactly like a crash.
-  ranking: { base: 0.65, weight: 0.05, label: 'Ranking the best moments' },
+  ranking: { base: 0.65, weight: 0.05, label: tr("Ranking the best moments") },
   // A Marketplace plugin saying what happens in the moments (Rate & understand).
-  understand: { base: 0.65, weight: 0.05, label: 'Understanding the moments' },
-  reactions: { base: 0.7, weight: 0.08, label: 'Scoring on-screen reactions' },
+  understand: { base: 0.65, weight: 0.05, label: tr("Understanding the moments") },
+  reactions: { base: 0.7, weight: 0.08, label: tr("Scoring on-screen reactions") },
   // A Marketplace plugin suggesting edits for the clips (Suggest edits).
-  edit: { base: 0.7, weight: 0.08, label: 'Suggesting edits' },
-  render: { base: 0.78, weight: 0.22, label: 'Rendering clips' }
+  edit: { base: 0.7, weight: 0.08, label: tr("Suggesting edits") },
+  render: { base: 0.78, weight: 0.22, label: tr("Rendering clips") }
 }
 
 /** A stage's label while a Marketplace plugin works in it, before its name. */
 const PLUGIN_LABELS: Record<'ranking' | 'understand' | 'edit', string> = {
-  ranking: 'Rating moments with',
-  understand: 'Understanding moments with',
-  edit: 'Suggesting edits with'
+  ranking: tr("Rating moments with"),
+  understand: tr("Understanding moments with"),
+  edit: tr("Suggesting edits with")
 }
 
 export const emptyProgress: JobProgress = {
@@ -54,7 +55,7 @@ export const progressStore: { current: JobProgress } = { current: { ...emptyProg
 export function applyEvent(p: JobProgress, e: StudioEvent): JobProgress {
   if (e.type === 'job') {
     if (e.status === 'running')
-      return { ...emptyProgress, active: true, label: 'Starting…', startedAt: Date.now() }
+      return { ...emptyProgress, active: true, label: tr("Starting…"), startedAt: Date.now() }
     if (e.status === 'done' || e.status === 'failed' || e.status === 'cancelled')
       return { ...emptyProgress }
   }
@@ -88,7 +89,7 @@ export function applyEvent(p: JobProgress, e: StudioEvent): JobProgress {
   // never goes backwards.
   const label =
     e.stage === 'render' && e.clip && e.total
-      ? `Rendering clip ${e.clip}/${e.total}${remote ? ` · ${remote}` : ''}`
+      ? tr("Rendering clip {0}/{1}{2}", e.clip, e.total, remote ? ` · ${remote}` : '')
       : e.plugin && (e.stage === 'ranking' || e.stage === 'understand' || e.stage === 'edit')
         ? `${PLUGIN_LABELS[e.stage]} ${e.plugin}`
         : stage.label

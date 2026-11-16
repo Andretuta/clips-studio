@@ -1,3 +1,4 @@
+import { t as tr } from "./i18n"
 /** Lets the interface run in a plain browser, for contributors.
  *
  *  `window.studio` is injected by Electron's preload. Open the Vite dev
@@ -14,8 +15,8 @@
 
 function unavailable(what: string): void {
   console.warn(
-    `[browser] ${what} needs the desktop app — it lives in Electron's preload. ` +
-      'Run the app on your host for the full thing; see docs/DOCKER.md.'
+    tr("[browser] {0} needs the desktop app — it lives in Electron's preload. ", what) +
+      tr("Run the app on your host for the full thing; see docs/DOCKER.md.")
   )
 }
 

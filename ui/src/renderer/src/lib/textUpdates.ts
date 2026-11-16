@@ -1,3 +1,4 @@
+import { t as tr } from "./i18n"
 import { API_BASE } from './api'
 import { sessionSecret } from './plugins'
 
@@ -36,7 +37,7 @@ async function call<T>(path: string, method = 'GET', body?: unknown): Promise<T>
   const headers: Record<string, string> = { 'Content-Type': 'application/json' }
   if (method !== 'GET') {
     const secret = await sessionSecret()
-    if (!secret) throw new Error('Clip updates settings need the desktop app.')
+    if (!secret) throw new Error(tr("Clip updates settings need the desktop app."))
     headers['X-Clips-Kitty-Session'] = secret
   }
   const response = await fetch(`${API_BASE}/text-updates${path}`, {
@@ -44,7 +45,7 @@ async function call<T>(path: string, method = 'GET', body?: unknown): Promise<T>
   })
   if (!response.ok) {
     const value = await response.json().catch(() => ({}))
-    throw new Error(typeof value.detail === 'string' ? value.detail : 'Clip updates could not be refreshed.')
+    throw new Error(typeof value.detail === 'string' ? value.detail : tr("Clip updates could not be refreshed."))
   }
   return response.json() as Promise<T>
 }

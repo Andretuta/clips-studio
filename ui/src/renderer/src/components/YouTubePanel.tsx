@@ -343,7 +343,7 @@ function PublishedBanner({ record }: { record: PublishRecord }): JSX.Element {
     >
       <p className="font-medium">
         {locked
-          ? `⚠ ${t('Locked to private by YouTube')}`
+          ? `⚠ ${t('YouTube set the video to private')}`
           : scheduled
             ? `◷ ${t('Scheduled')}`
             : `✓ ${t('Published')}`}
@@ -353,7 +353,7 @@ function PublishedBanner({ record }: { record: PublishRecord }): JSX.Element {
       {locked && (
         <p className="text-muted">
           {t(
-            'This happens when the Google Cloud project has not passed YouTube’s free API audit. It cannot be changed in Studio - the video has to be uploaded again from an audited project.'
+            'Check the visibility and any restrictions in YouTube Studio.'
           )}
         </p>
       )}

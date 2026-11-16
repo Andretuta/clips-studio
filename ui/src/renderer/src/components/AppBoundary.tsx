@@ -1,3 +1,4 @@
+import { t as tr } from "../lib/i18n"
 import { Component, type ErrorInfo, type ReactNode } from 'react'
 
 /** Last line of defence for the whole window.
@@ -40,15 +41,13 @@ export default class AppBoundary extends Component<
     return (
       <div className="h-screen grid place-items-center p-8 bg-base text-ink">
         <div className="max-w-lg space-y-4">
-          <h1 className="text-xl font-bold">Clips Kitty hit a problem</h1>
+          <h1 className="text-xl font-bold">{tr("Clips Kitty hit a problem")}</h1>
           <p className="text-sm text-muted leading-relaxed">
-            The window failed to draw. Your videos, clips and edits are safe — they live on
-            disk and in the database, not in this window.
+            {tr("The window failed to draw. Your videos, clips and edits are safe — they live on disk and in the database, not in this window.")}
           </p>
           {stalePreload && (
             <p className="text-sm text-muted leading-relaxed">
-              This usually means the app was updated while running. Fully closing and
-              reopening it should fix it.
+              {tr("This usually means the app was updated while running. Fully closing and reopening it should fix it.")}
             </p>
           )}
           <pre className="text-xs text-muted/70 bg-surface border border-raised/60 rounded-lg p-3 whitespace-pre-wrap break-words">
@@ -56,15 +55,14 @@ export default class AppBoundary extends Component<
           </pre>
           <div className="flex gap-2">
             <button className="btn-accent" onClick={() => window.location.reload()}>
-              Reload
+              {tr("Reload")}
             </button>
             <button className="btn-ghost" onClick={() => this.setState({ error: null })}>
-              Try again
+              {tr("Try again")}
             </button>
           </div>
           <p className="text-xs text-muted">
-            If it keeps happening, the Feedback button in the app sends this with the
-            diagnostics attached.
+            {tr("If it keeps happening, the Feedback button in the app sends this with the diagnostics attached.")}
           </p>
         </div>
       </div>

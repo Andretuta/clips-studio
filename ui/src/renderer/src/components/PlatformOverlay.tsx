@@ -1,3 +1,4 @@
+import { t as tr } from "../lib/i18n"
 /** What TikTok, Instagram Reels and YouTube Shorts draw over a Short, for the
  *  layout editor's preview: the top bar, the column of buttons down the right,
  *  the name, caption and sound at the bottom.
@@ -112,20 +113,20 @@ const ICONS: Record<Icon, Glyph> = {
 }
 
 const TIKTOK: Shape[] = [
-  { k: 'text', x: 447, y: 162, size: 38, text: 'Following', bold: true, anchor: 'middle' },
-  { k: 'text', x: 653, y: 162, size: 38, text: 'For You', bold: true, dim: true, anchor: 'middle' },
+  { k: 'text', x: 447, y: 162, size: 38, text: tr("Following"), bold: true, anchor: 'middle' },
+  { k: 'text', x: 653, y: 162, size: 38, text: tr("For You"), bold: true, dim: true, anchor: 'middle' },
   { k: 'icon', icon: 'search', x: 1008, y: 150, s: 56 },
   { k: 'circle', x: 961, y: 875, r: 56, ring: true },
   { k: 'icon', icon: 'tt-heart', x: 961, y: 1050, s: 84, label: '12.3K', labelY: 1118 },
   { k: 'icon', icon: 'tt-comment', x: 961, y: 1213, s: 74, label: '482', labelY: 1283 },
   { k: 'icon', icon: 'tt-bookmark', x: 961, y: 1378, s: 70, label: '1,204', labelY: 1447 },
-  { k: 'icon', icon: 'tt-share', x: 961, y: 1537, s: 78, label: 'Share', labelY: 1610 },
+  { k: 'icon', icon: 'tt-share', x: 961, y: 1537, s: 78, label: tr("Share"), labelY: 1610 },
   { k: 'circle', x: 954, y: 1744, r: 56 },
-  { k: 'text', x: 70, y: 1607, size: 36, text: 'username · 1-28', bold: true },
-  { k: 'text', x: 70, y: 1683, size: 32, text: 'Your caption and #hashtags go here, and' },
-  { k: 'text', x: 70, y: 1727, size: 32, text: 'run over two lines like this ... more' },
+  { k: 'text', x: 70, y: 1607, size: 36, text: tr("username · 1-28"), bold: true },
+  { k: 'text', x: 70, y: 1683, size: 32, text: tr("Your caption and #hashtags go here, and") },
+  { k: 'text', x: 70, y: 1727, size: 32, text: tr("run over two lines like this ... more") },
   { k: 'icon', icon: 'note', x: 93, y: 1781, s: 40 },
-  { k: 'text', x: 131, y: 1795, size: 32, text: 'original sound - username' }
+  { k: 'text', x: 131, y: 1795, size: 32, text: tr("original sound - username") }
 ]
 
 const REELS: Shape[] = [
@@ -140,7 +141,7 @@ const REELS: Shape[] = [
   { k: 'square', x: 930, y: 1828, s: 80 },
   { k: 'circle', x: 110, y: 1751, r: 34 },
   { k: 'text', x: 168, y: 1762, size: 32, text: 'username', bold: true },
-  { k: 'text', x: 56, y: 1853, size: 32, text: 'Your caption and #hashtags go here ... more' }
+  { k: 'text', x: 56, y: 1853, size: 32, text: tr("Your caption and #hashtags go here ... more") }
 ]
 
 const SHORTS: Shape[] = [
@@ -148,19 +149,19 @@ const SHORTS: Shape[] = [
   { k: 'icon', icon: 'search', x: 842, y: 211, s: 62 },
   { k: 'icon', icon: 'yt-more', x: 960, y: 211, s: 56 },
   { k: 'icon', icon: 'yt-like', x: 951, y: 1075, s: 62, label: '12K', labelY: 1142 },
-  { k: 'icon', icon: 'yt-dislike', x: 951, y: 1227, s: 62, label: 'Dislike', labelY: 1292 },
+  { k: 'icon', icon: 'yt-dislike', x: 951, y: 1227, s: 62, label: tr("Dislike"), labelY: 1292 },
   { k: 'icon', icon: 'yt-comment', x: 952, y: 1377, s: 62, label: '482', labelY: 1442 },
-  { k: 'icon', icon: 'yt-share', x: 950, y: 1525, s: 64, label: 'Share', labelY: 1591 },
-  { k: 'icon', icon: 'yt-remix', x: 950, y: 1674, s: 62, label: 'Remix', labelY: 1741 },
+  { k: 'icon', icon: 'yt-share', x: 950, y: 1525, s: 64, label: tr("Share"), labelY: 1591 },
+  { k: 'icon', icon: 'yt-remix', x: 950, y: 1674, s: 62, label: tr("Remix"), labelY: 1741 },
   { k: 'square', x: 951, y: 1837, s: 62 },
   { k: 'circle', x: 128, y: 1651, r: 32 },
   { k: 'text', x: 177, y: 1665, size: 34, text: '@channel', bold: true },
-  { k: 'pill', x: 343, y: 1612, w: 233, h: 76, text: 'Subscribe' },
+  { k: 'pill', x: 343, y: 1612, w: 233, h: 76, text: tr("Subscribe") },
   { k: 'icon', icon: 'yt-play', x: 106, y: 1733, s: 40 },
-  { k: 'text', x: 138, y: 1746, size: 34, text: 'Your Short’s title', bold: true },
-  { k: 'text', x: 79, y: 1810, size: 32, text: 'A line of the description goes here' },
+  { k: 'text', x: 138, y: 1746, size: 34, text: tr("Your Short’s title"), bold: true },
+  { k: 'text', x: 79, y: 1810, size: 32, text: tr("A line of the description goes here") },
   { k: 'icon', icon: 'note', x: 111, y: 1860, s: 40 },
-  { k: 'text', x: 147, y: 1872, size: 32, text: 'Sound name' }
+  { k: 'text', x: 147, y: 1872, size: 32, text: tr("Sound name") }
 ]
 
 export const PLATFORM_UI: Record<string, Shape[]> = { tiktok: TIKTOK, reels: REELS, shorts: SHORTS }

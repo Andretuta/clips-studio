@@ -1,3 +1,4 @@
+import { t as tr } from "../lib/i18n"
 import { useEffect, useState } from 'react'
 import { api } from '../lib/api'
 import { t } from '../lib/i18n'
@@ -29,9 +30,9 @@ const AREAS = [
 ] as const
 
 const KINDS: { id: Kind; icon: JSX.Element; title: string; blurb: string }[] = [
-  { id: 'bug', icon: <Bug size={20} />, title: 'Report a bug', blurb: 'Something broke or looks wrong' },
-  { id: 'feature', icon: <Bulb size={20} />, title: 'Request a feature', blurb: 'Something new you wish the app did' },
-  { id: 'improvement', icon: <TrendUp size={20} />, title: 'Suggest an improvement', blurb: 'Make an existing part better' }
+  { id: 'bug', icon: <Bug size={20} />, title: tr("Report a bug"), blurb: tr("Something broke or looks wrong") },
+  { id: 'feature', icon: <Bulb size={20} />, title: tr("Request a feature"), blurb: tr("Something new you wish the app did") },
+  { id: 'improvement', icon: <TrendUp size={20} />, title: tr("Suggest an improvement"), blurb: tr("Make an existing part better") }
 ]
 
 export default function FeedbackHub(): JSX.Element {
@@ -461,7 +462,7 @@ export default function FeedbackHub(): JSX.Element {
                     <p className="text-xs text-muted flex-1">
                       {missing.length > 0
                         ? `${t('Still needed:')} ${missing.map((m) => t(m)).join(', ')}`
-                        : 'Describe what happened in a bit more detail (a few words is enough)'}
+                        : tr("Describe what happened in a bit more detail (a few words is enough)")}
                     </p>
                   )}
                   <button className="btn-ghost shrink-0" onClick={reset} disabled={busy}>
@@ -471,7 +472,7 @@ export default function FeedbackHub(): JSX.Element {
                     className="btn-accent shrink-0"
                     onClick={submit}
                     disabled={!canSend || busy}
-                    title={!canSend ? 'Answer every required (*) question first' : undefined}
+                    title={!canSend ? tr("Answer every required (*) question first") : undefined}
                   >
                     {busy ? t('Sending…') : t('Send feedback')}
                   </button>

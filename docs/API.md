@@ -468,6 +468,29 @@ minutes, which is no use for a batch that failed at 3am. **This is the endpoint
 to surface when a job fails**; `error` on the job row is one line, and the log
 is why.
 
+### Diagnóstico local para automação
+
+Use `GET /diagnostics/errors?limit=20` para ver falhas persistidas, da mais
+recente à mais antiga. `source` indica processamento (`processing`), fila de
+publicação (`publication`) ou entrega à plataforma (`delivery`). `job_id` vale
+na fila correspondente. `clip_id` identifica o corte quando disponível.
+
+Use `GET /diagnostics/logs/engine` para o trecho em memória do motor,
+`GET /diagnostics/logs/recorder` para o log configurado em
+`diagnostics.recorder_log` e `GET /diagnostics/logs/job?job_id=149` para um
+trabalho de processamento. Cada resposta traz `status` e `lines`. O padrão é
+40 linhas, com limite de 100 e leitura de até 64 KiB por arquivo. Logs antigos
+podem ter sido removidos pela retenção do motor. URLs, campos com credenciais
+e padrões conhecidos de dados pessoais são filtrados na resposta.
+
+As duas consultas são experimentais, somente leitura e usam a sessão local
+do motor. Exemplo no PowerShell, com a pasta `data` deste Clipador:
+
+```powershell
+$headers = @{'X-Clips-Kitty-Session' = (Get-Content 'D:/clipador-gta6/data/plugins/session.secret' -Raw).Trim()}
+Invoke-RestMethod 'http://127.0.0.1:8765/diagnostics/errors?limit=5' -Headers $headers
+```
+
 ### `POST /jobs/{id}/retry`
 
 Re-queue a failed job with its original settings.

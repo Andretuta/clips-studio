@@ -1,3 +1,4 @@
+import { t as tr } from "../lib/i18n"
 import { useEffect, useRef, useState } from 'react'
 import { api } from '../lib/api'
 import { t } from '../lib/i18n'
@@ -218,7 +219,7 @@ export default function WoopSocialCard(): JSX.Element {
   const mine = PLATFORMS.filter((p) => WOOPSOCIAL_PLATFORMS.includes(p.id))
 
   return (
-    <section className="card space-y-3" aria-label="WoopSocial publishing">
+    <section className="card space-y-3" aria-label={tr("WoopSocial publishing")}>
       <div className="flex items-start justify-between gap-4">
         <div>
           <h3 className="font-semibold">{t('Publish through WoopSocial')}</h3>
@@ -420,7 +421,7 @@ export default function WoopSocialCard(): JSX.Element {
                 placeholder="https://…"
                 onChange={(e) => setAffiliateDraft(e.target.value)}
                 onBlur={() => void saveAffiliate()}
-                aria-label="WoopSocial affiliate referral URL"
+                aria-label={tr("WoopSocial affiliate referral URL")}
               />
             </details>
           )}

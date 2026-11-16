@@ -181,7 +181,7 @@ def _trusted_look(intermediate: Path, cam, tracking: dict) -> str:
 
 
 def render(intermediate: Path, output: Path, g: dict, config: dict, ass_path: Path | None = None,
-           vf_extra: str = "", normalize: bool = True) -> dict | None:
+           vf_extra: str = "", normalize: bool = True, *, caption_band: int = 0) -> dict | None:
     """Render one clip in its gaming layout. Returns the settings to keep with
     the clip, or None when the standard renderer should frame it instead."""
     from core.modes import probe_size
@@ -240,7 +240,7 @@ def render(intermediate: Path, output: Path, g: dict, config: dict, ass_path: Pa
             head = detect.head_in_box(intermediate, tuple(settings[role]), detector)
             if head is not None:
                 heads[role] = head
-    p = layout.plan(src_w, src_h, settings, heads)
+    p = layout.plan(src_w, src_h, settings, heads, caption_band=caption_band)
     compose.render(intermediate, output, p, ass_path=ass_path, vf_extra=vf_extra, normalize=normalize)
     face = None
     cam_el = p.element("cam")

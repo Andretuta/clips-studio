@@ -152,6 +152,7 @@ def rerun(monkeypatch, tmp_path, capsys):
 
     def process(db, moments, fresh, clips):
         config = load_config(BUNDLED_CONFIG)
+        config["clips"].pop("caption_style", None)
         config["paths"]["data_dir"] = str(tmp_path / "data")
         config["clips"].update({"captions": False, "min_duration": 10, "max_duration": 60, "min_score": 55,
                                 "max_clips_per_video": 0, **clips})

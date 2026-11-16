@@ -18,12 +18,14 @@ import subprocess
 import time
 from datetime import datetime
 from pathlib import Path
+from tempfile import TemporaryDirectory
 
 from fastapi import Depends, FastAPI, Header, HTTPException
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
 from plugins import session
+from video_editor.cortes_gamer import CortesGamerStyle, picture_band, style_for
 
 NOME = re.compile(r"[A-Za-z0-9_.-]+")
 # "<streamer> 2026-11-14 1825 [local_55a38fd2ff41]\clip_00320-00356.mp4": a block of a recorded live.
@@ -31,7 +33,8 @@ NOME = re.compile(r"[A-Za-z0-9_.-]+")
 ORIGEM = re.compile(r"(?P<data>\d{4}-\d{2}-\d{2}) (?P<hh>\d{2})(?P<mm>\d{2}) \[local_[^\]]+\][\\/]"
                     r"clip_(?P<ini>\d+)-(?P<fim>\d+)\.mp4$")
 CAMPOS = ("streamer", "plataforma", "fonte", "titulo", "descricao", "hashtags", "nota", "clip_id",
-          "video_id", "criado_em", "destinos")
+          "video_id", "criado_em", "destinos", "cortes_gamer_watermark", "cortes_gamer_baked",
+          "cortes_gamer_style")
 GRAVANDO_S = 180  # the recorder writes a segment a minute; three without one means it stopped
 
 
@@ -40,6 +43,8 @@ class Edicao(BaseModel):
     descricao: str | None = None
     hashtags: list[str] | None = None
     destinos: list[str] | None = None
+    cortes_gamer_watermark: bool | None = None
+    cortes_gamer_style: CortesGamerStyle | None = None
 
 
 def _ler(j: Path, precisa_video: bool = True) -> dict | None:
@@ -130,6 +135,10 @@ def install(app: FastAPI, *, config: dict, db, data_dir, session_secret: str) ->
     def video(nome: str):
         return FileResponse(achar(nome).with_suffix(".mp4"), media_type="video/mp4")
 
+    @app.get("/mesa/cortes/{nome}/video/picture")
+    def video_picture(nome: str):
+        return {"band": picture_band(achar(nome).with_suffix(".mp4"))}
+
     @app.get("/mesa/cortes/{nome}/capa")
     def capa(nome: str):
         """A small JPEG of the cut, for the desk's list: made once from a frame
@@ -176,16 +185,49 @@ def install(app: FastAPI, *, config: dict, db, data_dir, session_secret: str) ->
         while (pasta / f"{alvo}.mp4").exists() or (pasta / f"{alvo}.json").exists():
             n += 1
             alvo = f"{nome}-{n}"
-        # The video first: if it can't move (Windows keeps a file that is being read), nothing changed.
-        for tentativa in range(10):
-            try:
-                shutil.move(j.with_suffix(".mp4"), pasta / f"{alvo}.mp4")
-                break
-            except PermissionError:
-                if tentativa == 9:
-                    raise HTTPException(409, "The video is still open; try again in a moment") from None
-                time.sleep(0.2)
-        _escrever(pasta / f"{alvo}.json", d)
+        source = j.with_suffix(".mp4")
+        target = pasta / f"{alvo}.mp4"
+        style = style_for(d.get("cortes_gamer_style"))
+        if (estado == "aprovado" and d.get("cortes_gamer_watermark") and style.opacity
+                and not d.get("cortes_gamer_baked")):
+            from video_editor.cortes_gamer import render
+
+            originals = pasta / "originais"
+            originals.mkdir(exist_ok=True)
+            backup = originals / target.name
+            if backup.exists():
+                raise HTTPException(409, "Já existe um original com esse nome.")
+            with TemporaryDirectory(prefix="marca-", dir=pasta) as folder:
+                staged = Path(folder) / target.name
+                try:
+                    render(source, staged, style=style)
+                except (RuntimeError, OSError, subprocess.SubprocessError) as exc:
+                    raise HTTPException(500, f"Não foi possível aplicar a marca Cortes Gamer: {exc}") from exc
+                # Keep the clean original for future use. Until rendering succeeds,
+                # the cut remains on the desk with its original file.
+                try:
+                    source.rename(backup)
+                except PermissionError:
+                    raise HTTPException(409, "O vídeo ainda está aberto. Tente novamente.") from None
+                try:
+                    staged.replace(target)
+                    d["cortes_gamer_baked"] = True
+                    _escrever(target.with_suffix(".json"), d)
+                except OSError:
+                    target.unlink(missing_ok=True)
+                    backup.rename(source)
+                    raise
+        else:
+            # The video first: if the player still has it open, the cut stays on the desk.
+            for tentativa in range(10):
+                try:
+                    shutil.move(source, target)
+                    break
+                except PermissionError:
+                    if tentativa == 9:
+                        raise HTTPException(409, "The video is still open; try again in a moment") from None
+                    time.sleep(0.2)
+            _escrever(target.with_suffix(".json"), d)
         j.unlink()
         return {"nome": alvo, "estado": estado}
 

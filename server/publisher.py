@@ -339,6 +339,10 @@ class PublishWorker(threading.Thread):
             db.set_publish_job_clip(job_id, clip["id"])
         clip_id = clip["id"]
 
+        if request_data.get("provider") == "composio":
+            self._publish_composio(db, job_id, clip, request_data)
+            return
+
         path = Path(clip["path"] or "")
         if not path.exists():
             raise PublishError("This clip's file is missing. Re-render it and try again.")
@@ -441,6 +445,36 @@ class PublishWorker(threading.Thread):
             locked_private=result.locked_private,
         )
         self._verify.append((time.monotonic() + VERIFY_AFTER_SECONDS, clip_id, result.video_id))
+
+    def _publish_composio(self, db: StateDB, job_id: int, clip, request: dict) -> None:
+        from publish import composio
+        from publish.errors import PublishCancelled, PublishError
+
+        def cancelled() -> bool:
+            return job_id in self._cancelled
+
+        platform = request["platform"]
+        try:
+            if cancelled():
+                raise PublishCancelled("Envio cancelado.")
+            file = composio.clip_path(clip, self.data_dir)
+            key = composio.api_key(self.data_dir)
+            account, _ = composio.connection(db, key, platform)
+            if not account or account != request["account_id"]:
+                raise PublishError("A conexão do canal mudou. Revise o destino e tente de novo.")
+            self._emit(job_id, clip["id"], phase="upload", fraction=0.05, message="Enviando pelo Composio")
+            identifier = composio.upload(key, request, file, cancelled)
+        except PublishCancelled:
+            db.finish_publish_job(job_id, "cancelled", error="Envio cancelado.")
+            self._emit(job_id, clip["id"], phase="cancelled", fraction=0, message="Envio cancelado.",
+                       terminal="cancelled")
+            return
+        finally:
+            self._cancelled.discard(job_id)
+        youtube_id = identifier if platform == "youtube" else ""
+        db.finish_publish_job(job_id, "done", youtube_id=youtube_id)
+        self._emit(job_id, clip["id"], phase="done", fraction=1, message="Envio aceito pelo Composio",
+                   terminal="done")
 
     def _resolve_clip(self, db: StateDB, job):
         """Find the clip, following a re-render that gave it a new id."""

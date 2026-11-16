@@ -1,3 +1,4 @@
+import { t as tr } from "./i18n"
 import { API_BASE } from './api'
 import { sessionSecret } from './plugins'
 
@@ -89,14 +90,14 @@ async function failure(res: Response): Promise<Error> {
   } catch {
     // not JSON: fall through to the raw text
   }
-  return new Error(text.slice(0, 300) || `The engine answered ${res.status}`)
+  return new Error(text.slice(0, 300) || tr("The engine answered {0}", res.status))
 }
 
 async function call<T>(path: string, init: RequestInit = {}, guarded = false): Promise<T> {
   const headers: Record<string, string> = { 'Content-Type': 'application/json' }
   if (guarded) {
     const s = await sessionSecret()
-    if (!s) throw new Error('Changing Discord settings needs the Clips Kitty desktop app.')
+    if (!s) throw new Error(tr("Changing Discord settings needs the Clips Kitty desktop app."))
     headers['X-Clips-Kitty-Session'] = s
   }
   const res = await fetch(`${API_BASE}${path}`, { ...init, headers })

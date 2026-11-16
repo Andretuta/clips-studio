@@ -67,6 +67,7 @@ class Plan:
     elements: tuple = field(default_factory=tuple)
     order: str = "cam_top"
     safe: str = "tiktok"
+    caption_y: int | None = None
 
     def element(self, role: str) -> Element | None:
         return next((e for e in self.elements if e.role == role), None)
@@ -311,18 +312,19 @@ def _placed(box, aspect: float | None = None) -> tuple:
 
 
 def _stack_regions(spec: dict, order: str, divider: float, game_h: float | None = None,
-                   top: float = 0) -> list:
+                   top: float = 0, gap: int = 0) -> list:
     """[(role, dest, anchor)] for a stack preset, top to bottom.
 
-    game_h: the game's own height when it is shown whole. Its row is then
-    exactly that tall and right against the webcam, never with a band of blur
-    between them. The space left over goes above the rows (up to `top`, the
-    platform's top bar, so the streamer's head clears it) and below them."""
+    game_h: the game's own height when it is shown whole. The space left
+    over goes above the rows (up to the platform's top bar) and below them.
+    gap: caption space between the rows, taken from the webcam's share."""
     rows = [list(r) for r in spec["rows"]]
     if order == "game_top":
         rows.reverse()
     lo, hi, default = spec["divider"]
     cam_h = OUT_H * min(max(divider if divider is not None else default, lo), hi)
+    if gap:
+        cam_h = max(OUT_H * 0.18, cam_h - gap)
     heights = []
     for row in rows:
         if "game" in row:
@@ -331,7 +333,7 @@ def _stack_regions(spec: dict, order: str, divider: float, game_h: float | None 
             heights.append(OUT_H * spec.get("ui_share", 0.12))
         else:
             heights.append(cam_h)
-    rest = OUT_H - sum(h for h in heights if h is not None)
+    rest = OUT_H - gap - sum(h for h in heights if h is not None)
     packed = game_h is not None and game_h < rest
     heights = [(game_h if packed else rest) if h is None else h for h in heights]
     # Row edges rounded once, so rows meet exactly; filling, the last one ends
@@ -339,13 +341,14 @@ def _stack_regions(spec: dict, order: str, divider: float, game_h: float | None 
     edges = [_pos(min(rest - game_h, top)) if packed else 0]
     for h in heights[:-1]:
         edges.append(_pos(edges[-1] + h))
-    edges.append(_pos(edges[-1] + heights[-1]) if packed else OUT_H)
+    edges.append(_pos(edges[-1] + heights[-1]) if packed else OUT_H - gap)
     out = []
     for i, row in enumerate(rows):
         anchor = "top" if i == 0 else "bottom" if i == len(rows) - 1 else "center"
         cols = [_pos(j * OUT_W / len(row)) for j in range(len(row))] + [OUT_W]
         for j, role in enumerate(row):
-            out.append((role, (cols[j], edges[i], cols[j + 1] - cols[j], edges[i + 1] - edges[i]), anchor))
+            out.append((role, (cols[j], edges[i] + (gap if i else 0), cols[j + 1] - cols[j],
+                               edges[i + 1] - edges[i]), anchor))
     return out
 
 
@@ -376,7 +379,7 @@ def _game_src(src_w: int, src_h: int, s: dict, aspect: float, fit: str, cams: li
     return (_pos(x), _pos((src_h - crop_h) / 2), crop_w, crop_h)
 
 
-def plan(src_w: int, src_h: int, settings: dict, heads: dict | None = None) -> Plan:
+def plan(src_w: int, src_h: int, settings: dict, heads: dict | None = None, *, caption_band: int = 0) -> Plan:
     """The layout for one clip.
 
     settings: a clip's gaming settings (gaming/run.py lists the keys):
@@ -417,8 +420,16 @@ def plan(src_w: int, src_h: int, settings: dict, heads: dict | None = None) -> P
             src = _game_src(src_w, src_h, s, dest[2] / dest[3], fit, shown_cams, panels)
         elements.append(Element("game", src, dest, "contain" if fit == "fit" else "cover", anchor))
 
+    caption_y = None
     if spec["type"] == "full":
         game((0, 0, OUT_W, OUT_H), "center")
+        if caption_band and fit == "fit":
+            _, _, w, h = elements[-1].src
+            padding = (OUT_H - min(OUT_H, OUT_W * h / w)) / 2
+            if padding - safe["bottom"] >= caption_band:
+                caption_y = round(OUT_H - padding + caption_band / 2)
+            elif padding - safe["top"] >= caption_band:
+                caption_y = round(padding - caption_band / 2)
     elif spec["type"] == "pip":
         game((0, 0, OUT_W, OUT_H), "center")
         size = None
@@ -432,16 +443,20 @@ def plan(src_w: int, src_h: int, settings: dict, heads: dict | None = None) -> P
                 dest = (min(dest[0], OUT_W - size[0]), min(dest[1], OUT_H - size[1]), *size)
             camera(role, dest, spec.get("shape", "rect"))
     else:
-        regions = _stack_regions(spec, order, s.get("divider"))
+        regions = _stack_regions(spec, order, s.get("divider"), gap=caption_band)
         whole = None
         if fit == "fit":
             # The whole game right against the webcam: its row is the game's
             # own height, and what's left is blur above and below the two.
             space = next(dest for role, dest, _a in regions if role == "game")
             whole = _game_src(src_w, src_h, s, space[2] / space[3], fit, shown_cams, panels)
-            regions = _stack_regions(spec, order, s.get("divider"), OUT_W * whole[3] / whole[2], safe["top"])
+            regions = _stack_regions(spec, order, s.get("divider"), OUT_W * whole[3] / whole[2], safe["top"],
+                                     gap=caption_band)
             if regions[0][1][1] > 0 or regions[-1][1][1] + regions[-1][1][3] < OUT_H:
                 elements.append(Element("bg", whole, (0, 0, OUT_W, OUT_H), "blur"))
+        if caption_band:
+            _, first_y, _, first_h = regions[0][1]
+            caption_y = first_y + first_h + caption_band // 2
         for role, dest, anchor in regions:
             if role == "game":
                 game(dest, anchor, whole)
@@ -461,4 +476,4 @@ def plan(src_w: int, src_h: int, settings: dict, heads: dict | None = None) -> P
                 dest = _placed(places["ui"])
             ui = _clamp_box(s["ui_box"], src_w, src_h)
             elements.append(Element("ui", _cover(ui, dest[2] / dest[3]), dest, "cover"))
-    return Plan(preset, tuple(elements), order, safe_name)
+    return Plan(preset, tuple(elements), order, safe_name, caption_y)

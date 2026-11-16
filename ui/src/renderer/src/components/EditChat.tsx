@@ -1,3 +1,4 @@
+import { t as tr } from "../lib/i18n"
 import { useEffect, useRef, useState } from 'react'
 import { api } from '../lib/api'
 import type { Clip } from '../lib/types'
@@ -45,7 +46,7 @@ export default function EditChat({
     } catch (e) {
       setMessages((m) => [
         ...m,
-        { role: 'assistant', text: `Something went wrong: ${e instanceof Error ? e.message : e}` }
+        { role: 'assistant', text: tr("Something went wrong: {0}", e instanceof Error ? e.message : e) }
       ])
     } finally {
       setBusy(false)
@@ -55,10 +56,9 @@ export default function EditChat({
   return (
     <div className="border border-raised/60 rounded-lg p-3 space-y-2">
       <p className="font-medium">
-        Ask the AI to fix this clip
+        {tr("Ask the AI to fix this clip")}
         <span className="block text-[10px] text-muted font-normal mt-0.5">
-          e.g. “make it 5 seconds longer” · “center the crop” · “yellow captions” · “the caption
-          says gost, it should say ghost”
+          {tr("e.g. “make it 5 seconds longer” · “center the crop” · “yellow captions” · “the caption says gost, it should say ghost”")}
         </span>
       </p>
 

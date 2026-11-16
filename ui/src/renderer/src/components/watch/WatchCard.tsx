@@ -1,3 +1,4 @@
+import { t as tr } from "../../lib/i18n"
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { api, errorText } from '../../lib/api'
 import type { AutomationStatus, Watch, WatchCreator, WatchItem } from '../../lib/types'
@@ -10,7 +11,7 @@ import { ApprovalActions, useClipUpdates } from '../ApprovalCard'
 export const WATCH_PLATFORM_LABEL: Record<string, string> = {
   youtube: 'YouTube',
   twitch: 'Twitch',
-  twitch_clips: 'Twitch clips',
+  twitch_clips: tr("Twitch clips"),
   kick: 'Kick'
 }
 
@@ -159,7 +160,7 @@ export default function WatchCard({
       <div className="flex items-start gap-3 flex-wrap">
         <span className="text-xs font-semibold uppercase tracking-wide bg-raised rounded px-2 py-1 shrink-0">
           {WATCH_PLATFORM_LABEL[watch.platform] ?? watch.platform}
-          {watch.platform === 'twitch_clips' && ` · ${(watch.min_views ?? 0).toLocaleString()}+ views`}
+          {watch.platform === 'twitch_clips' && tr(" · {0}+ views", (watch.min_views ?? 0).toLocaleString())}
         </span>
         <div className="min-w-0">
           <h3 className="font-semibold truncate flex items-center gap-2">
@@ -247,11 +248,11 @@ export default function WatchCard({
       </div>
 
       {openClips && watch.platform === 'twitch_clips' && <div className="space-y-2 text-sm">
-        <p>Gaming layout · Viewer clips are posted whole, with no trimming.</p>
+        <p>{tr("Gaming layout · Viewer clips are posted whole, with no trimming.")}</p>
         <label className="flex items-center gap-2"><input type="checkbox" checked={watch.options.captions !== false}
           onChange={(e) => void act(() => api.patchWatch(watch.id, {
             options: { ...watch.options, captions: e.target.checked }
-          }))} />Captions</label>
+          }))} />{tr("Captions")}</label>
       </div>}
       {openClips && watch.platform !== 'twitch_clips' && (
         <div className="space-y-2">
@@ -273,7 +274,7 @@ export default function WatchCard({
           <QueueItemSettings
             key={`watch-${watch.id}`}
             job={{ id: watch.id, settings: watch.options }}
-            heading="Settings for every video from this channel"
+            heading={tr("Settings for every video from this channel")}
             autoSave
             save={(patch) => api.patchWatch(watch.id, { options: patch })}
             onSaved={onChanged}
@@ -333,31 +334,31 @@ export default function WatchCard({
 }
 
 function publishModeLabel(mode: Watch['publish']['mode']): string {
-  return mode === 'auto' ? 'Automatic' : mode === 'ask' ? 'Ask first' : 'Off'
+  return mode === 'auto' ? tr("Automatic") : mode === 'ask' ? tr("Ask first") : 'Off'
 }
 
 function statusText(item: WatchItem): { text: string; tone: string } {
   switch (item.status) {
     case 'earlier':
-      return { text: 'Before you started watching', tone: 'text-muted' }
+      return { text: tr("Before you started watching"), tone: 'text-muted' }
     case 'waiting_for_video':
-      return { text: 'Waiting for the video to be ready', tone: 'text-warn' }
+      return { text: tr("Waiting for the video to be ready"), tone: 'text-warn' }
     case 'waiting_for_queue':
-      return { text: 'Waiting for room in the queue', tone: 'text-warn' }
+      return { text: tr("Waiting for room in the queue"), tone: 'text-warn' }
     case 'queued':
-      return { text: 'In the queue', tone: 'text-ink' }
+      return { text: tr("In the queue"), tone: 'text-ink' }
     case 'processing':
-      return { text: 'Making clips', tone: 'text-accent' }
+      return { text: tr("Making clips"), tone: 'text-accent' }
     case 'complete':
-      return { text: 'Clips made', tone: 'text-accent' }
+      return { text: tr("Clips made"), tone: 'text-accent' }
     case 'failed':
-      return { text: 'Failed', tone: 'text-error' }
+      return { text: tr("Failed"), tone: 'text-error' }
     case 'cancelled':
-      return { text: 'Cancelled', tone: 'text-muted' }
+      return { text: tr("Cancelled"), tone: 'text-muted' }
     case 'skipped':
-      return { text: 'Skipped', tone: 'text-muted' }
+      return { text: tr("Skipped"), tone: 'text-muted' }
     default:
-      return { text: 'Problem', tone: 'text-error' }
+      return { text: tr("Problem"), tone: 'text-error' }
   }
 }
 
@@ -442,9 +443,9 @@ function ItemRow({
           <p className="text-xs text-muted">
             {when ? relative(when) : ''}
             {item.platform === 'twitch_clips' && <span className="ml-2">
-              {(item.views ?? 0).toLocaleString()} views
-              {item.reached_at ? ` · crossed ${relative(item.reached_at)}` : ' · already over target on first look'}
-              {item.clipper && ` · clipped by ${item.clipper}`}
+              {(item.views ?? 0).toLocaleString()} {tr("views")}
+              {item.reached_at ? tr(" · crossed {0}", relative(item.reached_at)) : tr(" · already over target on first look")}
+              {item.clipper && tr(" · clipped by {0}", item.clipper)}
             </span>}
             <span className={`ml-2 ${tone}`}>{t(text)}</span>
             {detail && <span className="ml-2">{t(detail)}</span>}

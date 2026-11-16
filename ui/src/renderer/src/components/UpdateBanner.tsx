@@ -1,3 +1,4 @@
+import { t as tr } from "../lib/i18n"
 import { useEffect, useState } from 'react'
 
 /** "813 MB" or "6.2 GB": update downloads span both. */
@@ -63,20 +64,20 @@ export default function UpdateBanner(): JSX.Element | null {
     if (!s.behind || s.skipped) return null
     return (
       <div className={`${bar} bg-accent/10 border-accent/30`}>
-        <span className="font-medium">Version {s.version} is in the Microsoft Store.</span>
-        <span className="text-xs text-muted">This copy is {s.current}.</span>
+        <span className="font-medium">{tr("Version")} {s.version} {tr("is in the Microsoft Store.")}</span>
+        <span className="text-xs text-muted">{tr("This copy is")} {s.current}.</span>
         <div className="ml-auto flex items-center gap-2 shrink-0">
           <button
             className="text-xs text-muted hover:text-ink"
             onClick={() => void window.studio.update.skip(s.version ?? '')}
           >
-            Skip this version
+            {tr("Skip this version")}
           </button>
           <button
             className="btn-accent !py-1"
             onClick={() => void window.studio.update.openStore()}
           >
-            Open the Microsoft Store
+            {tr("Open the Microsoft Store")}
           </button>
         </div>
       </div>
@@ -91,15 +92,15 @@ export default function UpdateBanner(): JSX.Element | null {
     const pct = s.percent ?? 0
     const betweenDownloads = !packagePhase && pct >= 100
     const label = packagePhase
-      ? 'Downloading the app files…'
+      ? tr("Downloading the app files…")
       : betweenDownloads
-        ? 'Preparing the app files download…'
-        : 'Downloading update…'
+        ? tr("Preparing the app files download…")
+        : tr("Downloading update…")
     const detail = betweenDownloads
-      ? 'This can take a while'
+      ? tr("This can take a while")
       : packagePhase && !s.total
         ? `${size(s.transferred)} downloaded`
-        : `${pct}%${s.total ? ` · ${size(s.transferred)} of ${size(s.total)}` : ''}`
+        : `${pct}%${s.total ? tr(" · {0} of {1}", size(s.transferred), size(s.total)) : ''}`
     return (
       <div className={`${bar} bg-surface border-raised/60`}>
         <span className="shrink-0 font-medium">{label}</span>
@@ -119,15 +120,15 @@ export default function UpdateBanner(): JSX.Element | null {
   if (s.state === 'ready') {
     return (
       <div className={`${bar} bg-accent/10 border-accent/30`}>
-        <span className="font-medium">Version {s.version} is ready to install.</span>
+        <span className="font-medium">{tr("Version")} {s.version} {tr("is ready to install.")}</span>
         <span className="text-xs text-muted">
-          Clips Kitty will close and reopen. Finish anything that&apos;s rendering first.
+          {tr("Clips Kitty will close and reopen. Finish anything that&apos;s rendering first.")}
         </span>
         <button
           className="btn-accent !py-1 ml-auto shrink-0"
           onClick={() => void window.studio.update.install()}
         >
-          Restart &amp; install
+          {tr("Restart &amp; install")}
         </button>
       </div>
     )
@@ -137,13 +138,13 @@ export default function UpdateBanner(): JSX.Element | null {
   return (
     <div className="bg-accent/10 border-b border-accent/30">
       <div className={`${bar} border-transparent`}>
-        <span className="font-medium">Version {s.version} is available.</span>
+        <span className="font-medium">{tr("Version")} {s.version} {tr("is available.")}</span>
         {s.notes && (
           <button
             className="text-xs text-accent hover:underline"
             onClick={() => setNotesOpen((v) => !v)}
           >
-            {notesOpen ? "Hide what's new" : "What's new"}
+            {notesOpen ? tr("Hide what's new") : tr("What's new")}
           </button>
         )}
         <div className="ml-auto flex items-center gap-2 shrink-0">
@@ -151,13 +152,13 @@ export default function UpdateBanner(): JSX.Element | null {
             className="text-xs text-muted hover:text-ink"
             onClick={() => void window.studio.update.skip(s.version ?? '')}
           >
-            Skip this version
+            {tr("Skip this version")}
           </button>
           <button
             className="btn-accent !py-1"
             onClick={() => void window.studio.update.download()}
           >
-            Download
+            {tr("Download")}
           </button>
         </div>
       </div>

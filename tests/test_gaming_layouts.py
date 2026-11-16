@@ -56,6 +56,17 @@ def test_camera_top_puts_the_camera_at_the_top_and_game_top_the_game():
     assert _plan("basecam").element("game").dest[1] == 0          # Basecam is game on top
 
 
+@pytest.mark.parametrize("order", ["cam_top", "game_top"])
+def test_centered_captions_have_their_own_space_between_webcam_and_game(order):
+    p = layout.plan(W, H, {"preset": "half", "cam": CAM, "game_fit": "fit", "order": order},
+                    caption_band=200)
+    top, bottom = sorted((e.dest for e in p.elements if e.role in ("cam", "game")), key=lambda d: d[1])
+    assert bottom[1] - (top[1] + top[3]) == 200
+    assert p.caption_y == bottom[1] - 100
+    game = p.element("game")
+    assert abs(game.dest[3] - 1080 * game.src[3] / game.src[2]) <= 2
+
+
 def test_the_divider_sets_the_camera_band_within_the_layouts_range():
     assert _plan("split", divider=0.3).element("cam").dest[3] == 576
     assert _plan("split", divider=0.9).element("cam").dest[3] == 960      # capped at half

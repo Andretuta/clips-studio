@@ -1,3 +1,4 @@
+import { t as tr } from "../lib/i18n"
 import { t } from '../lib/i18n'
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
@@ -63,23 +64,23 @@ export function ApprovalActions({itemId, showDMCA, onChanged, disabled = false}:
     try {
       const result = await (approve ? api.publishWatchItem(itemId) : api.skipWatchItem(itemId))
       const state = result.publish_state
-      setMessage(state === 'done' ? `#${itemId} is already scheduled or posted.` : state === 'off'
-        ? `⛔ Denied. Skipped #${itemId}. The clips stay in your library.`
-        : state === 'publishing' ? `✅ Approved. Posting #${itemId}…` : `#${itemId} is ${state || result.status}.`)
+      setMessage(state === 'done' ? tr("#{0} is already scheduled or posted.", itemId) : state === 'off'
+        ? tr("⛔ Denied. Skipped #{0}. The clips stay in your library.", itemId)
+        : state === 'publishing' ? tr("✅ Approved. Posting #{0}…", itemId) : tr("#{0} is {1}.", itemId, state || result.status))
       onChanged?.()
     } catch (error) { setMessage(errorText(error)); setBusy(false) }
   }
   const joke = (): void => {
     if (timer.current) clearTimeout(timer.current)
-    setMessage('⚖️ Putting you in contact with a lawyer… 📞 Ringing…')
+    setMessage(tr("⚖️ Putting you in contact with a lawyer… 📞 Ringing…"))
     setJokeOpen(true)
-    timer.current = setTimeout(() => setMessage(`⚖️ Delete all VODs and clips from the stream. Contact your attorney to DMCA any clip someone posted online because you don’t like it. Nothing was filed or deleted. #${itemId} is still waiting: Approve or Deny.`), 2000)
+    timer.current = setTimeout(() => setMessage(tr("⚖️ Delete all VODs and clips from the stream. Contact your attorney to DMCA any clip someone posted online because you don’t like it. Nothing was filed or deleted. #{0} is still waiting: Approve or Deny.", itemId)), 2000)
   }
   return <div className="space-y-2">
     <div className="flex gap-2 flex-wrap">
-      <button className="btn-accent !bg-green-700 !text-white" disabled={busy || disabled} onClick={() => void decide(true)}>Approve</button>
-      <button className="btn-accent !bg-red-700 !text-white" disabled={busy || disabled} onClick={() => void decide(false)}>Deny</button>
-      {showDMCA && <button className="btn-ghost" disabled={busy || disabled} onClick={joke}>Damage Control</button>}
+      <button className="btn-accent !bg-green-700 !text-white" disabled={busy || disabled} onClick={() => void decide(true)}>{tr("Approve")}</button>
+      <button className="btn-accent !bg-red-700 !text-white" disabled={busy || disabled} onClick={() => void decide(false)}>{tr("Deny")}</button>
+      {showDMCA && <button className="btn-ghost" disabled={busy || disabled} onClick={joke}>{tr("Damage Control")}</button>}
     </div>
     {message && !jokeOpen && <p className="text-xs" role="status">{message}</p>}
     {jokeOpen && createPortal(<AttorneyPopup message={message} onClose={() => {
@@ -94,9 +95,9 @@ function AttorneyPopup({message, onClose}: {message: string; onClose: () => void
   useEffect(() => { dialog.current?.showModal() }, [])
   return <dialog ref={dialog} aria-label={t("Contact your attorney")} onCancel={onClose}
     className="card m-auto max-w-md p-6 text-ink bg-surface backdrop:bg-black/60 space-y-4">
-    <h2 className="font-semibold text-lg">⚖️ Contact your attorney</h2>
+    <h2 className="font-semibold text-lg">{tr("⚖️ Contact your attorney")}</h2>
     <p role="status">{message}</p>
-    <button className="btn-accent" autoFocus onClick={onClose}>Close</button>
+    <button className="btn-accent" autoFocus onClick={onClose}>{tr("Close")}</button>
   </dialog>
 }
 
@@ -109,15 +110,15 @@ function ApprovalCard({item, onOpen}: {item: PendingApproval; onOpen: (videoId: 
     return () => clearTimeout(timer)
   }, [item.answer])
   if (closed) return null
-  const place = item.answered_where === 'discord' ? 'on Discord' : 'in the app'
+  const place = item.answered_where === 'discord' ? tr("on Discord") : tr("in the app")
   return <article className="card border border-accent/50 shadow-xl space-y-3" data-clip-approval tabIndex={-1}>
-    <h2 className="font-semibold">🐱 Clips Kitty · #{item.item_id}</h2>
-    {item.thumbnail_url && <img className="max-h-28 rounded" src={`${API_BASE}${item.thumbnail_url}`} alt="Clip preview" />}
+    <h2 className="font-semibold">{tr("🐱 Clips Kitty · #")}{item.item_id}</h2>
+    {item.thumbnail_url && <img className="max-h-28 rounded" src={`${API_BASE}${item.thumbnail_url}`} alt={tr("Clip preview")} />}
     <p>{item.line}</p>
-    <p className="text-xs text-muted">{item.platforms.map(platform => woopTargetLabel(platform, accounts)).join(', ')}{item.first_slot && ` · First slot: ${new Date(item.first_slot).toLocaleString()}`}</p>
-    {item.answer ? <p role="status">{item.state_text || (item.answer === 'approve' ? `✅ Approved ${place}…` : `⛔ Denied ${place}. The clips stay in your library.`)}</p>
+    <p className="text-xs text-muted">{item.platforms.map(platform => woopTargetLabel(platform, accounts)).join(', ')}{item.first_slot && tr(" · First slot: {0}", new Date(item.first_slot).toLocaleString())}</p>
+    {item.answer ? <p role="status">{item.state_text || (item.answer === 'approve' ? tr("✅ Approved {0}…", place) : tr("⛔ Denied {0}. The clips stay in your library.", place))}</p>
       : <ApprovalActions itemId={item.item_id} showDMCA={status?.show_dmca ?? item.show_dmca} onChanged={() => void refresh()} />}
-    <button className="text-xs text-accent underline" onClick={() => onOpen(item.video_id)}>Open in editor</button>
+    <button className="text-xs text-accent underline" onClick={() => onOpen(item.video_id)}>{tr("Open in editor")}</button>
   </article>
 }
 
@@ -141,7 +142,7 @@ export function AwayToggle(): JSX.Element | null {
   return <div className="text-sm">
     <label className="flex gap-2 items-center"><input type="checkbox" checked={status.away_from_desk}
       disabled={!status.away_from_desk && !(status.connected && status.test_ok)}
-      onChange={event => void textUpdates.settings({away_from_desk:event.target.checked}).then(refresh).catch(e=>setError(errorText(e)))} />Away from desk</label>
+      onChange={event => void textUpdates.settings({away_from_desk:event.target.checked}).then(refresh).catch(e=>setError(errorText(e)))} />{tr("Away from desk")}</label>
     {error && <p role="alert" className="text-danger">{error}</p>}
   </div>
 }

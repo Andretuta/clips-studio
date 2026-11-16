@@ -1,3 +1,4 @@
+import { t as tr } from "../lib/i18n"
 import { useEffect, useRef, useState } from 'react'
 import { api, type FramePeople, type LayoutSource } from '../lib/api'
 import {
@@ -71,7 +72,7 @@ const CARD_ORDER = [
 ] as const
 const FRAMES = [0.1, 0.3, 0.5, 0.7, 0.9]
 const COLOUR: Record<BoxRole, string> = { cam: '#38BDF8', cam2: '#A78BFA', game: '#22C55E', ui: '#F59E0B' }
-const LABEL: Record<BoxRole, string> = { cam: 'Webcam', cam2: 'Webcam 2', game: 'Game', ui: 'Game UI' }
+const LABEL: Record<BoxRole, string> = { cam: tr("Webcam"), cam2: tr("Webcam 2"), game: tr("Game"), ui: tr("Game UI") }
 const NEW_BOX: Record<BoxRole, FrameBox> = {
   cam: [0.02, 0.6, 0.25, 0.36],
   cam2: [0.73, 0.6, 0.25, 0.36],
@@ -880,7 +881,7 @@ export default function GamingLayoutEditor({
                     top: `${found[1] * 100}%`,
                     width: `${found[2] * 100}%`,
                     height: `${found[3] * 100}%`,
-                    border: `2px dashed ${COLOUR.cam}`
+                    border: tr("2px dashed {0}", COLOUR.cam)
                   }}
                 >
                   <span className="absolute top-0 left-0 text-[10px] px-1 rounded-br" style={{ background: COLOUR.cam, color: '#0B1220' }}>
@@ -900,7 +901,7 @@ export default function GamingLayoutEditor({
                         top: `${(e.src[1] / src.h) * 100}%`,
                         width: `${(e.src[2] / src.w) * 100}%`,
                         height: `${(e.src[3] / src.h) * 100}%`,
-                        border: `1px dashed ${COLOUR[e.role as BoxRole] ?? '#fff'}`,
+                        border: tr("1px dashed {0}", COLOUR[e.role as BoxRole] ?? '#fff'),
                         opacity: 0.9
                       }}
                     />
@@ -918,7 +919,7 @@ export default function GamingLayoutEditor({
                       width: `${w * 100}%`,
                       height: `${h * 100}%`,
                       background: 'repeating-linear-gradient(45deg, rgba(239,68,68,0.28) 0 6px, transparent 6px 12px)',
-                      outline: '1px solid rgba(239,68,68,0.8)'
+                      outline: tr("1px solid rgba(239,68,68,0.8)")
                     }}
                   >
                     <span className="text-[10px] px-1 rounded-bl bg-red-500 text-white">{t('Left out')}</span>
@@ -937,7 +938,7 @@ export default function GamingLayoutEditor({
                         width: `${w * 100}%`,
                         height: `${h * 100}%`,
                         // An outline, not a border: the handles then sit exactly on the edge.
-                        outline: `3px solid ${COLOUR[role]}`,
+                        outline: tr("3px solid {0}", COLOUR[role]),
                         outlineOffset: -3,
                         boxShadow: active === role ? `0 0 0 2px ${COLOUR[role]}55` : 'none'
                       }}

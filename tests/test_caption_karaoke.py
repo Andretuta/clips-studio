@@ -62,6 +62,26 @@ def test_pop_grows_only_the_word_being_said(tmp_path):
         assert popped and popped[1] == f"W{20 + k}"
 
 
+@pytest.mark.parametrize("highlight", [False, True])
+def test_long_edited_captions_are_split_in_time_with_at_most_two_rows(tmp_path, highlight):
+    words = "Paralelepípedo extraordinariamente constitucionalidade internacionalização responsabilidades".upper().split()
+    path = build_captions([], CLIP, tmp_path / "long.ass",
+                          style={"font": "Arial", "font_size": 140, "highlight": highlight, "pop": True},
+                          lines=[{"start": 0, "end": 8, "text": "\n".join(words)}])
+    dialogues = [line for line in path.read_text(encoding="utf-8").splitlines() if line.startswith("Dialogue:")]
+    assert dialogues[0].startswith("Dialogue: 0,0:00:00.00,")
+    assert dialogues[-1].split(",")[2] == "0:00:08.00"
+    pages = []
+    for event in dialogues:
+        assert r"\q2" in event  # libass may only use the explicit hard breaks
+        text = re.sub(r"\{[^}]*\}", "", event.split(",,0,0,0,,", 1)[1])
+        assert text.count(r"\N") <= 1
+        if not pages or pages[-1] != text:
+            pages.append(text)
+    assert len(pages) > 1
+    assert " ".join(pages).replace(r"\N", " ").split() == words
+
+
 def test_hyphenated_words_share_one_caption_slot_and_animation(tmp_path):
     fragments = "dê -me faça -se guarda- chuva anti -herói. próximo".split()
     words = [{"start": 10 + i / 2, "end": 10.5 + i / 2, "word": word}
@@ -77,7 +97,12 @@ def test_hyphenated_words_share_one_caption_slot_and_animation(tmp_path):
     events = [line for line in path.read_text(encoding="utf-8").splitlines() if line.startswith("Dialogue:")]
     assert len(events) == 5
     assert events[0].startswith("Dialogue: 0,0:00:00.00,0:00:01.00,")
-    assert re.sub(r"\{[^}]*\}", "", events[0]).endswith("DÊ-ME FAÇA-SE GUARDA-CHUVA ANTI-HERÓI.")
+    pages = []
+    for event in events[:4]:
+        text = re.sub(r"\{[^}]*\}", "", event.split(",,0,0,0,,", 1)[1]).replace(r"\N", " ")
+        if not pages or pages[-1] != text:
+            pages.append(text)
+    assert " ".join(pages) == "DÊ-ME FAÇA-SE GUARDA-CHUVA ANTI-HERÓI."
 
 
 def test_separate_caption_dashes_are_preserved():

@@ -1,3 +1,4 @@
+import { t as tr } from "./i18n"
 import type { JobOptions, QueueJob, QueueSnapshot } from './types'
 import type { JobProgress } from './jobProgress'
 import { etaSeconds } from './jobProgress'
@@ -17,10 +18,10 @@ import { describeSport } from './sports'
  *  than showing the thing the user actually pasted. */
 export function jobLabel(job: QueueJob): string {
   if (job.display_title) return job.display_title
-  if (job.type === 'render') return 'Re-rendering a clip'
-  if (job.type === 'translate') return 'Subtitles & dubbing'
-  if (!job.url) return `Job ${job.id}`
-  if (job.url.startsWith('local:')) return 'Local video file'
+  if (job.type === 'render') return tr("Re-rendering a clip")
+  if (job.type === 'translate') return tr("Subtitles & dubbing")
+  if (!job.url) return tr("Job {0}", job.id)
+  if (job.url.startsWith('local:')) return tr("Local video file")
   try {
     const u = new URL(job.url)
     return `${u.hostname.replace(/^www\./, '')}${u.pathname}`
@@ -37,13 +38,13 @@ export function jobLabel(job: QueueJob): string {
  *  puts a Twitch chip on a row that has nothing to do with Twitch. */
 export function sourceOf(url: string): string {
   if (!url) return ''
-  if (url.startsWith('local:')) return 'Local file'
+  if (url.startsWith('local:')) return tr("Local file")
 
   let host: string
   try {
     host = new URL(url).hostname.replace(/^www\./, '').toLowerCase()
   } catch {
-    return 'Link'
+    return tr("Link")
   }
 
   // Exact host, or a subdomain of it — never a substring.
@@ -51,7 +52,7 @@ export function sourceOf(url: string): string {
   if (from('youtube.com') || from('youtu.be')) return 'YouTube'
   if (from('twitch.tv')) return 'Twitch'
   if (from('kick.com')) return 'Kick'
-  return 'Link'
+  return tr("Link")
 }
 
 /** The settings that actually differ from the defaults, as short chips.
@@ -59,22 +60,23 @@ export function sourceOf(url: string): string {
 export function describeOptions(o: JobOptions | undefined): string[] {
   if (!o) return []
   const chips: string[] = []
-  if (o.captions === false) chips.push('No captions')
+  if (o.captions === false) chips.push(tr('No captions'))
   if (o.long_clips) chips.push('60s+')
   if (o.podcast) chips.push('Podcast')
-  if (o.vertical_live) chips.push('Vertical Live')
-  if (o.gaming) chips.push('Gaming / Reaction')
+  if (o.vertical_live) chips.push(tr('Vertical Live'))
+  if (o.gaming) chips.push(tr('Gaming / Reaction'))
   if (o.sport) chips.push(describeSport(o.sport))
   if (o.longform)
     chips.push(
-      `Longform · ${String(o.longform.mode ?? '').replace(/_/g, ' ')}${o.longform.shorts ? ' + 9:16 Shorts' : ''}`
+      tr('Longform · {0}{1}', tr(o.longform.mode ?? ''), o.longform.shorts ? tr(' + 9:16 Shorts') : '')
     )
-  if (o.watermark_profile_id) chips.push('Watermark')
-  if (o.filter && o.filter !== 'none') chips.push(`Filter · ${o.filter}`)
-  if (typeof o.max_clips === 'number') chips.push(`Max ${o.max_clips} clips`)
-  if (typeof o.min_score === 'number') chips.push(`Score ≥ ${o.min_score}`)
-  if (o.focus) chips.push(`Direction · ${o.focus.length > 40 ? `${o.focus.slice(0, 40)}…` : o.focus}`)
-  if (o.force) chips.push('Reprocess')
+  if (o.watermark_profile_id) chips.push(tr('Watermark'))
+  if (o.cortes_gamer_watermark) chips.push('Cortes Gamer')
+  if (o.filter && o.filter !== 'none') chips.push(tr('Filter · {0}', tr(o.filter)))
+  if (typeof o.max_clips === 'number') chips.push(tr('Max {0} clips', o.max_clips))
+  if (typeof o.min_score === 'number') chips.push(tr('Score ≥ {0}', o.min_score))
+  if (o.focus) chips.push(tr('Direction · {0}', o.focus.length > 40 ? o.focus.slice(0, 40) + '…' : o.focus))
+  if (o.force) chips.push(tr('Reprocess'))
   return chips
 }
 

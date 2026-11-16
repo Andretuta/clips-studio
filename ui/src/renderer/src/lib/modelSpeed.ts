@@ -1,3 +1,4 @@
+import { t as tr } from "./i18n"
 /** What picking a bigger model actually costs you, in time.
  *
  *  The selector used to show only a name and a size on disk, which says
@@ -73,8 +74,8 @@ export function speedNote(
       text:
         // One decimal, matching SystemStats. Rounding 12.88 to "13 GB" would
         // contradict the figure shown on the dashboard for the same card.
-        `Too big for your ${vramGb.toFixed(1)} GB graphics card. It will run on the ` +
-        `processor instead and be many times slower — often hours for one video.`
+        tr("Too big for your {0} GB graphics card. It will run on the ", vramGb.toFixed(1)) +
+        tr("processor instead and be many times slower — often hours for one video.")
     }
   }
 
@@ -83,19 +84,19 @@ export function speedNote(
 
   const smallest = usable.reduce((a, b) => (b.size_gb < a.size_gb ? b : a))
   if (smallest.name === model.name) {
-    return { tone: 'ok', text: 'Fastest of your installed models. Picks clips less carefully than larger ones.' }
+    return { tone: 'ok', text: tr("Fastest of your installed models. Picks clips less carefully than larger ones.") }
   }
 
   const factor = model.size_gb / smallest.size_gb
   if (factor < NOTICEABLE) {
-    return { tone: 'ok', text: `Similar speed to ${smallest.name}, and picks clips a little better.` }
+    return { tone: 'ok', text: tr("Similar speed to {0}, and picks clips a little better.", smallest.name) }
   }
 
   const rounded = factor < 3 ? factor.toFixed(1) : String(Math.round(factor))
   return {
     tone: factor >= 2.5 ? 'slow' : 'ok',
     text:
-      `Picks clips better, but expect roughly ${rounded}x longer than ${smallest.name} ` +
-      `— a rough guide, since it depends on your hardware and the video.`
+      tr("Picks clips better, but expect roughly {0}x longer than {1} ", rounded, smallest.name) +
+      tr("— a rough guide, since it depends on your hardware and the video.")
   }
 }

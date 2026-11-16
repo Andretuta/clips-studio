@@ -3,9 +3,8 @@
  *  - Dictionaries are keyed by the ENGLISH source string, so untranslated
  *    strings simply render in English (partial coverage degrades gracefully
  *    and `t()` calls keep the code readable).
- *  - The language defaults to the WINDOWS display language (Electron's
- *    navigator.language reflects the OS locale) and can be overridden in
- *    Settings. Switching reloads the window — no reactive plumbing needed.
+ *  - This installation defaults to Brazilian Portuguese. Settings can
+ *    follow the system language or choose another installed dictionary.
  */
 import ar from '../locales/ar.json'
 import bn from '../locales/bn.json'
@@ -60,22 +59,26 @@ export function languageLabel(code: string): string {
   const pair = LANGUAGE_NAMES[code]
   if (!pair) return code
   const [english, native] = pair
-  return english === native ? english : `${english} (${native})`
+  if (activeLocale() === 'pt') return t(code === 'pt' ? 'Portuguese (Brazil)' : english)
+  const translated = t(english)
+  return translated === native ? translated : translated + ' (' + native + ')'
 }
 
-/** Interface languages: English plus every locale with a dictionary. */
-export const APP_LANGUAGES: [string, string][] = [
-  ['system', 'System (Windows) language'],
-  ['en', languageLabel('en')],
-  ...Object.keys(LOCALES)
-    .map((code): [string, string] => [code, languageLabel(code)])
-    .sort((a, b) => a[1].localeCompare(b[1]))
-]
+/** Interface languages, named in the language the user is reading. */
+export function appLanguages(): [string, string][] {
+  return [
+    ['system', t('System (Windows) language')],
+    ['en', languageLabel('en')],
+    ...Object.keys(LOCALES)
+      .map((code): [string, string] => [code, languageLabel(code)])
+      .sort((a, b) => a[1].localeCompare(b[1], interfaceLocale()))
+  ]
+}
 
 const STORE_KEY = 'app-language'
 
 export function appLanguageSetting(): string {
-  return localStorage.getItem(STORE_KEY) ?? 'system'
+  return localStorage.getItem(STORE_KEY) ?? 'pt'
 }
 
 /** The locale actually in effect (resolving 'system' to the OS language). */
@@ -86,18 +89,57 @@ export function activeLocale(): string {
   return sys in LOCALES ? sys : 'en'
 }
 
-/** Switch language IN PLACE — no reload: the dictionary is swapped and an
- *  event tells App to re-render the tree, so the user stays exactly where
- *  they are (e.g. mid-way through the Settings page). */
+/** Re-read labels declared in modules and return to Settings. */
 export function setAppLanguage(code: string): void {
+  if (code === appLanguageSetting()) return
   localStorage.setItem(STORE_KEY, code)
-  dict = LOCALES[activeLocale()]
-  window.dispatchEvent(new CustomEvent('app-language-changed'))
+  sessionStorage.setItem('restore-language-settings', 'yes')
+  window.location.reload()
 }
 
-let dict = LOCALES[activeLocale()]
+export const opensLanguageSettings = sessionStorage.getItem('restore-language-settings') === 'yes'
+sessionStorage.removeItem('restore-language-settings')
 
-/** Translate a UI string; falls back to the English source text. */
-export function t(s: string): string {
-  return (dict && dict[s]) || s
+const dict = LOCALES[activeLocale()]
+
+export function interfaceLocale(): string {
+  const locale = activeLocale()
+  return locale === 'pt' ? 'pt-BR' : locale
+}
+
+function applyLocale(): void {
+  document.documentElement.lang = interfaceLocale()
+  void window.studio?.setInterfaceLanguage?.(activeLocale()).catch(() => undefined)
+}
+
+applyLocale()
+
+/** Translate a UI message and substitute its numbered values after lookup. */
+export function t(source: string, ...values: unknown[]): string {
+  const message = dict && Object.hasOwn(dict, source) ? dict[source] : source
+  if (!values.length) return message
+  return message.replace(/\{(\d+)\}/g, (token, index: string) =>
+    Number(index) < values.length ? String(values[Number(index)]) : token
+  )
+}
+
+/** Localize server and browser messages that include a varying value. */
+export function messageText(source: string): string {
+  const exact = t(source)
+  if (exact !== source || activeLocale() !== 'pt') return exact
+  const text = source.trim()
+  const known = t(text)
+  if (known !== text) return known
+
+  if (/Failed to fetch|ERR_CONNECTION_REFUSED|NetworkError when attempting to fetch/i.test(text)) {
+    return t('Failed to fetch')
+  }
+  if (text.includes('X-Clips-Kitty-Session')) {
+    return t('Open the Clips Kitty desktop app again to renew the local session.')
+  }
+  const model = text.match(/^(?:model )?(.+?) isn.t downloaded\. Download it on the Models page.*$/i)
+  if (model) return t('Model {0} is not downloaded. Open Models to download it.', model[1])
+  const preview = text.match(/^preview render failed:\s*(.+)$/i)
+  if (preview) return t('Could not render the preview. {0}', messageText(preview[1]))
+  return exact
 }

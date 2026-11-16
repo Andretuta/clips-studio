@@ -17,12 +17,8 @@ on 4 December 2025, when the cost fell to ~100 units, and stopped being the
 right model entirely six months later.) Since every user brings their own Cloud
 project, nobody shares a bucket with anyone else.
 
-The one thing no code here can fix: **until an API project passes YouTube's
-free compliance audit, YouTube locks every video uploaded through it to
-private**, whatever privacy was requested. That lock cannot be appealed and
-cannot be undone in Studio — the video has to be uploaded again from an audited
-project. So `publish()` reads the privacy back and reports what actually
-happened rather than what was asked for.
+YouTube can apply a different visibility from the one requested.
+`publish()` reads the actual privacy back so the editor can report it.
 """
 
 import time
@@ -335,7 +331,7 @@ class YouTubeShortsPublisher(Publisher):
 
         Used a minute after upload to catch three things the insert response
         cannot tell us: processing failure, rejection (duplicate, copyright),
-        and confirmation of the unaudited-project privacy lock.
+        and any difference in visibility returned by YouTube.
         """
         try:
             response = (
@@ -405,9 +401,7 @@ class YouTubeShortsPublisher(Publisher):
         if result.locked_private:
             result.warnings.append(
                 "YouTube set this video to private even though you asked for "
-                f"{request.privacy}. That happens when the Google Cloud project has not "
-                "passed YouTube's free API audit. It cannot be changed in Studio — the "
-                "video has to be uploaded again from an audited project."
+                f"{request.privacy}. Check the visibility and any restrictions in YouTube Studio."
             )
 
         # Neither of these should fail the publish. The video is already up;

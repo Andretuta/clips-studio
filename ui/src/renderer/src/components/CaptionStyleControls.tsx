@@ -1,12 +1,13 @@
+import { t as tr } from "../lib/i18n"
 import { useEffect, useState } from 'react'
 import type { CaptionStyle } from '../lib/types'
 import { t } from '../lib/i18n'
 
 export const DEFAULT_CAPTION_STYLE: Required<CaptionStyle> = {
   font: 'Arial',
-  font_size: 84,
+  font_size: 68,
   color: '#FFFFFF',
-  position: 'bottom',
+  position: 'middle',
   words_per_caption: 3,
   uppercase: true,
   highlight: false,
@@ -26,7 +27,8 @@ export const CAPTION_FONTS = [
   'Segoe UI',
   'Georgia',
   'Comic Sans MS',
-  'Courier New'
+  'Courier New',
+  'Bebas Neue'
 ]
 
 /** Live example of how the burned-in captions will look (9:16 mock). */
@@ -56,11 +58,10 @@ function CaptionExample({ style }: { style: Required<CaptionStyle> }): JSX.Eleme
         style={{
           fontFamily: `'${style.font}', sans-serif`,
           color: style.color,
-          // 84px at 1920 tall ≈ scale into this ~176px-tall mock
-          fontSize: `${(style.font_size / 1920) * 176 * 2.2}px`,
+          fontSize: `${(style.font_size / 1920) * 176}px`,
           fontWeight: 700,
-          WebkitTextStroke: '0.8px black',
-          textShadow: '1px 1px 2px rgba(0,0,0,0.9)'
+          WebkitTextStroke: tr("0.8px black"),
+          textShadow: tr("1px 1px 2px rgba(0,0,0,0.9)")
         }}
       >
         {style.highlight
@@ -74,7 +75,7 @@ function CaptionExample({ style }: { style: Required<CaptionStyle> }): JSX.Eleme
             the two colours side by side are what is being chosen. */}
         {style.second_speaker && (
           <span className="block" style={{ color: style.second_speaker_color }}>
-            {style.uppercase ? 'SECOND SPEAKER' : 'second speaker'}
+            {style.uppercase ? tr("SECOND SPEAKER") : tr("second speaker")}
           </span>
         )}
       </p>
@@ -107,7 +108,7 @@ export default function CaptionStyleControls({
       <div className="grid grid-cols-2 gap-3">
         <div className="col-span-2">
           <label htmlFor={`${idPrefix}-font`} className="label">
-            Font
+            {tr("Font")}
           </label>
           <select
             id={`${idPrefix}-font`}
@@ -125,7 +126,7 @@ export default function CaptionStyleControls({
         </div>
         <div>
           <label htmlFor={`${idPrefix}-color`} className="label">
-            Text colour
+            {tr("Text colour")}
           </label>
           <input
             id={`${idPrefix}-color`}
@@ -137,7 +138,7 @@ export default function CaptionStyleControls({
         </div>
         <div>
           <label htmlFor={`${idPrefix}-size`} className="label">
-            Size ({style.font_size})
+            {tr("Size (")}{style.font_size})
           </label>
           <input
             id={`${idPrefix}-size`}
@@ -151,7 +152,7 @@ export default function CaptionStyleControls({
         </div>
         <div>
           <label htmlFor={`${idPrefix}-pos`} className="label">
-            Position
+            {tr("Position")}
           </label>
           <select
             id={`${idPrefix}-pos`}
@@ -159,15 +160,15 @@ export default function CaptionStyleControls({
             value={style.position}
             onChange={(e) => onChange('position', e.target.value as CaptionStyle['position'])}
           >
-            <option value="bottom">Bottom</option>
-            <option value="middle">Middle</option>
-            <option value="top">Top</option>
+            <option value="bottom">{tr("Bottom")}</option>
+            <option value="middle">{tr("Middle")}</option>
+            <option value="top">{tr("Top")}</option>
           </select>
         </div>
         {!hideWordsPerCaption && (
           <div>
             <label htmlFor={`${idPrefix}-words`} className="label">
-              Words per caption
+              {tr("Words per caption")}
             </label>
             <select
               id={`${idPrefix}-words`}
@@ -191,7 +192,7 @@ export default function CaptionStyleControls({
           checked={style.uppercase}
           onChange={(e) => onChange('uppercase', e.target.checked)}
         />
-        UPPERCASE captions
+        {tr("UPPERCASE captions")}
       </label>
 
       <div className="flex items-center gap-3">
@@ -202,7 +203,7 @@ export default function CaptionStyleControls({
             checked={style.highlight}
             onChange={(e) => onChange('highlight', e.target.checked)}
           />
-          Highlight each word as it&apos;s said
+          {tr("Highlight each word as it&apos;s said")}
         </label>
         {style.highlight && (
           <input
@@ -229,7 +230,7 @@ export default function CaptionStyleControls({
               checked={style.second_speaker}
               onChange={(e) => onChange('second_speaker', e.target.checked)}
             />
-            Second speaker in another colour
+            {tr("Second speaker in another colour")}
           </label>
           {style.second_speaker && (
             <input
@@ -244,7 +245,7 @@ export default function CaptionStyleControls({
       )}
 
       <div>
-        <p className="label mb-1">Example</p>
+        <p className="label mb-1">{tr("Example")}</p>
         <CaptionExample style={style} />
       </div>
     </>

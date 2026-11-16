@@ -1,3 +1,4 @@
+import { t as tr } from "../../lib/i18n"
 import { useEffect, useRef, useState } from 'react'
 import { api } from '../../lib/api'
 import type { CaptionStyle, JobOptions, PipelineChoice, SportOption } from '../../lib/types'
@@ -5,6 +6,7 @@ import CaptionStyleControls, { DEFAULT_CAPTION_STYLE } from '../CaptionStyleCont
 import SportFields from '../SportFields'
 import { sportForVertical, startingSport, useSports, verticalSports, verticalValue } from '../../lib/sports'
 import { watermarkSelection } from '../WatermarkCard'
+import { CortesGamerSliders, DEFAULT_CORTES_GAMER_STYLE } from '../CortesGamerWatermark'
 import { useEditPlugins, usePipelines, useStepPlugins } from '../../lib/plugins'
 import {
   MOMENT_STEPS,
@@ -70,6 +72,8 @@ export default function QueueItemSettings({
   const [longformMode, setLongformMode] = useState(s.longform?.mode ?? 'short_clips')
   const [longformShorts, setLongformShorts] = useState(Boolean(s.longform?.shorts))
   const [watermark, setWatermark] = useState(Boolean(s.watermark_profile_id))
+  const [cortesGamer, setCortesGamer] = useState(Boolean(s.cortes_gamer_watermark))
+  const [cortesGamerStyle, setCortesGamerStyle] = useState(s.cortes_gamer_style ?? DEFAULT_CORTES_GAMER_STYLE)
   // A Marketplace pipeline is chosen when the video is added; here it can only
   // be kept or turned off, which the modes that pick moments their own way need.
   const [pipeline, setPipeline] = useState<PipelineChoice | null>(s.pipeline ?? null)
@@ -129,6 +133,8 @@ export default function QueueItemSettings({
       const edits = editPatch(s, editKept, Boolean(channel))
       Object.assign(patch, edits.patch)
       clear.push(...edits.clear)
+      patch.cortes_gamer_watermark = cortesGamer
+      if (cortesGamer || s.cortes_gamer_style) patch.cortes_gamer_style = cortesGamerStyle
       if (watermark) {
         // Which branding profile is a single app-wide choice (Generate bar /
         // Creators tab); this toggle only decides whether THIS video uses it.
@@ -163,6 +169,8 @@ export default function QueueItemSettings({
     longformMode,
     longformShorts,
     watermark,
+    cortesGamer,
+    cortesGamerStyle,
     pipeline,
     stepsKept,
     editKept,
@@ -225,17 +233,17 @@ export default function QueueItemSettings({
     <div className="mt-3 pt-3 border-t border-raised/60 space-y-3">
       <p className="label">{t(heading)}</p>
       <div className="flex gap-x-5 gap-y-2 flex-wrap">
-        {toggle('Captions', '', captions, setCaptions, 'Burn captions into this video’s clips')}
+        {toggle(tr("Captions"), '', captions, setCaptions, tr("Burn captions into this video’s clips"))}
         {toggle(
           '60s+',
-          '(TikTok monetization)',
+          tr("(TikTok monetization)"),
           longClips,
           setLongClips,
-          'TikTok monetization requires videos over 1 minute. On: clips run 61-180s.'
+          tr("TikTok monetization requires videos over 1 minute. On: clips run 61-180s.")
         )}
         {toggle(
-          'Longform',
-          '(16:9 clips)',
+          tr("Longform"),
+          tr("(16:9 clips)"),
           longform,
           (on) => {
             setLongform(on)
@@ -247,11 +255,11 @@ export default function QueueItemSettings({
               setEditKept(false)
             }
           },
-          'Makes 16:9 clips for YouTube and X. Leave it off for 9:16 Shorts, from any video.'
+          tr("Makes 16:9 clips for YouTube and X. Leave it off for 9:16 Shorts, from any video.")
         )}
         {toggle(
-          'Vertical Live',
-          '(already-vertical video)',
+          tr("Vertical Live"),
+          tr("(already-vertical video)"),
           verticalLive,
           (on) => {
             // Keeps the live's own 9:16 layout, so the options that reframe
@@ -263,11 +271,11 @@ export default function QueueItemSettings({
               setGaming(false)
             }
           },
-          'Only for a video that is already vertical (9:16); leave it off to make 9:16 Shorts from a normal 16:9 video. A livestream that was already vertical when it was streamed: keeps its own 9:16 layout, no face tracking or reframing. For a watched channel, videos with no vertical version are skipped.'
+          tr("Only for a video that is already vertical (9:16); leave it off to make 9:16 Shorts from a normal 16:9 video. A livestream that was already vertical when it was streamed: keeps its own 9:16 layout, no face tracking or reframing. For a watched channel, videos with no vertical version are skipped.")
         )}
         {toggle(
-          'Podcast',
-          '(multi-cam)',
+          tr("Podcast"),
+          tr("(multi-cam)"),
           podcast,
           (on) => {
             setPodcast(on)
@@ -277,10 +285,10 @@ export default function QueueItemSettings({
               setSport(null)
             }
           },
-          'For multi-camera podcasts: each shot gets one steady crop on whoever is talking.'
+          tr("For multi-camera podcasts: each shot gets one steady crop on whoever is talking.")
         )}
         {toggle(
-          'Gaming / Reaction',
+          tr("Gaming / Reaction"),
           '(split-screen)',
           gaming,
           (on) => {
@@ -293,11 +301,11 @@ export default function QueueItemSettings({
               setSport(null)
             }
           },
-          'Game streams and reaction videos: the streamer’s webcam in the top half, the game or the video they’re reacting to in the bottom half. With no webcam, the game fills the screen.'
+          tr("Game streams and reaction videos: the streamer’s webcam in the top half, the game or the video they’re reacting to in the bottom half. With no webcam, the game fills the screen.")
         )}
         {(sports.length > 0 || sport) &&
           toggle(
-            'Sports',
+            tr("Sports"),
             '(match)',
             Boolean(sport),
             (on) => {
@@ -310,11 +318,11 @@ export default function QueueItemSettings({
                 setPipeline(null)
               }
             },
-            'A match or a game (Soccer, Basketball): its moments from the crowd, the commentary and the scoreboard, one clip per moment, and a 9:16 crop that follows the play.'
+            tr("A match or a game (Soccer, Basketball): its moments from the crowd, the commentary and the scoreboard, one clip per moment, and a 9:16 crop that follows the play.")
           )}
         {s.pipeline &&
           toggle(
-            'Pipeline',
+            tr("Pipeline"),
             `(${pipelineName})`,
             Boolean(pipeline),
             (on) => {
@@ -325,7 +333,7 @@ export default function QueueItemSettings({
                 setGamingScoring(false)
               }
             },
-            'A pipeline from the Marketplace picks this video’s moments. Sports, Gaming scoring and Longform pick them their own way, so turning one of them on turns the pipeline off.'
+            tr("A pipeline from the Marketplace picks this video’s moments. Sports, Gaming scoring and Longform pick them their own way, so turning one of them on turns the pipeline off.")
           )}
         {hasSteps(s) &&
           (channel?.presetLongform ? (
@@ -334,7 +342,7 @@ export default function QueueItemSettings({
             </span>
           ) : (
             toggle(
-              'Rate & understand',
+              tr("Rate & understand"),
               `(${stepNames.join(', ')})`,
               stepsKept,
               (on) => {
@@ -342,8 +350,8 @@ export default function QueueItemSettings({
                 if (on) setLongform(false) // the engine refuses the two together
               },
               channel
-                ? 'Marketplace plugins rate this channel’s moments or say what happens in them, as chosen for this channel. Here they can only be kept or turned off. Longform picks its moments its own way, so turning it on turns these off.'
-                : 'Marketplace plugins rate this video’s moments or say what happens in them, as chosen when it was added. Here they can only be kept or turned off. Longform picks its moments its own way, so turning it on turns these off.'
+                ? tr("Marketplace plugins rate this channel’s moments or say what happens in them, as chosen for this channel. Here they can only be kept or turned off. Longform picks its moments its own way, so turning it on turns these off.")
+                : tr("Marketplace plugins rate this video’s moments or say what happens in them, as chosen when it was added. Here they can only be kept or turned off. Longform picks its moments its own way, so turning it on turns these off.")
             )
           ))}
         {Boolean(s.edit?.length) &&
@@ -353,7 +361,7 @@ export default function QueueItemSettings({
             </span>
           ) : (
             toggle(
-              'Suggest edits',
+              tr("Suggest edits"),
               `(${editNames.join(', ')})`,
               editKept,
               (on) => {
@@ -361,18 +369,27 @@ export default function QueueItemSettings({
                 if (on) setLongform(false) // the engine refuses the two together
               },
               channel
-                ? 'Marketplace plugins suggest edits for this channel’s clips, as chosen for this channel. Suggestions wait for you in the editor. Here they can only be kept or turned off. Longform makes its clips its own way, so turning it on turns these off.'
-                : 'Marketplace plugins suggest edits for this video’s clips, as chosen when it was added. Suggestions wait for you in the editor. Here they can only be kept or turned off. Longform makes its clips its own way, so turning it on turns these off.'
+                ? tr("Marketplace plugins suggest edits for this channel’s clips, as chosen for this channel. Suggestions wait for you in the editor. Here they can only be kept or turned off. Longform makes its clips its own way, so turning it on turns these off.")
+                : tr("Marketplace plugins suggest edits for this video’s clips, as chosen when it was added. Suggestions wait for you in the editor. Here they can only be kept or turned off. Longform makes its clips its own way, so turning it on turns these off.")
             )
           ))}
         {toggle(
-          'Watermark',
-          '(branding)',
+          'Marca d’água Cortes Gamer',
+          '',
+          cortesGamer,
+          setCortesGamer,
+          'Grava o logo e @CortesGameroffc em pontos diferentes dentro do vídeo.'
+        )}
+        {toggle(
+          tr("Watermark"),
+          tr("(branding)"),
           watermark,
           setWatermark,
-          'Burn your logo / channel handle into every clip of this video.'
+          tr("Burn your logo / channel handle into every clip of this video.")
         )}
       </div>
+
+      {cortesGamer && <CortesGamerSliders value={cortesGamerStyle} onChange={setCortesGamerStyle} />}
 
       {stepsKept && !channel?.presetLongform && stepsGone.length + postingLines.length > 0 && (
         <div className="space-y-1">
@@ -454,10 +471,10 @@ export default function QueueItemSettings({
             onChange={(e) => setLongformMode(e.target.value)}
             aria-label={t("Longform output type")}
           >
-            <option value="short_clips">Short Clips (up to 60s, horizontal)</option>
-            <option value="clips_140">Clips (up to 140s — X/Twitter)</option>
-            <option value="highlights">Highlights (best-of, 8-20 min by quality)</option>
-            <option value="edited_stream">Edited Stream (downtime removed)</option>
+            <option value="short_clips">{tr("Short Clips (up to 60s, horizontal)")}</option>
+            <option value="clips_140">{tr("Clips (up to 140s — X/Twitter)")}</option>
+            <option value="highlights">{tr("Highlights (best-of, 8-20 min by quality)")}</option>
+            <option value="edited_stream">{tr("Edited Stream (downtime removed)")}</option>
           </select>
           <label
             className="flex items-center gap-2 text-sm cursor-pointer"

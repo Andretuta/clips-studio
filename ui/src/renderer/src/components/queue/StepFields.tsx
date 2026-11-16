@@ -1,3 +1,4 @@
+import { t as tr } from "../../lib/i18n"
 import { t } from '../../lib/i18n'
 import type { InstalledPlugin } from '../../lib/marketplace'
 import { MAX_PER_STEP, usableFor, type JobStep } from '../../lib/steps'
@@ -7,9 +8,9 @@ import PipelineFields from '../PipelineFields'
 /** The words of each step's rows: the first row's label, the label of the
  *  rows after it, and what Clips Kitty does when no plugin is chosen. */
 const ROWS: Record<JobStep, { first: string; more: string; none: string }> = {
-  understand: { first: 'Understand them with', more: 'and with', none: 'Clips Kitty (from what’s said)' },
-  rate: { first: 'Rate them with', more: 'then with', none: 'Clips Kitty’s own scores' },
-  edit: { first: 'Suggest edits with', more: 'and with', none: 'No suggestions' }
+  understand: { first: tr("Understand them with"), more: tr("and with"), none: tr("Clips Kitty (from what’s said)") },
+  rate: { first: tr("Rate them with"), more: tr("then with"), none: tr("Clips Kitty’s own scores") },
+  edit: { first: tr("Suggest edits with"), more: tr("and with"), none: tr("No suggestions") }
 }
 
 /** One video's Rate & understand choices, under the switch, read as a

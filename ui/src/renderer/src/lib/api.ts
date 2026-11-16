@@ -9,6 +9,9 @@ import type {
   CaptionLine,
   CaptionStyle,
   Clip,
+  CompilationJob,
+  CompilationSource,
+  CortesGamerStyle,
   CreatorDetail,
   CreatorSuggestion,
   CreatorSummary,
@@ -48,6 +51,8 @@ import type {
 } from './youtube'
 import type { Capabilities, FanOut, PlatformRow, UploadPostStatus } from './uploadpost'
 import type { RemoteRenderState } from './remoteRender'
+import type { ComposioJob, ComposioPlatform, ComposioStatus } from './composio'
+import { messageText, t } from './i18n'
 
 export const API_BASE = 'http://127.0.0.1:8765'
 
@@ -65,13 +70,19 @@ function layoutQuery(source: { url?: string; path?: string }): string {
 }
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(`${API_BASE}${path}`, {
-    headers: { 'Content-Type': 'application/json' },
-    ...init
-  })
+  let res: Response
+  try {
+    res = await fetch(`${API_BASE}${path}`, {
+      headers: { 'Content-Type': 'application/json' },
+      ...init
+    })
+  } catch (error) {
+    if (error instanceof DOMException && error.name === 'AbortError') throw error
+    throw new Error(t('Failed to fetch'), { cause: error })
+  }
   if (!res.ok) {
     const body = await res.text().catch(() => '')
-    throw new Error(`${res.status} ${path}: ${body.slice(0, 200)}`)
+    throw new Error(responseErrorText(body, res.status))
   }
   return res.json() as Promise<T>
 }
@@ -155,6 +166,8 @@ export const api = {
         source_url: opts.source_url ?? '',
         longform: opts.longform ?? null,
         watermark_profile_id: opts.watermark_profile_id ?? null,
+        cortes_gamer_watermark: opts.cortes_gamer_watermark ?? null,
+        cortes_gamer_style: opts.cortes_gamer_style ?? null,
         filter: opts.filter ?? null,
         min_score: opts.min_score ?? null,
         max_clips: opts.max_clips ?? null,
@@ -168,6 +181,29 @@ export const api = {
       `/videos/local/shape?path=${encodeURIComponent(path)}`
     ),
   jobs: () => request<Job[]>('/jobs'),
+  job: (id: number) => request<Job>(`/jobs/${id}`),
+  compilationSources: () => request<CompilationSource[]>('/compilations/sources'),
+  composioStatus: () => request<ComposioStatus>('/composio/status'),
+  composioSettings: (settings: { api_key?: string; tiktok_auth_config: string }) =>
+    request<{ ok: boolean }>('/composio/settings', { method: 'PUT', body: JSON.stringify(settings) }),
+  composioConnect: (platform: ComposioPlatform) =>
+    request<{ url: string }>('/composio/connect', { method: 'POST', body: JSON.stringify({ platform }) }),
+  composioJobs: (id: number) => request<ComposioJob[]>(`/composio/clips/${id}/jobs`),
+  composioSend: (id: number, platform: ComposioPlatform, title: string, description: string) =>
+    request<ComposioJob>(`/composio/clips/${id}/send`, {
+      method: 'POST',
+      body: JSON.stringify({ platform, title, description })
+    }),
+  compilationMedia: (id: string) => `${API_BASE}/compilations/sources/${encodeURIComponent(id)}/media`,
+  preparePublication: (id: string) =>
+    request<{ video_id: string; clip_id: number }>(`/publication/sources/${encodeURIComponent(id)}/prepare`, {
+      method: 'POST'
+    }),
+  makeCompilation: (title: string, sources: string[], cortesGamer: boolean, style: CortesGamerStyle) =>
+    request<CompilationJob>('/compilations', {
+      method: 'POST',
+      body: JSON.stringify({ title, sources, cortes_gamer_watermark: cortesGamer, cortes_gamer_style: style })
+    }),
   /** The sports the Sports toggle offers, with their menus (sports/ on the
    *  engine). Empty when it has none. */
   sports: () => request<SportChoice[]>('/sports'),
@@ -358,7 +394,9 @@ export const api = {
      *  ones, an empty list = none. */
     speakerEdits?: SpeakerTurn[],
     /** The pending Captions switch; undefined = the clip's saved choice. */
-    captions?: boolean
+    captions?: boolean,
+    cortesGamerWatermark?: boolean,
+    cortesGamerStyle?: CortesGamerStyle
   ) =>
     request<{ url: string }>(`/clips/${clipId}/preview`, {
       method: 'POST',
@@ -372,7 +410,9 @@ export const api = {
         gaming: gaming ?? null,
         gaming_off: gaming === null,
         speaker_edits: speakerEdits ?? null,
-        captions: captions ?? null
+        captions: captions ?? null,
+        cortes_gamer_watermark: cortesGamerWatermark ?? null,
+        cortes_gamer_style: cortesGamerStyle ?? null
       })
     }),
   /** A frame of the clip's SOURCE video, `at` (0-1) of the way through, to
@@ -978,16 +1018,17 @@ export const api = {
     })
 }
 
-/** The server's own words from a failed request, for showing to a person.
- *  request() throws "400 /path: {"detail":"..."}"; this returns the detail. */
-export function errorText(e: unknown): string {
-  const raw = e instanceof Error ? e.message : String(e)
-  const body = raw.slice(raw.indexOf(': ') + 2)
+/** Localize the API detail while leaving provider codes and model names intact. */
+export function responseErrorText(body: string, status: number): string {
   try {
-    const parsed = JSON.parse(body) as { detail?: unknown }
-    if (typeof parsed.detail === 'string') return parsed.detail
+    const parsed = JSON.parse(body) as { detail?: unknown } | null
+    if (typeof parsed?.detail === 'string') return messageText(parsed.detail)
   } catch {
-    // not JSON: fall through to the raw text
+    if (body.trim() && !body.trimStart().startsWith('<')) return messageText(body.trim().slice(0, 500))
   }
-  return raw
+  return t('The service returned an error ({0}).', status)
+}
+
+export function errorText(error: unknown): string {
+  return messageText(error instanceof Error ? error.message : String(error))
 }

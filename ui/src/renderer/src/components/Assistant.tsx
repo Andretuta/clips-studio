@@ -1,3 +1,4 @@
+import { t as tr } from "../lib/i18n"
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { api } from '../lib/api'
 import { t } from '../lib/i18n'
@@ -298,7 +299,7 @@ export default function Assistant(): JSX.Element | null {
                   : t('Install Gemma 4')}
               </button>
               <span className="text-xs text-muted">
-                <code>{install.model}</code> · {t('about')} {install.size_gb} GB,{' '}
+                <code>{install.model}</code> · {t('about')} {install.size_gb} {tr("GB,")}{' '}
                 {t('one time, stays on your PC')} ·{' '}
                 <button
                   className="text-accent hover:underline"
@@ -315,7 +316,7 @@ export default function Assistant(): JSX.Element | null {
             )}
           </>
         ) : (
-          <p className="text-xs text-muted mt-1">{reason || t('No model available.')}</p>
+          <p className="text-xs text-muted mt-1">{t(reason || 'No model available.')}</p>
         )}
       </section>
     )
@@ -389,7 +390,7 @@ export default function Assistant(): JSX.Element | null {
                   schedule.per_day
                     ? `, ${schedule.per_day} ${t('a day')}`
                     : schedule.every_hours
-                      ? `, ${t('one every')} ${schedule.every_hours}h`
+                      ? tr(", {0} {1}h", t('one every'), schedule.every_hours)
                       : ''
                 }. ${t('Nothing has been posted yet.')}`
               : `${plan.length} ${t('clips ready to upload. Nothing has been uploaded yet.')}`}

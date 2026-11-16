@@ -1,3 +1,4 @@
+import { t as tr } from "../lib/i18n"
 import { t } from '../lib/i18n'
 import { useEffect, useState } from 'react'
 import { api } from '../lib/api'
@@ -66,11 +67,11 @@ export default function BrandingEditor(): JSX.Element {
     try {
       if (activeId) {
         await api.updateBranding(activeId, name || 'Branding', config)
-        flash('Saved')
+        flash(tr("Saved"))
         await load(activeId)
       } else {
         const { id } = await api.createBranding(name || 'Branding', config)
-        flash('Profile created')
+        flash(tr("Profile created"))
         await load(id)
       }
     } catch (e) {
@@ -85,7 +86,7 @@ export default function BrandingEditor(): JSX.Element {
   }
 
   const remove = async (): Promise<void> => {
-    if (!activeId || !window.confirm(`Delete branding profile "${name}"?`)) return
+    if (!activeId || !window.confirm(tr("Delete branding profile \"{0}\"?", name))) return
     await api.deleteBranding(activeId)
     setActiveId(null)
     await load()
@@ -95,13 +96,13 @@ export default function BrandingEditor(): JSX.Element {
   return (
     <div className="w-full space-y-3 border-t border-raised/60 pt-3">
       <div className="flex items-center gap-2 flex-wrap">
-        <p className="label shrink-0">Branding profile</p>
+        <p className="label shrink-0">{tr("Branding profile")}</p>
         <select
           className="input !w-48 !py-1 text-sm"
           value={activeId ?? ''}
           onChange={(e) => selectProfile(Number(e.target.value))}
         >
-          {profiles.length === 0 && <option value="">(none yet)</option>}
+          {profiles.length === 0 && <option value="">{tr("(none yet)")}</option>}
           {profiles.map((p) => (
             <option key={p.id} value={p.id}>
               {p.name}
@@ -109,11 +110,11 @@ export default function BrandingEditor(): JSX.Element {
           ))}
         </select>
         <button className="btn-ghost !py-1 text-xs" onClick={newProfile}>
-          + New
+          {tr("+ New")}
         </button>
         {activeId && (
           <button className="text-xs text-muted hover:text-red-400" onClick={remove}>
-            Delete
+            {tr("Delete")}
           </button>
         )}
         <input
@@ -128,11 +129,11 @@ export default function BrandingEditor(): JSX.Element {
 
       <div className="flex items-center gap-3">
         <button className="btn-accent !py-1.5" onClick={save}>
-          {activeId ? 'Save profile' : 'Create profile'}
+          {activeId ? tr("Save profile") : tr("Create profile")}
         </button>
         {notice && <span className="text-xs text-accent">{notice}</span>}
         <span className="text-[11px] text-muted/70 ml-auto">
-          Also settable per creator in the Creators tab.
+          {tr("Also settable per creator in the Creators tab.")}
         </span>
       </div>
     </div>

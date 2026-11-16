@@ -1,3 +1,4 @@
+import { t as tr } from "../lib/i18n"
 import { useEffect, useState } from 'react'
 import { api } from '../lib/api'
 import { openAISetup } from '../lib/aiSetup'
@@ -20,7 +21,7 @@ export default function ModelSwitcher(): JSX.Element {
       const label = [...status.providers, ...(status.signin ?? [])].find(
         (p) => p.id === status.active.provider
       )?.label
-      setCloud(status.active.local ? '' : `${label ?? status.active.provider} · ${status.active.model}`)
+      setCloud(status.active.local ? '' : `${tr(label ?? status.active.provider)} · ${status.active.model}`)
     } catch {
       setCloud('')
     }
@@ -67,7 +68,7 @@ export default function ModelSwitcher(): JSX.Element {
     // provider, which is exactly the kind of surprise this must not spring.
     return (
       <div className="px-3 pb-2">
-        <label className="label px-2">AI model</label>
+        <label className="label px-2">{tr("AI model")}</label>
         <button
           className="input mt-1 text-sm text-left truncate"
           title={cloud}
@@ -75,7 +76,7 @@ export default function ModelSwitcher(): JSX.Element {
         >
           {cloud}
         </button>
-        <p className="mt-1 px-2 text-[11px] leading-snug text-muted">Your own key · change in Settings</p>
+        <p className="mt-1 px-2 text-[11px] leading-snug text-muted">{tr("Your own key · change in Settings")}</p>
       </div>
     )
   }
@@ -87,7 +88,7 @@ export default function ModelSwitcher(): JSX.Element {
 
   return (
     <div className="px-3 pb-2">
-      <label className="label px-2">AI model</label>
+      <label className="label px-2">{tr("AI model")}</label>
       <select
         className="input mt-1 text-sm"
         value={active}
@@ -121,7 +122,7 @@ export default function ModelSwitcher(): JSX.Element {
           className="mt-0.5 px-2 text-[11px] text-accent hover:underline text-left"
           onClick={() => openAISetup('openrouter')}
         >
-          Or run it in the cloud with OpenRouter →
+          {tr("Or run it in the cloud with OpenRouter →")}
         </button>
       )}
     </div>

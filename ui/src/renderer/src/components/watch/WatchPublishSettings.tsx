@@ -1,3 +1,4 @@
+import { t as tr } from "../../lib/i18n"
 import { useEffect, useRef, useState } from 'react'
 import { api, errorText } from '../../lib/api'
 import { discord, type Destination } from '../../lib/campaigns'
@@ -34,20 +35,20 @@ export function useWoopAccounts(): { ready: boolean; connected: string[]; accoun
 }
 
 const MODES: { id: WatchPublish['mode']; label: string; hint: string }[] = [
-  { id: 'off', label: 'Off', hint: 'Only make the clips.' },
-  { id: 'ask', label: 'Ask first', hint: 'Make the clips, then wait for you to press Publish.' },
+  { id: 'off', label: 'Off', hint: tr("Only make the clips.") },
+  { id: 'ask', label: tr("Ask first"), hint: tr("Make the clips, then wait for you to press Publish.") },
   {
     id: 'auto',
-    label: 'Automatic (hands-off)',
-    hint: 'Publish as soon as the clips are made. Anything that fails is tried again, so it keeps going with nobody at the PC.'
+    label: tr("Automatic (hands-off)"),
+    hint: tr("Publish as soon as the clips are made. Anything that fails is tried again, so it keeps going with nobody at the PC.")
   }
 ]
 
 const BACKLOG: { id: Watch['backlog']; label: string }[] = [
-  { id: 'newest', label: 'Only the newest one' },
-  { id: 'all', label: 'All of them' },
-  { id: 'day', label: 'The ones from the last 24 hours' },
-  { id: 'none', label: 'None, I will pick' }
+  { id: 'newest', label: tr("Only the newest one") },
+  { id: 'all', label: tr("All of them") },
+  { id: 'day', label: tr("The ones from the last 24 hours") },
+  { id: 'none', label: tr("None, I will pick") }
 ]
 
 /** What happens to a watched channel's clips, and to videos it finds late.
@@ -257,7 +258,7 @@ export default function WatchPublishSettings({
               id={`watch-tags-${watch.id}`}
               className="input"
               value={hashtags}
-              placeholder="#creatorname #twitch"
+              placeholder={tr("#creatorname #twitch")}
               onChange={(e) => setHashtags(e.target.value)}
             />
             <label className="flex items-center gap-2 cursor-pointer text-sm">
@@ -310,7 +311,7 @@ export default function WatchPublishSettings({
           </select>
         </label>
         <label className="text-sm space-y-1">
-          <span className="label block">{clipWatch ? 'Post a clip once it has views' : t('Skip videos shorter than (minutes)')}</span>
+          <span className="label block">{clipWatch ? tr("Post a clip once it has views") : t('Skip videos shorter than (minutes)')}</span>
           <input
             type="number"
             min={0}
@@ -323,12 +324,12 @@ export default function WatchPublishSettings({
           />
         </label>
         {clipWatch && <label className="text-sm space-y-1">
-          <span className="label block">Look back days</span>
+          <span className="label block">{tr("Look back days")}</span>
           <input type="number" min={1} max={90} className="input !w-24" value={lookbackDays}
             onChange={(e) => setLookbackDays(Math.max(1, Math.min(90, Number(e.target.value) || 1)))} />
         </label>}
         {clipWatch && <label className="text-sm space-y-1">
-          <span className="label block">Maximum upcoming clips</span>
+          <span className="label block">{tr("Maximum upcoming clips")}</span>
           <input type="number" min={1} max={100} className="input !w-24" value={maxPending}
             onChange={(e) => setMaxPending(Math.max(1, Math.min(100, Number(e.target.value) || 1)))} />
         </label>}

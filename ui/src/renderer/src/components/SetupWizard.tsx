@@ -1,3 +1,4 @@
+import { t as tr } from "../lib/i18n"
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { api, errorText } from '../lib/api'
 import { isChecking, pullPercent, pullStep } from '../lib/modelPull'
@@ -17,18 +18,18 @@ export function resetSetup(): void {
 }
 
 const LABEL: Record<string, string> = {
-  ffmpeg: 'Video engine',
-  ffprobe: 'Video inspector',
+  ffmpeg: tr("Video engine"),
+  ffprobe: tr("Video inspector"),
   // Not "Ollama" any more. It ships inside the app and starts itself, so its
   // brand name is an implementation detail — naming it here only invites
   // someone to go and install a second copy.
-  ollama: 'AI runtime',
-  model: 'AI model',
-  ai: 'AI model',
-  whisper: 'Transcription',
-  transcription: 'Transcription',
-  gpu: 'Graphics card',
-  disk: 'Free space'
+  ollama: tr("AI runtime"),
+  model: tr("AI model"),
+  ai: tr("AI model"),
+  whisper: tr("Transcription"),
+  transcription: tr("Transcription"),
+  gpu: tr("Graphics card"),
+  disk: tr("Free space")
 }
 
 function CheckRow({ check }: { check: PreflightCheck }): JSX.Element {
@@ -43,7 +44,7 @@ function CheckRow({ check }: { check: PreflightCheck }): JSX.Element {
     <div className="flex gap-3 py-2.5 border-b border-raised/40 last:border-0">
       <span
         className={`size-6 shrink-0 rounded-full grid place-items-center text-xs font-bold ${tone}`}
-        aria-label={state === 'ok' ? 'ready' : state === 'bad' ? 'missing' : 'warning'}
+        aria-label={state === 'ok' ? tr("ready") : state === 'bad' ? 'missing' : 'warning'}
       >
         {mark}
       </span>
@@ -100,7 +101,7 @@ export default function SetupWizard({ onClose }: { onClose: () => void }): JSX.E
       return p
     } catch (e) {
       setError(
-        'Could not reach the Clips Kitty engine. If you just installed, give it a few seconds and try again.'
+        tr("Could not reach the Clips Kitty engine. If you just installed, give it a few seconds and try again.")
       )
       return null
     } finally {
@@ -255,7 +256,7 @@ export default function SetupWizard({ onClose }: { onClose: () => void }): JSX.E
     onClose()
   }
 
-  const steps = ['Welcome', 'Setting up', 'Ready']
+  const steps = [tr("Welcome"), tr("Setting up"), tr("Ready")]
 
   return (
     <div className="fixed inset-0 z-50 bg-base/95 backdrop-blur-sm grid place-items-center p-6">
@@ -273,25 +274,21 @@ export default function SetupWizard({ onClose }: { onClose: () => void }): JSX.E
 
         <div className="p-7">
           <p className="text-xs text-muted mb-1">
-            Step {step + 1} of {steps.length} · {steps[step]}
+            {tr("Step")} {step + 1} of {steps.length} · {steps[step]}
           </p>
 
           {/* ---------------------------------------------- 0: welcome */}
           {step === 0 && (
             <>
-              <h2 className="text-2xl font-bold">Welcome to Clips Kitty</h2>
+              <h2 className="text-2xl font-bold">{tr("Welcome to Clips Kitty")}</h2>
               <p className="text-sm text-muted mt-3 leading-relaxed">
-                Paste a link to a YouTube video, Twitch VOD or Kick VOD and Clips Kitty finds
-                the best moments, crops them to fit a phone screen, and writes captions and
-                titles for you.
+                {tr("Paste a link to a YouTube video, Twitch VOD or Kick VOD and Clips Kitty finds the best moments, crops them to fit a phone screen, and writes captions and titles for you.")}
               </p>
               <p className="text-sm text-muted mt-3 leading-relaxed">
-                All of it runs on this computer. Your videos are never uploaded anywhere, there
-                is no subscription, and there is no limit on how many clips you make.
+                {tr("All of it runs on this computer. Your videos are never uploaded anywhere, there is no subscription, and there is no limit on how many clips you make.")}
               </p>
               <p className="text-sm text-muted mt-3 leading-relaxed">
-                This takes about a minute. We&apos;ll check everything is installed, then pick
-                an AI model that suits your graphics card.
+                {tr("This takes about a minute. We&apos;ll check everything is installed, then pick an AI model that suits your graphics card.")}
               </p>
             </>
           )}
@@ -299,11 +296,9 @@ export default function SetupWizard({ onClose }: { onClose: () => void }): JSX.E
           {/* ------------------------------- 1: checks + the one download */}
           {step === 1 && (
             <>
-              <h2 className="text-2xl font-bold">Setting up</h2>
+              <h2 className="text-2xl font-bold">{tr("Setting up")}</h2>
               <p className="text-sm text-muted mt-3 leading-relaxed">
-                Everything Clips Kitty needs came with it, apart from the AI model that picks
-                the moments worth clipping. We&apos;re fetching the one that suits your graphics
-                card now — it downloads once and then works offline.
+                {tr("Everything Clips Kitty needs came with it, apart from the AI model that picks the moments worth clipping. We&apos;re fetching the one that suits your graphics card now — it downloads once and then works offline.")}
               </p>
               {/* For the old laptop or low-spec mini PC that cannot run the
                   model: OpenRouter on their own key instead. Prominent when
@@ -318,11 +313,11 @@ export default function SetupWizard({ onClose }: { onClose: () => void }): JSX.E
                   <OpenRouterPrompt
                     className="mt-3"
                     prominent={lowSpec}
-                    title={lowSpec ? 'Local AI may be slow on this computer.' : 'PC too old to run AI?'}
+                    title={lowSpec ? tr("Local AI may be slow on this computer.") : tr("PC too old to run AI?")}
                     body={
                       lowSpec
-                        ? 'Recommended: OpenRouter. Bring your own OpenRouter key to use a cloud model instead (billed by OpenRouter to your account).'
-                        : 'Use OpenRouter with your own key instead, billed by OpenRouter to your account.'
+                        ? tr("Recommended: OpenRouter. Bring your own OpenRouter key to use a cloud model instead (billed by OpenRouter to your account).")
+                        : tr("Use OpenRouter with your own key instead, billed by OpenRouter to your account.")
                     }
                     onSetup={finish}
                   />
@@ -333,18 +328,18 @@ export default function SetupWizard({ onClose }: { onClose: () => void }): JSX.E
                   {error}
                 </div>
               )}
-              {!pre && !error && <p className="text-sm text-muted mt-4">Checking…</p>}
+              {!pre && !error && <p className="text-sm text-muted mt-4">{tr("Checking…")}</p>}
 
               {pre && (
                 <>
                   <div className="mt-4 bg-raised/40 border border-raised rounded-lg px-4 py-3">
                     <p className="text-xs text-muted">
-                      {stats?.gpu ? `Detected: ${stats.gpu.name}` : 'No graphics card detected'}
+                      {stats?.gpu ? tr("Detected: {0}", stats.gpu.name) : tr("No graphics card detected")}
                     </p>
                     <p className="text-sm font-semibold mt-1">
                       {modelOk
                         ? `✓ ${check('model')?.detail}`
-                        : `Downloading ${rec ? rec.model : '…'}`}
+                        : tr("Downloading {0}", rec ? rec.model : '…')}
                     </p>
                     <p className="text-xs text-muted mt-1 leading-relaxed">{rec?.reason ?? ''}</p>
 
@@ -363,13 +358,11 @@ export default function SetupWizard({ onClose }: { onClose: () => void }): JSX.E
                           </div>
                         )}
                         <p className="text-[11px] text-muted mt-1.5">
-                          Several gigabytes — it can take a while on a slow connection. You can
-                          leave this window open, or carry on and let it finish in the
-                          background.
+                          {tr("Several gigabytes — it can take a while on a slow connection. You can leave this window open, or carry on and let it finish in the background.")}
                         </p>
                         {canRetry && (
                           <button className="btn-ghost !py-1.5 mt-2" onClick={() => void startPull()}>
-                            Try again
+                            {tr("Try again")}
                           </button>
                         )}
                       </div>
@@ -382,7 +375,7 @@ export default function SetupWizard({ onClose }: { onClose: () => void }): JSX.E
                     ))}
                   </div>
                   <button className="btn-ghost !py-1.5 mt-4" disabled={checking} onClick={refresh}>
-                    {checking ? 'Checking…' : 'Check again'}
+                    {checking ? tr("Checking…") : tr("Check again")}
                   </button>
                 </>
               )}
@@ -393,25 +386,21 @@ export default function SetupWizard({ onClose }: { onClose: () => void }): JSX.E
           {step === 2 && (
             <>
               <h2 className="text-2xl font-bold">
-                {pre?.ready ? "You're ready" : 'Nearly there'}
+                {pre?.ready ? tr("You're ready") : tr("Nearly there")}
               </h2>
               {pre?.ready ? (
                 <>
                   <p className="text-sm text-muted mt-3 leading-relaxed">
-                    Everything is installed. Paste a video link on the Clip Editor page and
-                    press <b>Generate clips</b>.
+                    {tr("Everything is installed. Paste a video link on the Clip Editor page and press")} <b>{tr("Generate clips")}</b>.
                   </p>
                   <p className="text-sm text-muted mt-3 leading-relaxed">
-                    A first video takes a while — it downloads, transcribes, then studies the
-                    whole thing before it renders anything. Later videos from the same creator
-                    get faster as the app learns them.
+                    {tr("A first video takes a while — it downloads, transcribes, then studies the whole thing before it renders anything. Later videos from the same creator get faster as the app learns them.")}
                   </p>
                 </>
               ) : (
                 <>
                   <p className="text-sm text-muted mt-3 leading-relaxed">
-                    Some things are still missing. You can carry on and sort them out later —
-                    the app will tell you what it needs when you try to make a clip.
+                    {tr("Some things are still missing. You can carry on and sort them out later — the app will tell you what it needs when you try to make a clip.")}
                   </p>
                   <div className="mt-4">
                     {(pre?.checks ?? []).filter((c) => !c.ok).map((c) => (
@@ -421,7 +410,7 @@ export default function SetupWizard({ onClose }: { onClose: () => void }): JSX.E
                 </>
               )}
               <p className="text-xs text-muted mt-4">
-                You can run this again any time from Settings.
+                {tr("You can run this again any time from Settings.")}
               </p>
             </>
           )}
@@ -431,11 +420,11 @@ export default function SetupWizard({ onClose }: { onClose: () => void }): JSX.E
         <div className="flex items-center gap-2 px-7 py-4 border-t border-raised/60 bg-base/40">
           {step > 0 && (
             <button className="btn-ghost" onClick={() => setStep((n) => n - 1)}>
-              Back
+              {tr("Back")}
             </button>
           )}
           <button className="text-xs text-muted hover:text-ink ml-auto" onClick={finish}>
-            Skip setup
+            {tr("Skip setup")}
           </button>
           {step < steps.length - 1 ? (
             // No gate any more. There is nothing left for a creator to go and
@@ -443,11 +432,11 @@ export default function SetupWizard({ onClose }: { onClose: () => void }): JSX.E
             // model download continues server-side whether this window is on
             // this step or not.
             <button className="btn-accent" onClick={() => setStep((n) => n + 1)}>
-              Continue
+              {tr("Continue")}
             </button>
           ) : (
             <button className="btn-accent" onClick={finish}>
-              Start clipping
+              {tr("Start clipping")}
             </button>
           )}
         </div>

@@ -1,3 +1,4 @@
+import { t as tr } from "../lib/i18n"
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { AwayToggle } from '../components/ApprovalCard'
 import { api, errorText } from '../lib/api'
@@ -23,9 +24,9 @@ import { fitSport, sportForVertical, startingSport, useSports, verticalSports, v
 type AddMode = 'auto' | 'ask' | 'off'
 
 const ADD_MODES: { id: AddMode; label: string }[] = [
-  { id: 'auto', label: 'Clip and publish automatically (hands-off)' },
-  { id: 'ask', label: 'Clip, then ask me before publishing' },
-  { id: 'off', label: 'Only clip' }
+  { id: 'auto', label: tr("Clip and publish automatically (hands-off)") },
+  { id: 'ask', label: tr("Clip, then ask me before publishing") },
+  { id: 'off', label: tr("Only clip") }
 ]
 
 const PLACEHOLDER: Record<WatchPlatform, string> = {
@@ -350,7 +351,7 @@ export default function Watch({
           >
             <option value="youtube">YouTube</option>
             <option value="twitch">Twitch</option>
-            <option value="twitch_clips">Twitch clips (made by viewers)</option>
+            <option value="twitch_clips">{tr("Twitch clips (made by viewers)")}</option>
             <option value="kick">Kick</option>
           </select>
           <input
@@ -369,29 +370,29 @@ export default function Watch({
         </div>
         <div className="space-y-2">
           {clipWatch && <div className="space-y-2 text-sm">
-            <label className="flex items-center gap-2">Post a clip once it has
+            <label className="flex items-center gap-2">{tr("Post a clip once it has")}
               <input type="number" className="input !w-32" min={0} max={10000000} value={minViews}
                 aria-label={t("Post a clip once it has views")}
-                onChange={(e) => setMinViews(Math.max(0, Math.min(10000000, Number(e.target.value) || 0)))} /> views
+                onChange={(e) => setMinViews(Math.max(0, Math.min(10000000, Number(e.target.value) || 0)))} /> {tr("views")}
             </label>
-            <label className="flex items-center gap-2">Look back
+            <label className="flex items-center gap-2">{tr("Look back")}
               <input type="number" className="input !w-24" min={1} max={90} value={lookbackDays}
                 aria-label={t("Look back days")}
-                onChange={(e) => setLookbackDays(Math.max(1, Math.min(90, Number(e.target.value) || 1)))} /> days
+                onChange={(e) => setLookbackDays(Math.max(1, Math.min(90, Number(e.target.value) || 1)))} /> {tr("days")}
             </label>
-            <label className="flex items-center gap-2">Keep at most
+            <label className="flex items-center gap-2">{tr("Keep at most")}
               <input type="number" className="input !w-24" min={1} max={100} value={maxPending}
                 aria-label={t("Maximum upcoming clips")}
-                onChange={(e) => setMaxPending(Math.max(1, Math.min(100, Number(e.target.value) || 1)))} /> upcoming clips
+                onChange={(e) => setMaxPending(Math.max(1, Math.min(100, Number(e.target.value) || 1)))} /> {tr("upcoming clips")}
             </label>
             <label className="flex items-center gap-2">
               <input type="checkbox" checked={backfill} onChange={(e) => setBackfill(e.target.checked)}
                 aria-label={t("Also post clips already over the target from the lookback window")} />
-              Also post clips already over the target from the lookback window
+              {tr("Also post clips already over the target from the lookback window")}
             </label>
-            <p className="text-muted">Viewer clips are posted whole, with no trimming.</p>
-            <p className="text-muted">Gaming layout · Viewer credited on every post · View counts can lag.</p>
-            <p className="text-muted">Overlapping clips of the same VOD moment are skipped. Other qualifying clips wait for space.</p>
+            <p className="text-muted">{tr("Viewer clips are posted whole, with no trimming.")}</p>
+            <p className="text-muted">{tr("Gaming layout · Viewer credited on every post · View counts can lag.")}</p>
+            <p className="text-muted">{tr("Overlapping clips of the same VOD moment are skipped. Other qualifying clips wait for space.")}</p>
           </div>}
           <div className="flex items-center gap-3 flex-wrap">
             <span className="label">{t('When it posts')}</span>
@@ -451,14 +452,14 @@ export default function Watch({
             <span className="label">{t('Clips')}</span>
             {(
               [
-                ['captions', 'Captions', addClip.captions !== false],
+                ['captions', tr("Captions"), addClip.captions !== false],
                 ['long_clips', '60s+', Boolean(addClip.long_clips)],
-                ['longform', 'Longform', Boolean(addClip.longform)],
-                ['vertical_live', 'Vertical Live', Boolean(addClip.vertical_live)],
-                ['podcast', 'Podcast', Boolean(addClip.podcast)],
-                ['gaming', 'Gaming / Reaction', Boolean(addClip.gaming)],
+                ['longform', tr("Longform"), Boolean(addClip.longform)],
+                ['vertical_live', tr("Vertical Live"), Boolean(addClip.vertical_live)],
+                ['podcast', tr("Podcast"), Boolean(addClip.podcast)],
+                ['gaming', tr("Gaming / Reaction"), Boolean(addClip.gaming)],
                 ...(offeredSports.length > 0 || addClip.sport
-                  ? ([['sport', 'Sports', Boolean(addClip.sport)]] as const)
+                  ? ([['sport', tr("Sports"), Boolean(addClip.sport)]] as const)
                   : [])
               ] as const
             ).filter(([key]) => !clipWatch || key === 'captions').map(([key, label, on]) => (
@@ -594,7 +595,7 @@ export default function Watch({
                   id="add-watch-tags"
                   className="input"
                   value={addHashtags}
-                  placeholder="#creatorname #twitch"
+                  placeholder={tr("#creatorname #twitch")}
                   onChange={(e) => setAddHashtags(e.target.value)}
                 />
                 <label className="flex items-center gap-2 cursor-pointer text-sm">

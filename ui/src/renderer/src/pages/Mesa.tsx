@@ -1,5 +1,8 @@
+import { t as tr } from "../lib/i18n"
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { t } from '../lib/i18n'
+import { CortesGamerOverlay, CortesGamerSliders, CortesGamerToggle, DEFAULT_CORTES_GAMER_STYLE } from '../components/CortesGamerWatermark'
+import type { CortesGamerStyle } from '../lib/types'
 import {
   BLOCO_S,
   DESTINOS,
@@ -27,13 +30,17 @@ interface Rascunho {
   descricao: string
   hashtags: string[]
   destinos: string[]
+  cortes_gamer_watermark: boolean
+  cortes_gamer_style: CortesGamerStyle
 }
 
 const rascunhoDe = (c: Corte): Rascunho => ({
   titulo: c.titulo ?? '',
   descricao: c.descricao ?? '',
   hashtags: c.hashtags ?? [],
-  destinos: c.destinos ?? DESTINOS.map((d) => d.id)
+  destinos: c.destinos ?? DESTINOS.map((d) => d.id),
+  cortes_gamer_watermark: Boolean(c.cortes_gamer_watermark || c.cortes_gamer_baked),
+  cortes_gamer_style: c.cortes_gamer_style ?? DEFAULT_CORTES_GAMER_STYLE
 })
 
 const mmss = (s: number): string => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`
@@ -289,7 +296,7 @@ export default function Mesa({ target, onTargetConsumed, onOpenInStudio }: Props
                         <span className="flex items-center gap-1.5 text-[11px] text-muted">
                           <span className={`rounded px-1 font-bold ${FAIXA_CHIP[faixa(c.nota)]}`}>{c.nota ?? '–'}</span>
                           {c.streamer}
-                          {c.live && ` · ${c.live.fim_s - c.live.inicio_s} s`}
+                          {c.live && tr(" · {0} s", c.live.fim_s - c.live.inicio_s)}
                         </span>
                       </span>
                     </button>
@@ -304,18 +311,36 @@ export default function Mesa({ target, onTargetConsumed, onOpenInStudio }: Props
                 {atual.live &&
                   ` · ${mmss(atual.live.inicio_s)}–${mmss(atual.live.fim_s)} ${t('of the block at')} ${atual.live.bloco}`}
               </p>
-              <video
-                key={atual.nome}
-                ref={video}
-                src={mesa.videoUrl(atual.nome)}
-                poster={mesa.capaUrl(atual.nome)}
-                controls
-                autoPlay
-                muted
-                loop
-                playsInline
-                className="h-[min(560px,calc(100vh-290px))] min-h-[320px] aspect-[9/16] rounded-2xl bg-black border border-raised"
+              <div className="relative h-[min(560px,calc(100vh-290px))] min-h-[320px] aspect-[9/16] overflow-hidden rounded-2xl bg-black ring-1 ring-raised">
+                <video
+                  key={atual.nome}
+                  ref={video}
+                  src={mesa.videoUrl(atual.nome)}
+                  poster={mesa.capaUrl(atual.nome)}
+                  controls
+                  autoPlay
+                  muted
+                  loop
+                  playsInline
+                  className="absolute inset-0 size-full object-contain"
+                />
+                {rascunho?.cortes_gamer_watermark && !atual.cortes_gamer_baked && (
+                  <CortesGamerOverlay key={atual.nome} videoRef={video} style={rascunho.cortes_gamer_style} />
+                )}
+              </div>
+              <CortesGamerToggle
+                checked={Boolean(rascunho?.cortes_gamer_watermark)}
+                disabled={ocupado || !rascunho || Boolean(atual.cortes_gamer_baked)}
+                onChange={(on) => mudar({ cortes_gamer_watermark: on })}
               />
+              {rascunho?.cortes_gamer_watermark && !atual.cortes_gamer_baked && (
+                <>
+                  <CortesGamerSliders value={rascunho.cortes_gamer_style} disabled={ocupado}
+                    onChange={(style) => mudar({ cortes_gamer_style: style })} />
+                  <p className="text-xs text-muted">Ao aprovar, a marca será gravada no MP4.</p>
+                </>
+              )}
+              {atual.cortes_gamer_baked && <p className="text-xs text-muted">Este arquivo já tem a marca no vídeo.</p>}
               {atual.live && (
                 <div className="w-full max-w-xl flex flex-col gap-1.5">
                   <div className="flex justify-between text-[11px] text-muted">
@@ -393,7 +418,7 @@ export default function Mesa({ target, onTargetConsumed, onOpenInStudio }: Props
                   ))}
                   <input
                     className="w-28 px-2.5 py-1 rounded-full border border-dashed border-muted/50 bg-transparent text-xs outline-none focus:border-accent"
-                    placeholder="+ hashtag"
+                    placeholder={tr("+ hashtag")}
                     value={novaTag}
                     onChange={(e) => setNovaTag(e.target.value)}
                     onKeyDown={(e) => {

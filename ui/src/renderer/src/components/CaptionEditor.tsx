@@ -1,3 +1,4 @@
+import { t as tr } from "../lib/i18n"
 import { useEffect, useState } from 'react'
 import { api } from '../lib/api'
 import type { CaptionLine, CaptionStyle, Clip } from '../lib/types'
@@ -88,7 +89,7 @@ export default function CaptionEditor({
         onClick={toggleOpen}
         aria-expanded={open}
       >
-        Captions &amp; style
+        {tr("Captions &amp; style")}
         <span aria-hidden>{open ? '▾' : '▸'}</span>
       </button>
 
@@ -104,17 +105,17 @@ export default function CaptionEditor({
                 setDirty(true)
               }}
             />
-            Burn captions into this clip
+            {tr("Burn captions into this clip")}
           </label>
 
           <CaptionStyleControls idPrefix={`clip-${clip.id}`} style={style} onChange={setStyleField} />
 
           <div>
-            <p className="label mb-1">Caption text (fix any transcription mistakes)</p>
+            <p className="label mb-1">{tr("Caption text (fix any transcription mistakes)")}</p>
             {lines === null ? (
-              <p className="text-muted text-xs">Loading captions…</p>
+              <p className="text-muted text-xs">{tr("Loading captions…")}</p>
             ) : lines.length === 0 ? (
-              <p className="text-muted text-xs">No captions in this clip.</p>
+              <p className="text-muted text-xs">{tr("No captions in this clip.")}</p>
             ) : (
               <div className="space-y-1.5 max-h-56 overflow-y-auto pr-1">
                 {lines.map((line, i) => (
@@ -124,7 +125,7 @@ export default function CaptionEditor({
                     </span>
                     <input
                       className="input !py-1 text-sm"
-                      aria-label={`Caption at ${line.start.toFixed(1)} seconds`}
+                      aria-label={tr("Caption at {0} seconds", line.start.toFixed(1))}
                       value={line.text}
                       onChange={(e) => editLine(i, e.target.value)}
                     />
@@ -134,13 +135,13 @@ export default function CaptionEditor({
             )}
             {lines !== null && lines.length > 0 && (
               <p className="text-[10px] text-muted mt-1">
-                Tip: clear a line's text to remove that caption entirely.
+                {tr("Tip: clear a line's text to remove that caption entirely.")}
               </p>
             )}
           </div>
 
           <button className="btn-accent w-full" onClick={apply} disabled={busy || !dirty}>
-            {busy ? 'Queueing…' : 'Apply captions & style (re-render)'}
+            {busy ? tr("Queueing…") : tr("Apply captions & style (re-render)")}
           </button>
         </div>
       )}

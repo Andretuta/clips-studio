@@ -1,3 +1,4 @@
+import { t as tr } from "../lib/i18n"
 import { useState } from 'react'
 import { streamWorkflows, twitchVodId, type RecordedNominationStream } from '../lib/connectedAccounts'
 import { t } from '../lib/i18n'
@@ -74,7 +75,7 @@ export default function RecordingBindingCard({ accountId, stream, disabled, onSa
         {' · '}{t('Nominations')}: {stream.nomination_count}
       </p>
       {stream.commands && (
-        <p className="text-xs text-muted">!clip {stream.commands.clip ?? 0} · !chaos {stream.commands.chaos ?? 0} · !funny {stream.commands.funny ?? 0}</p>
+        <p className="text-xs text-muted">{tr("!clip")} {stream.commands.clip ?? 0} {tr("· !chaos")} {stream.commands.chaos ?? 0} {tr("· !funny")} {stream.commands.funny ?? 0}</p>
       )}
       {buckets.length > 0 && (
         <div>

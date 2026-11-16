@@ -245,10 +245,10 @@ export default function Queue({
                 ? clearButton('queued', 'Clear waiting', snapshot.queued.length)
                 : undefined
           })}
-          {section('Failed', snapshot.failed, {
+          {section('Failed jobs', snapshot.failed, {
             action: clearButton('failed', 'Clear failed', snapshot.failed.length)
           })}
-          {section('Completed', snapshot.completed, {
+          {section('Completed jobs', snapshot.completed, {
             action: clearButton('completed', 'Clear completed', snapshot.completed.length)
           })}
         </>

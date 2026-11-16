@@ -98,7 +98,7 @@ def test_the_other_speakers_lines_burn_in_the_second_colour(tmp_path):
     events = [e for e in ass.splitlines() if e.startswith("Dialogue:")]
     assert len(events) == len(lines)
     for line, event in zip(lines, events):
-        text = event.split(",,", 2)[-1]
+        text = event.split(",,", 2)[-1].removeprefix(r"{\q2}")
         if line.get("speaker"):
             assert text == f"{{\\1c{SECOND}}}{line['text'].upper()}"
         else:

@@ -290,18 +290,26 @@ class ChatGPTPlan(SignInProvider):
                 return  # cancelled, or a newer sign-in started
             self._login = None
             if ok:
-                self._flow = {"state": "done", "error": ""}
+                # Publish completion only after the persistent marker exists. A
+                # polling UI stops polling as soon as it sees "done".
+                # Discard any client that was started before authentication;
+                # a status poll must not consult its stale account state.
+                with self._lock:
+                    self._drop_client()
+                try:
+                    self._marker.touch()
+                except OSError:
+                    ok = False
+                    self._flow = {"state": "error", "error": "Couldn't save the sign-in on this PC. Try again."}
+                else:
+                    self._status = None
+                    self._limits = None
+                    self._flow = {"state": "done", "error": ""}
             elif "timed out" in error.lower():
                 self._flow = {"state": "error", "error": "The sign-in wasn't finished in time. Try again."}
             else:
                 self._flow = {"state": "error",
                               "error": "ChatGPT sign-in didn't finish. Try again."}
-        if ok:
-            with self._lock:
-                self._drop_client()  # the next request starts Codex with the new sign-in
-            self._marker.touch()
-            self._status = None
-            self._limits = None
 
     def cancel(self) -> None:
         with self._flow_lock:

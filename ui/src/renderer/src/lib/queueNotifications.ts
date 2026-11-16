@@ -1,3 +1,4 @@
+import { t as tr } from "./i18n"
 import type { StudioEvent } from './types'
 import { useEvents } from './useEvents'
 
@@ -47,7 +48,7 @@ export function useQueueNotifications(): void {
     if (e.job_type && e.job_type !== 'process') return
     if (e.status !== 'done' && e.status !== 'failed') return
 
-    const name = e.title || 'A video'
+    const name = e.title || tr("A video")
     const remaining = typeof e.remaining === 'number' ? e.remaining : null
 
     if (notifyOnFinish()) {

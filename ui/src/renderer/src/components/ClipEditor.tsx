@@ -1,3 +1,4 @@
+import { t as tr } from "../lib/i18n"
 import { useEffect, useState } from 'react'
 import { api } from '../lib/api'
 import { getExportFolder, pickExportFolder, setExportFolder } from '../lib/exportFolder'
@@ -68,7 +69,7 @@ export default function ClipEditor({
     try {
       await fn()
     } catch (e) {
-      flash(`Error: ${e instanceof Error ? e.message : String(e)}`)
+      flash(tr("Error: {0}", e instanceof Error ? e.message : String(e)))
     } finally {
       setBusy(null)
     }
@@ -81,7 +82,7 @@ export default function ClipEditor({
         description,
         hashtags: hashtags.split(/\s+/).filter(Boolean)
       })
-      flash('Saved')
+      flash(tr("Saved"))
       onChanged()
     })
 
@@ -89,13 +90,13 @@ export default function ClipEditor({
     run('render', async () => {
       const range = start !== clip.start_s || end !== clip.end_s ? { start, end } : undefined
       await api.rerenderClip(clip.id, range)
-      flash('Re-render queued — watch the Dashboard activity feed')
+      flash(tr("Re-render queued — watch the Dashboard activity feed"))
     })
 
   const exportOne = (): Promise<void> =>
     run('export', async () => {
       const res = await api.exportClip(clip.id, folder)
-      flash(res.exported.length ? `Exported: ${res.exported[0]}` : 'Nothing exported')
+      flash(res.exported.length ? tr("Exported: {0}", res.exported[0]) : tr("Nothing exported"))
       onChanged() // exporting stars the clip; show it on its card
     })
 
@@ -105,7 +106,7 @@ export default function ClipEditor({
         key={clip.id}
         src={api.mediaUrl(clip.id)}
         controls
-        aria-label={`Preview of clip: ${clip.title || clip.hook || 'untitled'}. Captions are burned into the video.`}
+        aria-label={tr("Preview of clip: {0}. Captions are burned into the video.", clip.title || clip.hook || 'untitled')}
         className="w-full rounded-lg bg-base max-h-96"
       />
 
@@ -115,7 +116,7 @@ export default function ClipEditor({
         title={t("Open the editor: trim, cut, mute words, censor, color, captions, AI edit")}
       >
         <span className="inline-flex items-center gap-2 justify-center">
-          <Scissors size={16} /> Edit this clip
+          <Scissors size={16} /> {tr("Edit this clip")}
         </span>
       </button>
 
@@ -129,9 +130,9 @@ export default function ClipEditor({
           // A match is scored with the same evidence a gaming stream gets.
           <span
             className="bg-raised px-2 py-1 rounded-md text-muted"
-            title={clip.render_opts?.sport ? 'What the crowd and the whistle marked' : 'Scored as a gaming stream'}
+            title={clip.render_opts?.sport ? tr("What the crowd and the whistle marked") : tr("Scored as a gaming stream")}
           >
-            {clip.render_opts?.sport ? 'match' : 'game'}{' '}
+            {clip.render_opts?.sport ? tr("match") : tr("game")}{' '}
             <span className="text-ink font-semibold">{clip.scores.game}</span>
             {clip.scores.game_bonus ? <span className="text-accent"> +{clip.scores.game_bonus}</span> : null}
           </span>
@@ -151,7 +152,7 @@ export default function ClipEditor({
       )}
       {clip.scores.plugin && (
         <p className="text-xs text-muted -mt-2" title={t("The Marketplace pipeline that found this moment, in its own words")}>
-          Found by {clip.scores.plugin} {clip.scores.plugin_version}
+          {tr("Found by")} {clip.scores.plugin} {clip.scores.plugin_version}
           {clip.scores.plugin_label ? `: ${clip.scores.plugin_label}` : ''}
           {clip.scores.plugin_why ? ` · ${clip.scores.plugin_why}` : ''}
         </p>
@@ -164,14 +165,14 @@ export default function ClipEditor({
           className="text-xs text-muted -mt-2"
           title={t("A Marketplace plugin’s score for this moment, in its own words")}
         >
-          Rated {r.score} by {r.name || r.plugin}
+          {tr("Rated")} {r.score} by {r.name || r.plugin}
           {r.version ? ` ${r.version}` : ''}
           {r.reason ? ` · ${r.reason}` : ''}
         </p>
       ))}
       {clip.scores.found_score != null && (
         <p className="text-xs text-muted -mt-2" title={t("The score this moment had before any plugin rated it")}>
-          Score when found: {clip.scores.found_score}
+          {tr("Score when found:")} {clip.scores.found_score}
         </p>
       )}
       {pluginNotes(clip.scores.plugin_notes).map((n) => (
@@ -180,7 +181,7 @@ export default function ClipEditor({
           className="text-xs text-muted -mt-2"
           title={t("What a Marketplace plugin said happens in this moment. Clips Kitty gives notes like this to the AI when it writes a new clip’s title, description and hashtags.")}
         >
-          Notes from {n.who}: {n.texts.join(' · ')}
+          {tr("Notes from")} {n.who}: {n.texts.join(' · ')}
         </p>
       ))}
       {/* Suggest edits (plugins/steps.py suggest_edits): what each plugin
@@ -198,18 +199,18 @@ export default function ClipEditor({
         ))}
       {clip.scores.intent_why && (
         <p className="text-xs text-muted -mt-2" title={t("Points from the clip direction given with this video")}>
-          Direction +{clip.scores.intent}: {clip.scores.intent_why}
-          {clip.scores.required ? ` · kept as asked (${clip.scores.required})` : ''}
+          {tr("Direction +")}{clip.scores.intent}: {clip.scores.intent_why}
+          {clip.scores.required ? tr(" · kept as asked ({0})", clip.scores.required) : ''}
         </p>
       )}
 
       <div className="space-y-3">
         <div>
-          <label className="label">Title</label>
+          <label className="label">{tr("Title")}</label>
           <input className="input mt-1" value={title} onChange={(e) => setTitle(e.target.value)} />
         </div>
         <div>
-          <label className="label">Description</label>
+          <label className="label">{tr("Description")}</label>
           <textarea
             className="input mt-1 h-20 resize-none"
             value={description}
@@ -217,12 +218,12 @@ export default function ClipEditor({
           />
         </div>
         <div>
-          <label className="label">Hashtags (space-separated)</label>
+          <label className="label">{tr("Hashtags (space-separated)")}</label>
           <input className="input mt-1" value={hashtags} onChange={(e) => setHashtags(e.target.value)} />
         </div>
         <div className="flex gap-3">
           <div className="flex-1">
-            <label className="label">Start (s)</label>
+            <label className="label">{tr("Start (s)")}</label>
             <input
               type="number"
               className="input mt-1"
@@ -232,7 +233,7 @@ export default function ClipEditor({
             />
           </div>
           <div className="flex-1">
-            <label className="label">End (s)</label>
+            <label className="label">{tr("End (s)")}</label>
             <input
               type="number"
               className="input mt-1"
@@ -246,10 +247,10 @@ export default function ClipEditor({
 
       <div className="flex gap-2 flex-wrap items-center">
         <button className="btn-accent" onClick={saveMetadata} disabled={busy !== null}>
-          {busy === 'save' ? 'Saving…' : 'Save metadata'}
+          {busy === 'save' ? tr("Saving…") : tr("Save metadata")}
         </button>
         <button className="btn-ghost" onClick={rerender} disabled={busy !== null}>
-          {busy === 'render' ? 'Queueing…' : 'Re-render'}
+          {busy === 'render' ? tr("Queueing…") : tr("Re-render")}
         </button>
         <input
           className="input !w-44"

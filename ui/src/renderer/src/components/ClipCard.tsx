@@ -1,3 +1,4 @@
+import { t as tr } from "../lib/i18n"
 import { t } from '../lib/i18n'
 import { useEffect, useRef, useState } from 'react'
 import { api } from '../lib/api'
@@ -10,8 +11,8 @@ import { Star, Trash } from './icons'
 const PROFILE_BADGE: Record<string, string> = {
   short_clips: '▭ 16:9',
   clips_140: '▭ 16:9',
-  highlights: '▭ Highlights',
-  edited_stream: '▭ Edited stream'
+  highlights: tr("▭ Highlights"),
+  edited_stream: tr("▭ Edited stream")
 }
 
 export default function ClipCard({
@@ -33,7 +34,7 @@ export default function ClipCard({
   onPublish?: () => void
 }): JSX.Element {
   const duration = Math.round(clip.end_s - clip.start_s)
-  const name = clip.title || clip.hook || 'Untitled clip'
+  const name = clip.title || clip.hook || tr("Untitled clip")
   const profile = clip.render_opts?.profile
   const badge = profile ? (PROFILE_BADGE[profile] ?? '▭ 16:9') : null
   const exported = !!clip.exported_at
@@ -71,9 +72,7 @@ export default function ClipCard({
     <div className="relative group">
       <button
         onClick={onClick}
-        aria-label={`${name}${moment ? `, ${moment}` : ''}, ${duration} seconds, score ${clip.score}${
-          badge ? ', horizontal longform' : ', vertical Short'
-        }${suggested ? ', suggested edit' : ''}${exported ? ', exported' : ''}${selected ? ', selected' : ''}`}
+        aria-label={tr("{0}{1}, {2} seconds, score {3}{4}{5}{6}{7}", name, moment ? `, ${moment}` : '', duration, clip.score, badge ? tr(", horizontal longform") : tr(", vertical Short"), suggested ? tr(", suggested edit") : '', exported ? tr(", exported") : '', selected ? tr(", selected") : '')}
         aria-pressed={selected}
         className={`w-full text-left rounded-xl overflow-hidden bg-surface border transition-colors ${
           selected ? 'border-accent' : 'border-raised/60 hover:border-raised'
@@ -109,7 +108,7 @@ export default function ClipCard({
               className="absolute top-9 left-2 bg-accent/90 text-black px-1.5 py-0.5 rounded text-[10px] font-bold"
               title={t("A Marketplace plugin suggested an edit for this clip. Open it in the editor to see it.")}
             >
-              Suggested edit
+              {tr("Suggested edit")}
             </span>
           )}
           <span className="absolute bottom-2 right-2 bg-base/80 px-1.5 py-0.5 rounded text-xs tabular-nums">
@@ -118,7 +117,7 @@ export default function ClipCard({
         </div>
         <div className="p-2.5">
           <p className="text-sm font-medium line-clamp-2">
-            {clip.title || clip.hook || 'Untitled clip'}
+            {clip.title || clip.hook || tr("Untitled clip")}
           </p>
           {moment && (
             <p className="text-xs text-accent mt-1 truncate" title={clip.scores.sport_why}>
@@ -129,12 +128,12 @@ export default function ClipCard({
       </button>
       {onToggleExported && (
         <button
-          aria-label={exported ? `Unstar ${name} (not exported)` : `Star ${name} as exported`}
+          aria-label={exported ? tr("Unstar {0} (not exported)", name) : tr("Star {0} as exported", name)}
           aria-pressed={exported}
           title={
             exported
-              ? 'Exported. Click to unstar.'
-              : 'Star as exported. Export all skips starred clips.'
+              ? tr("Exported. Click to unstar.")
+              : tr("Star as exported. Export all skips starred clips.")
           }
           onClick={(e) => {
             e.stopPropagation()
@@ -158,11 +157,11 @@ export default function ClipCard({
       )}
       {onDelete && (
         <button
-          aria-label={`Delete ${name}`}
+          aria-label={tr("Delete {0}", name)}
           title={t("Delete this clip and its file. The video and other clips stay.")}
           onClick={(e) => {
             e.stopPropagation()
-            if (window.confirm(`Delete this clip and its file?\n\n"${name}"\n\nOnly this clip is removed — the video and your other clips stay. Can't be undone.`)) {
+            if (window.confirm(tr("Delete this clip and its file?\n\n\"{0}\"\n\nOnly this clip is removed — the video and your other clips stay. Can't be undone.", name))) {
               onDelete()
             }
           }}
@@ -177,7 +176,7 @@ export default function ClipCard({
           so this is the one free corner. */}
       {onPublish && (
         <button
-          aria-label={`Publish ${name}`}
+          aria-label={tr("Publish {0}", name)}
           title={t("Publish just this clip")}
           onClick={(e) => {
             e.stopPropagation()
@@ -185,7 +184,7 @@ export default function ClipCard({
           }}
           className="absolute bottom-14 left-2 z-10 px-2 py-1 rounded-md bg-black/70 text-white/90 text-[10px] font-semibold opacity-0 group-hover:opacity-100 focus:opacity-100 hover:bg-accent hover:text-black transition"
         >
-          Publish ↗
+          {tr("Publish ↗")}
         </button>
       )}
     </div>

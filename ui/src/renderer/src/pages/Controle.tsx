@@ -1,3 +1,4 @@
+import { t as tr } from "../lib/i18n"
 import { useEffect, useState } from 'react'
 import { api } from '../lib/api'
 import { t } from '../lib/i18n'
@@ -216,7 +217,7 @@ export default function Controle({ onOpenMesa, onOpenQueue }: Props): JSX.Elemen
                           <div
                             title={`${b.inicio} · ${b.cortes.length}`}
                             className="absolute inset-y-0 rounded-lg border border-raised bg-raised/50 px-2 py-1 text-[11px] font-semibold text-muted overflow-hidden whitespace-nowrap"
-                            style={{ left: pos(ini), width: `calc(${(100 * (BLOCO_S / 60)) / span}% - 4px)` }}
+                            style={{ left: pos(ini), width: tr("calc({0}% - 4px)", (100 * (BLOCO_S / 60)) / span) }}
                           >
                             {span <= 240 && `${b.inicio} · ${b.cortes.length}`}
                           </div>

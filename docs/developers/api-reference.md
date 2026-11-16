@@ -4,7 +4,7 @@
 
 API version **1** (`GET /health` → `api_version`). The engine listens on `http://127.0.0.1:8765`. How to call it, with examples and the gotchas, is in [`docs/API.md`](../API.md); what the labels promise is in [API](api.md).
 
-265 routes: **60 stable**, **47 experimental**, 158 internal.
+280 routes: **60 stable**, **49 experimental**, 171 internal.
 
 | Label | Promise |
 |---|---|
@@ -40,6 +40,8 @@ Details: [`docs/API.md` › Watching progress](../API.md#watching-progress).
 | Route | Label | What it is for |
 |---|---|---|
 | `POST /cancel` | stable | Ask a running video to stop at its next stage boundary. |
+| `GET /diagnostics/errors` | experimental | Recent processing and publishing failures with redacted errors. Session header. |
+| `GET /diagnostics/logs/{source}` | experimental | Bounded and redacted engine, recorder or processing job logs. Session header. |
 | `GET /jobs` | stable | Every job, newest last (a bare array). |
 | `DELETE /jobs/{job_id}` | stable | Remove a job. |
 | `GET /jobs/{job_id}` | stable | One job. |
@@ -218,16 +220,19 @@ Everything else. Grouped by the first part of the path; the module is where it i
 |---|---|---|
 | `/agent` | `POST /agent/chat`<br>`GET /agent/status` | `server.api` |
 | `/ai` | `GET /ai/providers/{provider_id}/callback/{state}`<br>`POST /ai/providers/{provider_id}/connect`<br>`POST /ai/providers/{provider_id}/stt-check`<br>`GET /ai/signin/{provider_id}`<br>`POST /ai/signin/{provider_id}/automation`<br>`POST /ai/signin/{provider_id}/cancel`<br>`GET /ai/signin/{provider_id}/models`<br>`POST /ai/signin/{provider_id}/sign-out`<br>`POST /ai/signin/{provider_id}/start`<br>`POST /ai/signin/{provider_id}/test` | `server.ai_api` |
-| `/branding` | `GET /branding`<br>`POST /branding`<br>`POST /branding/asset`<br>`GET /branding/asset/{name}`<br>`DELETE /branding/{profile_id}`<br>`PUT /branding/{profile_id}` | `server.api` |
+| `/branding` | `GET /branding`<br>`POST /branding`<br>`POST /branding/asset`<br>`GET /branding/asset/{name}`<br>`GET /branding/cortes-gamer.png`<br>`DELETE /branding/{profile_id}`<br>`PUT /branding/{profile_id}` | `server.api` |
 | `/campaigns` | `GET /campaigns`<br>`POST /campaigns`<br>`POST /campaigns/preview`<br>`GET /campaigns/submissions`<br>`POST /campaigns/submissions`<br>`GET /campaigns/submissions/{submission_id}`<br>`PATCH /campaigns/submissions/{submission_id}`<br>`POST /campaigns/submissions/{submission_id}/approve`<br>`POST /campaigns/submissions/{submission_id}/cancel`<br>`POST /campaigns/submissions/{submission_id}/move`<br>`POST /campaigns/submissions/{submission_id}/opened`<br>`POST /campaigns/submissions/{submission_id}/record`<br>`POST /campaigns/submissions/{submission_id}/retry`<br>`POST /campaigns/submissions/{submission_id}/submit`<br>`DELETE /campaigns/{campaign_id}`<br>`GET /campaigns/{campaign_id}`<br>`PATCH /campaigns/{campaign_id}` | `server.campaigns_api` |
 | `/clips` | `DELETE /clips/{clip_id}`<br>`POST /clips/{clip_id}/ai-edit`<br>`PUT /clips/{clip_id}/captions`<br>`GET /clips/{clip_id}/creator-gaming-layout`<br>`PUT /clips/{clip_id}/creator-gaming-layout`<br>`GET /clips/{clip_id}/frame`<br>`GET /clips/{clip_id}/glossary`<br>`POST /clips/{clip_id}/glossary`<br>`GET /clips/{clip_id}/panels`<br>`GET /clips/{clip_id}/people`<br>`GET /clips/{clip_id}/posts`<br>`POST /clips/{clip_id}/preview`<br>`POST /clips/{clip_id}/render`<br>`GET /clips/{clip_id}/snap`<br>`GET /clips/{clip_id}/source-frame`<br>`POST /clips/{clip_id}/tighten`<br>`GET /clips/{clip_id}/translations`<br>`DELETE /clips/{clip_id}/translations/{language}`<br>`PUT /clips/{clip_id}/translations/{language}` | `server.api`, `server.posts_api`, `server.youtube_api` |
+| `/compilations` | `POST /compilations`<br>`GET /compilations/sources`<br>`GET /compilations/sources/{source_id}/media`<br>`GET /compilations/sources/{source_id}/media/picture` | `server.compilation_api` |
+| `/composio` | `GET /composio/clips/{clip_id}/jobs`<br>`POST /composio/clips/{clip_id}/send`<br>`POST /composio/connect`<br>`PUT /composio/settings`<br>`GET /composio/status` | `server.composio_api` |
 | `/creators` | `GET /creators`<br>`POST /creators/merge`<br>`POST /creators/split/{account_id}`<br>`DELETE /creators/{creator_id}`<br>`GET /creators/{creator_id}`<br>`POST /creators/{creator_id}/accounts`<br>`POST /creators/{creator_id}/branding`<br>`DELETE /creators/{creator_id}/knowledge`<br>`DELETE /creators/{creator_id}/knowledge/{knowledge_id}`<br>`POST /creators/{creator_id}/learning`<br>`DELETE /creators/{creator_id}/memory` | `server.api` |
 | `/discord` | `GET /discord/callback`<br>`POST /discord/clips/{clip_id}/send`<br>`POST /discord/connect`<br>`GET /discord/destinations`<br>`POST /discord/destinations`<br>`POST /discord/destinations/authorize`<br>`DELETE /discord/destinations/{destination_id}`<br>`PATCH /discord/destinations/{destination_id}`<br>`POST /discord/destinations/{destination_id}/test`<br>`POST /discord/disconnect`<br>`GET /discord/guilds`<br>`POST /discord/parse-link`<br>`PATCH /discord/settings`<br>`GET /discord/status` | `server.discord_api` |
 | `/feedback` | `GET /feedback/diagnostics`<br>`POST /feedback/submit` | `server.api` |
 | `/jobs` | `POST /jobs/{job_id}/move` | `server.api` |
-| `/media` | `GET /media/preview/{clip_id}` | `server.api` |
-| `/mesa` | `GET /mesa/controle`<br>`GET /mesa/cortes`<br>`PATCH /mesa/cortes/{nome}`<br>`POST /mesa/cortes/{nome}/aprovar`<br>`GET /mesa/cortes/{nome}/capa`<br>`POST /mesa/cortes/{nome}/descartar`<br>`GET /mesa/cortes/{nome}/video` | `server.mesa_api` |
+| `/media` | `GET /media/preview/{clip_id}`<br>`GET /media/{clip_id}/picture` | `server.api` |
+| `/mesa` | `GET /mesa/controle`<br>`GET /mesa/cortes`<br>`PATCH /mesa/cortes/{nome}`<br>`POST /mesa/cortes/{nome}/aprovar`<br>`GET /mesa/cortes/{nome}/capa`<br>`POST /mesa/cortes/{nome}/descartar`<br>`GET /mesa/cortes/{nome}/video`<br>`GET /mesa/cortes/{nome}/video/picture` | `server.mesa_api` |
 | `/models` | `GET /models/pulls`<br>`DELETE /models/{tag:path}` | `server.api` |
+| `/publication` | `POST /publication/sources/{source_id}/prepare` | `server.compilation_api` |
 | `/publish` | `POST /publish/{job_id}/cancel` | `server.youtube_api` |
 | `/queue` | `POST /queue/clear` | `server.api` |
 | `/remote-render` | `GET /remote-render`<br>`PUT /remote-render`<br>`POST /remote-render/jobs/{job_id}/retry`<br>`POST /remote-render/pairing-code`<br>`PUT /remote-render/this-pc`<br>`POST /remote-render/this-pc/unpair`<br>`POST /remote-render/videos/{video_id}/render-locally`<br>`DELETE /remote-render/workers/{worker_id}`<br>`POST /remote-render/workers/{worker_id}/hold` | `remote_render.service` |

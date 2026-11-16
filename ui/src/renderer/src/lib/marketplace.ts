@@ -1,3 +1,4 @@
+import { t as tr } from "./i18n"
 /** The Marketplace screen's logic: how listings, installed plugins and
  *  install plans are grouped, labelled and checked against this PC.
  *
@@ -394,27 +395,27 @@ export type Tone = 'ok' | 'info' | 'warn' | 'danger'
 /** The manifest's categories (sdk/python/clipskitty_sdk/manifest.py
  *  CATEGORIES), in its order. A test keeps the two in step. */
 export const CATEGORY_LABELS: Record<string, string> = {
-  gaming: 'Gaming',
-  sports: 'Sports',
-  creators: 'Creators',
-  streaming: 'Streaming',
-  podcasting: 'Podcasting',
-  captions: 'Captions',
-  detection: 'Detection',
-  analytics: 'Analytics',
-  audio: 'Audio',
-  utilities: 'Utilities'
+  gaming: tr("Gaming"),
+  sports: tr("Sports"),
+  creators: tr("Creators"),
+  streaming: tr("Streaming"),
+  podcasting: tr("Podcasting"),
+  captions: tr("Captions"),
+  detection: tr("Detection"),
+  analytics: tr("Analytics"),
+  audio: tr("Audio"),
+  utilities: tr("Utilities")
 }
 
 /** The manifest's kinds, built and planned (KINDS + PLANNED_KINDS). */
 export const KIND_LABELS: Record<string, string> = {
-  pipeline: 'Pipelines',
-  'caption-style': 'Caption styles',
-  publisher: 'Publishers',
-  source: 'Sources',
-  integration: 'Integrations',
-  provider: 'Providers',
-  component: 'Components'
+  pipeline: tr("Pipelines"),
+  'caption-style': tr("Caption styles"),
+  publisher: tr("Publishers"),
+  source: tr("Sources"),
+  integration: tr("Integrations"),
+  provider: tr("Providers"),
+  component: tr("Components")
 }
 
 export function categoryLabel(id: string | undefined): string {
@@ -430,10 +431,10 @@ export interface Badge {
 
 /** Where a plugin runs, as a short badge. The engine's sentence is the title. */
 export function executionBadge(execution: string | null | undefined, text = ''): Badge {
-  if (execution === 'local') return { label: 'Runs on this PC', tone: 'ok', title: text }
-  if (execution === 'remote') return { label: 'Runs online', tone: 'warn', title: text }
-  if (execution === 'hybrid') return { label: 'This PC + online', tone: 'warn', title: text }
-  return { label: 'Doesn’t say where it runs', tone: 'danger', title: text }
+  if (execution === 'local') return { label: tr("Runs on this PC"), tone: 'ok', title: text }
+  if (execution === 'remote') return { label: tr("Runs online"), tone: 'warn', title: text }
+  if (execution === 'hybrid') return { label: tr("This PC + online"), tone: 'warn', title: text }
+  return { label: tr("Doesn’t say where it runs"), tone: 'danger', title: text }
 }
 
 /** The trust tier as a badge, in the engine's words. */
@@ -442,12 +443,12 @@ export function tierBadge(details: Pick<PluginDetails, 'tier' | 'tier_text'>): B
   const tone: Tone = official ? 'ok' : details.tier === 'listed' ? 'info' : 'warn'
   const title =
     details.tier === 'official'
-      ? 'Ships with Clips Kitty.'
+      ? tr("Ships with Clips Kitty.")
       : details.tier === 'listed-official'
-        ? 'Made by the Clips Kitty project and listed in Awesome Clips Kitty.'
+        ? tr("Made by the Clips Kitty project and listed in Awesome Clips Kitty.")
         : details.tier === 'listed'
-          ? 'Made by someone outside the Clips Kitty project and installed from a list. Nobody at Clips Kitty has read its code.'
-          : 'Installed from a folder or a link. Clips Kitty has not checked it.'
+          ? tr("Made by someone outside the Clips Kitty project and installed from a list. Nobody at Clips Kitty has read its code.")
+          : tr("Installed from a folder or a link. Clips Kitty has not checked it.")
   return { label: details.tier_text || details.tier, tone, title }
 }
 
@@ -467,7 +468,7 @@ export interface FitLine {
 }
 
 const GB = 1e9
-const OS_NAMES: Record<string, string> = { windows: 'Windows', macos: 'macOS', linux: 'Linux' }
+const OS_NAMES: Record<string, string> = { windows: tr("Windows"), macos: 'macOS', linux: tr("Linux") }
 const PLATFORM_OS: Record<string, string> = { win32: 'windows', darwin: 'macos', linux: 'linux' }
 
 function gb(n: number): string {
@@ -481,36 +482,36 @@ export function hardwareFit(req: Requirements | undefined, hw: Hardware | null):
   const out: FitLine[] = []
   const gpu = hw?.gpu ?? null
   if (req.gpu === 'required' || req.gpu === 'recommended') {
-    const need = req.gpu === 'required' ? 'Needs a graphics card' : 'A graphics card is recommended'
-    if (gpu) out.push({ text: `${need}: this PC has ${gpu.name}`, fit: 'yes' })
+    const need = req.gpu === 'required' ? tr("Needs a graphics card") : tr("A graphics card is recommended")
+    if (gpu) out.push({ text: tr("{0}: this PC has {1}", need, gpu.name), fit: 'yes' })
     else if (!hw) out.push({ text: need, fit: 'unknown' })
     else
-      out.push({ text: `${need}. Clips Kitty found no NVIDIA card here and can’t see other makes`, fit: 'unknown' })
+      out.push({ text: tr("{0}. Clips Kitty found no NVIDIA card here and can’t see other makes", need), fit: 'unknown' })
   } else if (req.gpu === 'optional') {
-    out.push({ text: 'A graphics card helps but isn’t needed', fit: 'yes' })
+    out.push({ text: tr("A graphics card helps but isn’t needed"), fit: 'yes' })
   } else if (req.gpu === 'none') {
-    out.push({ text: 'Doesn’t use a graphics card', fit: 'yes' })
+    out.push({ text: tr("Doesn’t use a graphics card"), fit: 'yes' })
   }
   if (typeof req.vram_gb === 'number' && req.vram_gb > 0) {
     if (gpu && gpu.vram_total > 0) {
       const have = gpu.vram_total / GB
       out.push({
-        text: `${gb(req.vram_gb)} of video memory: this card has ${gb(have)}`,
+        text: tr("{0} of video memory: this card has {1}", gb(req.vram_gb), gb(have)),
         fit: have + 0.05 >= req.vram_gb ? 'yes' : 'no'
       })
-    } else out.push({ text: `${gb(req.vram_gb)} of video memory`, fit: 'unknown' })
+    } else out.push({ text: tr("{0} of video memory", gb(req.vram_gb)), fit: 'unknown' })
   }
   if (typeof req.ram_gb === 'number' && req.ram_gb > 0) {
-    out.push({ text: `${gb(req.ram_gb)} of memory (Clips Kitty doesn’t measure this)`, fit: 'unknown' })
+    out.push({ text: tr("{0} of memory (Clips Kitty doesn’t measure this)", gb(req.ram_gb)), fit: 'unknown' })
   }
   if (typeof req.disk_gb === 'number' && req.disk_gb > 0) {
     const free = hw?.disk_free_bytes
     if (typeof free === 'number' && free >= 0) {
       out.push({
-        text: `${gb(req.disk_gb)} of disk: ${gb(free / GB)} free`,
+        text: tr("{0} of disk: {1} free", gb(req.disk_gb), gb(free / GB)),
         fit: free / GB >= req.disk_gb ? 'yes' : 'no'
       })
-    } else out.push({ text: `${gb(req.disk_gb)} of disk`, fit: 'unknown' })
+    } else out.push({ text: tr("{0} of disk", gb(req.disk_gb)), fit: 'unknown' })
   }
   if (req.os && req.os.length > 0) {
     const names = req.os.map((o) => OS_NAMES[o] ?? o).join(', ')
@@ -518,13 +519,13 @@ export function hardwareFit(req: Requirements | undefined, hw: Hardware | null):
     if (here) {
       const ok = req.os.includes(here)
       out.push({
-        text: ok ? `Works on ${names}` : `Works on ${names}; this PC runs ${OS_NAMES[here]}`,
+        text: ok ? tr("Works on {0}", names) : tr("Works on {0}; this PC runs {1}", names, OS_NAMES[here]),
         fit: ok ? 'yes' : 'no'
       })
-    } else out.push({ text: `Works on ${names}`, fit: 'unknown' })
+    } else out.push({ text: tr("Works on {0}", names), fit: 'unknown' })
   }
   if (req.software && req.software.length > 0) {
-    out.push({ text: `Needs ${req.software.join(', ')}`, fit: 'unknown' })
+    out.push({ text: tr("Needs {0}", req.software.join(', ')), fit: 'unknown' })
   }
   return out
 }
@@ -550,9 +551,9 @@ export function needLines(
 /** A one-word summary for a listing card: does it fit this PC? */
 export function fitSummary(lines: FitLine[]): { label: string; tone: Tone } | null {
   if (lines.length === 0) return null
-  if (lines.some((l) => l.fit === 'no')) return { label: 'May not run on this PC', tone: 'danger' }
-  if (lines.some((l) => l.fit === 'unknown')) return { label: 'Check the requirements', tone: 'warn' }
-  return { label: 'Fits this PC', tone: 'ok' }
+  if (lines.some((l) => l.fit === 'no')) return { label: tr("May not run on this PC"), tone: 'danger' }
+  if (lines.some((l) => l.fit === 'unknown')) return { label: tr("Check the requirements"), tone: 'warn' }
+  return { label: tr("Fits this PC"), tone: 'ok' }
 }
 
 /** A link from a plugin's manifest that is safe to offer: https, no
@@ -630,21 +631,21 @@ export function updateLines(plan: Pick<PluginPlan, 'update' | 'plugin' | 'detail
   if (!u) return []
   const to = plan.plugin.version ?? ''
   const out: ToneLine[] = []
-  if (u.direction === 'update') out.push({ text: `Updates ${u.from} to ${to}. ${u.from} is kept, so you can go back to it.`, tone: 'info' })
+  if (u.direction === 'update') out.push({ text: tr("Updates {0} to {1}. {2} is kept, so you can go back to it.", u.from, to, u.from), tone: 'info' })
   else if (u.direction === 'downgrade')
-    out.push({ text: `Goes back from ${u.from} to the older ${to}. ${u.from} is kept, so you can go back to it.`, tone: 'warn' })
-  else out.push({ text: `Replaces the installed copy of ${u.from}.`, tone: 'info' })
+    out.push({ text: tr("Goes back from {0} to the older {1}. {2} is kept, so you can go back to it.", u.from, to, u.from), tone: 'warn' })
+  else out.push({ text: tr("Replaces the installed copy of {0}.", u.from), tone: 'info' })
   const labels = new Map(plan.details.permissions.map((p) => [p.id, p.label]))
-  for (const p of u.added_permissions) out.push({ text: `New permission: ${labels.get(p) ?? p}`, tone: 'warn' })
-  if (u.added_hosts.length) out.push({ text: `Now connects to: ${u.added_hosts.join(', ')}`, tone: 'warn' })
-  for (const w of u.added_data_warnings) out.push({ text: `New: ${w}`, tone: 'danger' })
+  for (const p of u.added_permissions) out.push({ text: tr("New permission: {0}", labels.get(p) ?? p), tone: 'warn' })
+  if (u.added_hosts.length) out.push({ text: tr("Now connects to: {0}", u.added_hosts.join(', ')), tone: 'warn' })
+  for (const w of u.added_data_warnings) out.push({ text: tr("New: {0}", w), tone: 'danger' })
   if (u.execution_changed)
-    out.push({ text: `Where it runs has changed: ${plan.details.execution_text || 'not stated'}`, tone: 'warn' })
+    out.push({ text: tr("Where it runs has changed: {0}", plan.details.execution_text || tr("not stated")), tone: 'warn' })
   // A rater's scores decide which clips are made, so a new step is said before it installs.
-  for (const s of u.added_steps ?? []) out.push({ text: `Now also: ${s}`, tone: 'warn' })
+  for (const s of u.added_steps ?? []) out.push({ text: tr("Now also: {0}", s), tone: 'warn' })
   if (u.removed_permissions.length)
-    out.push({ text: `No longer asks for: ${u.removed_permissions.join(', ')}`, tone: 'ok' })
-  if (u.removed_hosts.length) out.push({ text: `No longer connects to: ${u.removed_hosts.join(', ')}`, tone: 'ok' })
+    out.push({ text: tr("No longer asks for: {0}", u.removed_permissions.join(', ')), tone: 'ok' })
+  if (u.removed_hosts.length) out.push({ text: tr("No longer connects to: {0}", u.removed_hosts.join(', ')), tone: 'ok' })
   return out
 }
 
@@ -666,14 +667,14 @@ export function usablePipelines(plugins: InstalledPlugin[]): InstalledPlugin[] {
 /** What each step pill means (plugins/permissions.py STEP_WORDS), as its title. */
 const STEP_TITLES: Record<string, string> = {
   'Finds moments':
-    'It picks a video’s moments itself, in place of Clips Kitty’s own scoring. Turn on Pipeline when you add a video to use it.',
+    tr("It picks a video’s moments itself, in place of Clips Kitty’s own scoring. Turn on Pipeline when you add a video to use it."),
   'Understands moments':
-    'It says what happens in each moment found by Clips Kitty or a pipeline, and Clips Kitty uses that when writing titles. Turn on Rate & understand when you add a video.',
-  'Understands what it finds': 'It says what happens in the moments it finds, for the titles.',
+    tr("It says what happens in each moment found by Clips Kitty or a pipeline, and Clips Kitty uses that when writing titles. Turn on Rate & understand when you add a video."),
+  'Understands what it finds': tr("It says what happens in the moments it finds, for the titles."),
   'Rates moments':
-    'It scores each moment found by Clips Kitty or a pipeline. Turn on Rate & understand when you add a video.',
+    tr("It scores each moment found by Clips Kitty or a pipeline. Turn on Rate & understand when you add a video."),
   'Suggests edits':
-    'It suggests cuts, fades, a hook title or a layout for each clip. Turn on Suggest edits when you add a video.'
+    tr("It suggests cuts, fades, a hook title or a layout for each clip. Turn on Suggest edits when you add a video.")
 }
 
 /** A step pill (details.steps, in the engine's words) as a badge in the info tone. */
@@ -684,7 +685,7 @@ export function stepBadge(words: string): Badge {
 /** The one sentence that says when a suggested edit reaches a clip: the
  *  same on the Suggest edits switch, here and in the docs. */
 export const SUGGESTION_PROMISE =
-  'Clips Kitty doesn’t put a suggestion into a clip until you use it in the editor and apply your edits (Apply edits, or Apply edits & upload).'
+  tr("Clips Kitty doesn’t put a suggestion into a clip until you use it in the editor and apply your edits (Apply edits, or Apply edits & upload).")
 
 /** The details panel's lines about a plugin that rates or understands
  *  moments, or suggests edits for clips: what its answers change, and its
@@ -808,7 +809,7 @@ export function gitSource(
   const fromCommit = githubPage(sha)
   if (fromLink === null || fromCommit === null)
     return {
-      problem: 'That GitHub address isn’t a repository, or a folder at a commit. Open the repository on GitHub and copy its address.'
+      problem: tr("That GitHub address isn’t a repository, or a folder at a commit. Open the repository on GitHub and copy its address.")
     }
   if (fromCommit && !fromCommit.ref)
     return { problem: 'The commit box takes the 40-character commit, or a GitHub link that ends in /tree/<commit>.' }
@@ -818,14 +819,14 @@ export function gitSource(
         problem: `That link points at ${JSON.stringify(page.ref)}, a branch or tag, which can change. On GitHub, open the commit you want and copy the link from there.`
       }
   if (fromLink && fromCommit && fromLink.repo.toLowerCase() !== fromCommit.repo.toLowerCase())
-    return { problem: 'The two links are for different repositories. Clear one of them.' }
+    return { problem: tr("The two links are for different repositories. Clear one of them.") }
   const page = fromLink ?? fromCommit
   if (page) repo = page.repo
   else if (!/^https:\/\/[^\s/?#]+\/[^\s?#]+$/.test(repo)) return { problem: 'Paste the repository’s https:// address.' }
   if (fromCommit?.ref) sha = fromCommit.ref
   if (fromLink?.ref) {
     if (sha && sha.toLowerCase() !== fromLink.ref.toLowerCase())
-      return { problem: 'The link and the commit box name different commits. Clear one of them.' }
+      return { problem: tr("The link and the commit box name different commits. Clear one of them.") }
     sha = fromLink.ref
   }
   sha = sha.toLowerCase()
@@ -833,10 +834,10 @@ export function gitSource(
   if (!COMMIT.test(sha))
     return {
       problem:
-        'Give the full 40-character commit. A branch or tag can change after you looked at it; a commit can’t.'
+        tr("Give the full 40-character commit. A branch or tag can change after you looked at it; a commit can’t.")
     }
   if (path.split('/').some((part) => part === '..' || part.includes('\\') || part.includes(':')))
-    return { problem: 'The folder is a path inside the repository, like plugins/my-plugin.' }
+    return { problem: tr("The folder is a path inside the repository, like plugins/my-plugin.") }
   return { source: { kind: 'git', url: repo.replace(/\/+$/, ''), commit: sha, ...(path ? { path } : {}) } }
 }
 
@@ -845,7 +846,7 @@ export function agoText(stamp: string | null, nowMs: number): string | null {
   const at = stamp ? Date.parse(stamp) : NaN
   if (!Number.isFinite(at)) return null
   const s = Math.max(0, Math.round((nowMs - at) / 1000))
-  if (s < 90) return 'just now'
+  if (s < 90) return tr("just now")
   const m = Math.round(s / 60)
   if (m < 90) return `${m} minutes ago`
   const h = Math.round(m / 60)
@@ -855,7 +856,7 @@ export function agoText(stamp: string | null, nowMs: number): string | null {
 
 export function fetchedText(fetchedAt: string | null, nowMs: number): string {
   const ago = agoText(fetchedAt, nowMs)
-  return ago ? `updated ${ago}` : 'not fetched yet'
+  return ago ? tr("updated {0}", ago) : tr("not fetched yet")
 }
 
 /** What the Marketplace says about Clips Kitty's online list, in one or two
@@ -865,14 +866,14 @@ export function onlineText(online: OnlineList | undefined, nowMs: number, manage
   const fetched = agoText(online?.fetched_at ?? null, nowMs)
   const tried = agoText(online?.tried_at ?? null, nowMs)
   const used = fetched !== null && online?.in_use !== false
-  const shows = used ? `This shows its copy from ${fetched}.` : 'This shows the list that came with Clips Kitty.'
+  const shows = used ? `This shows its copy from ${fetched}.` : tr("This shows the list that came with Clips Kitty.")
   if (online?.error) {
-    const when = tried ? `The check for new pipelines ${tried} didn’t work.` : 'The last check for new pipelines didn’t work.'
+    const when = tried ? `The check for new pipelines ${tried} didn’t work.` : tr("The last check for new pipelines didn’t work.")
     return `${when} ${online.error} ${shows}`
   }
   if (used) return `Clips Kitty’s online list, updated ${fetched}.`
-  if (fetched) return 'This shows the list that came with Clips Kitty, which is newer than its online copy.'
-  return `${shows} ${manage ? 'Check for new pipelines to get the online list.' : 'The Clips Kitty desktop app gets the online list.'}`
+  if (fetched) return tr("This shows the list that came with Clips Kitty, which is newer than its online copy.")
+  return `${shows} ${manage ? tr("Check for new pipelines to get the online list.") : tr("The Clips Kitty desktop app gets the online list.")}`
 }
 
 export function formatBytes(n: number | undefined): string {
@@ -895,8 +896,8 @@ export function isOurList(url: string | undefined): boolean {
 
 /** How the screen names an index: one of Clips Kitty's own, or someone else's by its address. */
 export function indexName(url: string): string {
-  if (url === 'bundled') return 'The list that came with Clips Kitty'
-  if (url === ONLINE_LIST) return 'Clips Kitty’s online list'
+  if (url === 'bundled') return tr("The list that came with Clips Kitty")
+  if (url === ONLINE_LIST) return tr("Clips Kitty’s online list")
   try {
     return `A list from ${new URL(url).host} (not Clips Kitty’s)`
   } catch {
@@ -906,10 +907,10 @@ export function indexName(url: string): string {
 
 /** Which list a listing is in, and how fresh Clips Kitty's online copy is. */
 export function listedInText(url: string, online: OnlineList | undefined, nowMs: number): string {
-  if (url === 'bundled') return 'In the list that came with Clips Kitty.'
+  if (url === 'bundled') return tr("In the list that came with Clips Kitty.")
   if (url === ONLINE_LIST) {
     const ago = agoText(online?.fetched_at ?? null, nowMs)
-    return ago ? `In Clips Kitty’s online list (updated ${ago}).` : 'In Clips Kitty’s online list.'
+    return ago ? `In Clips Kitty’s online list (updated ${ago}).` : tr("In Clips Kitty’s online list.")
   }
   try {
     return `In a list from ${new URL(url).host} (not Clips Kitty’s).`
@@ -923,15 +924,15 @@ export function listedInText(url: string, online: OnlineList | undefined, nowMs:
 export function sourceLine(source: Record<string, string> | undefined): string {
   const listed = source?.listed_in
   if (listed) {
-    if (isOurList(listed)) return 'From Clips Kitty’s list'
+    if (isOurList(listed)) return tr("From Clips Kitty’s list")
     try {
       return `From a list on ${new URL(listed).host} (not Clips Kitty’s)`
     } catch {
-      return 'From a list that isn’t Clips Kitty’s'
+      return tr("From a list that isn’t Clips Kitty’s")
     }
   }
-  if (source?.kind === 'folder') return 'From a folder on this PC'
-  if (source?.kind === 'git') return 'From a link'
+  if (source?.kind === 'folder') return tr("From a folder on this PC")
+  if (source?.kind === 'git') return tr("From a link")
   return ''
 }
 
@@ -943,12 +944,12 @@ export function slugLabel(slug: string): string {
 
 /** The automated checks an index build ran on a listing (plugins/registry.py). */
 export const CHECK_LABELS: Record<string, string> = {
-  manifest_valid: 'Its setup file passed Clips Kitty’s checks',
-  publisher_is_repository_owner: 'The developer in its id owns the code’s page on GitHub',
-  official_repository: 'The code’s page on GitHub is the Clips Kitty project’s own',
-  commit_pinned: 'Each version is fixed and can’t change after it was listed',
-  commit_on_branch: 'Each version comes from the developer’s own code, not from someone else’s copy',
-  public_at_commit: 'Anyone could read each version’s code'
+  manifest_valid: tr("Its setup file passed Clips Kitty’s checks"),
+  publisher_is_repository_owner: tr("The developer in its id owns the code’s page on GitHub"),
+  official_repository: tr("The code’s page on GitHub is the Clips Kitty project’s own"),
+  commit_pinned: tr("Each version is fixed and can’t change after it was listed"),
+  commit_on_branch: tr("Each version comes from the developer’s own code, not from someone else’s copy"),
+  public_at_commit: tr("Anyone could read each version’s code")
 }
 
 /** The checks an index reports for a listing, as lines to show: only the
@@ -968,17 +969,17 @@ export function checkLines(checks: Record<string, unknown> | undefined): { text:
  *  (plugins/catalog.py DIRECTORY_KINDS). Models are "AI model links" here,
  *  so the tab isn't taken for the app's own Models page. */
 export const DIRECTORY_KINDS: Record<string, string> = {
-  app: 'Apps',
-  model: 'AI model links',
-  workflow: 'Workflows',
-  integration: 'Integrations',
-  tool: 'Tools'
+  app: tr("Apps"),
+  model: tr("AI model links"),
+  workflow: tr("Workflows"),
+  integration: tr("Integrations"),
+  tool: tr("Tools")
 }
 
 /** How a project relates to Clips Kitty, in words (plugins/catalog.py RELATIONSHIPS). */
 export const RELATIONSHIP_LABELS: Record<string, string> = {
-  'built-for': 'Built for Clips Kitty',
-  'built-with': 'Built with Clips Kitty'
+  'built-for': tr("Built for Clips Kitty"),
+  'built-with': tr("Built with Clips Kitty")
 }
 
 /** The catalog's labels as badges. "official" and "community" are the
@@ -987,17 +988,17 @@ export function catalogBadges(badges: string[] | undefined, extraOnly = false): 
   const out: Badge[] = []
   for (const b of badges ?? []) {
     if (b === 'official' && !extraOnly)
-      out.push({ label: '✓ Official', tone: 'ok', title: 'Made and maintained by the Clips Kitty project.' })
+      out.push({ label: tr("✓ Official"), tone: 'ok', title: tr("Made and maintained by the Clips Kitty project.") })
     else if (b === 'community' && !extraOnly)
-      out.push({ label: 'Community', tone: 'info', title: 'Made by someone outside the Clips Kitty project. Nobody at Clips Kitty has read its code.' })
+      out.push({ label: tr("Community"), tone: 'info', title: tr("Made by someone outside the Clips Kitty project. Nobody at Clips Kitty has read its code.") })
     else if (b === 'compatible')
       out.push({
-        label: '✓ Compatible',
+        label: tr("✓ Compatible"),
         tone: 'ok',
         title:
-          'This version passed Clips Kitty’s automated compatibility checks. A technical label, not a security review.'
+          tr("This version passed Clips Kitty’s automated compatibility checks. A technical label, not a security review.")
       })
-    else if (b === 'featured') out.push({ label: '★ Featured', tone: 'info', title: 'Picked by a Clips Kitty maintainer.' })
+    else if (b === 'featured') out.push({ label: tr("★ Featured"), tone: 'info', title: tr("Picked by a Clips Kitty maintainer.") })
   }
   return out
 }
@@ -1017,21 +1018,21 @@ export function metricLines(metrics: Metrics | undefined): { text: string; tone:
   if (!metrics) return out
   if (typeof metrics.installs === 'number')
     out.push({
-      text: `${metrics.installs.toLocaleString('en-US')} Clips Kitty ${metrics.installs === 1 ? 'install' : 'installs'}`,
+      text: tr("{0} Clips Kitty {1}", metrics.installs.toLocaleString('en-US'), metrics.installs === 1 ? 'install' : 'installs'),
       tone: 'info'
     })
   const gh = metrics.github
-  if (gh && typeof gh.stars === 'number') out.push({ text: `★ ${shortCount(gh.stars)} on GitHub`, tone: 'info' })
+  if (gh && typeof gh.stars === 'number') out.push({ text: tr("★ {0} on GitHub", shortCount(gh.stars)), tone: 'info' })
   if (gh && typeof gh.discussions === 'number' && gh.discussions > 0)
-    out.push({ text: `${gh.discussions} ${gh.discussions === 1 ? 'discussion' : 'discussions'} on GitHub`, tone: 'info' })
+    out.push({ text: tr("{0} {1} on GitHub", gh.discussions, gh.discussions === 1 ? 'discussion' : 'discussions'), tone: 'info' })
   for (const [id, m] of Object.entries(metrics.models ?? {})) {
     if (!m || typeof m !== 'object') continue
     const bits = []
     if (typeof m.downloads === 'number') bits.push(`${shortCount(m.downloads)} downloads a month`)
     if (typeof m.likes === 'number') bits.push(`${shortCount(m.likes)} likes`)
-    if (bits.length) out.push({ text: `${id} on Hugging Face: ${bits.join(', ')}`, tone: 'info' })
+    if (bits.length) out.push({ text: tr("{0} on Hugging Face: {1}", id, bits.join(', ')), tone: 'info' })
   }
-  if (metrics.stale) out.push({ text: `⚠ ${metrics.stale === 'archived' ? 'Archived by its authors' : metrics.stale}`, tone: 'warn' })
+  if (metrics.stale) out.push({ text: `⚠ ${metrics.stale === 'archived' ? tr("Archived by its authors") : metrics.stale}`, tone: 'warn' })
   return out
 }
 
@@ -1045,20 +1046,20 @@ export function entryLink(
   const s = entry.source ?? {}
   const download = safeLink(s.download)
   if (download)
-    return { url: download, label: 'Download from', host: new URL(download).hostname.replace(/^www\./, '') }
+    return { url: download, label: tr("Download from"), host: new URL(download).hostname.replace(/^www\./, '') }
   const homepage = safeLink(s.homepage)
-  if (homepage) return { url: homepage, label: 'Website', host: null }
+  if (homepage) return { url: homepage, label: tr("Website"), host: null }
   if (s.github) {
     let url = safeLink(s.github)
     const page = safeLink(s.url)
     if (url && s.path) url = safeLink(`${s.github.replace(/\/+$/, '')}/tree/HEAD/${s.path.replace(/^\/+|\/+$/g, '')}`)
     else if (url && page && (page.startsWith(`${s.github}#`) || page.startsWith(`${s.github}/`))) url = page
-    return url ? { url, label: 'Code page on GitHub', host: null } : null
+    return url ? { url, label: tr("Code page on GitHub"), host: null } : null
   }
   if (s.huggingface && /^[A-Za-z0-9][A-Za-z0-9_.-]*\/[A-Za-z0-9][A-Za-z0-9_.-]*$/.test(s.huggingface))
-    return { url: `https://huggingface.co/${s.huggingface}`, label: 'Model page on Hugging Face', host: null }
+    return { url: `https://huggingface.co/${s.huggingface}`, label: tr("Model page on Hugging Face"), host: null }
   const url = safeLink(s.url)
-  return url ? { url, label: 'Website', host: null } : null
+  return url ? { url, label: tr("Website"), host: null } : null
 }
 
 const BASED_ON_HOW: Record<string, string> = {
@@ -1074,7 +1075,7 @@ export function basedOnLines(items: BasedOn[] | undefined): { name: string; url:
     .map((b) => ({
       name: b.name,
       url: safeLink(b.url),
-      text: `${b.license} · ${BASED_ON_HOW[b.how] ? `this pipeline ${BASED_ON_HOW[b.how]}` : b.how}`
+      text: `${b.license} · ${BASED_ON_HOW[b.how] ? tr("this pipeline {0}", BASED_ON_HOW[b.how]) : b.how}`
     }))
 }
 
@@ -1118,11 +1119,11 @@ export function compatibilityText(record: CompatibilityRecord | undefined | null
   const when = String(record.checked_at || '').slice(0, 10)
   if (record.passed)
     return {
-      text: `✓ Compatible: version ${record.version} passed the automated checks on Clips Kitty ${record.app_version}${when ? ` (${when})` : ''}. A technical check, not a security review.`,
+      text: tr("✓ Compatible: version {0} passed the automated checks on Clips Kitty {1}{2}. A technical check, not a security review.", record.version, record.app_version, when ? ` (${when})` : ''),
       tone: 'ok'
     }
   return {
-    text: `Version ${record.version} didn’t pass the automated checks on Clips Kitty ${record.app_version}${record.note ? `: ${record.note}` : ''}.`,
+    text: tr("Version {0} didn’t pass the automated checks on Clips Kitty {1}{2}.", record.version, record.app_version, record.note ? `: ${record.note}` : ''),
     tone: 'warn'
   }
 }
@@ -1146,6 +1147,6 @@ export function groupBySection(
     if (own.length) out.push({ id: s.id, title: s.title, description: s.description, entries: easyFirst(own) })
   }
   const rest = entries.filter((e) => !known.has(e.section))
-  if (rest.length) out.push({ id: '', title: 'Other', entries: easyFirst(rest) })
+  if (rest.length) out.push({ id: '', title: tr("Other"), entries: easyFirst(rest) })
   return out
 }

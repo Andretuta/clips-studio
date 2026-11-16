@@ -81,6 +81,8 @@ ROUTES: dict[tuple[str, str], tuple[str, str, str]] = {
     ("GET", "/jobs"): (STABLE, "progress", "Every job, newest last (a bare array)."),
     ("GET", "/jobs/{job_id}"): (STABLE, "progress", "One job."),
     ("GET", "/jobs/{job_id}/log"): (STABLE, "progress", "The job's own log file, last lines."),
+    ("GET", "/diagnostics/errors"): (EXPERIMENTAL, "progress", "Recent processing and publishing failures with redacted errors. Session header."),
+    ("GET", "/diagnostics/logs/{source}"): (EXPERIMENTAL, "progress", "Bounded and redacted engine, recorder or processing job logs. Session header."),
     ("POST", "/jobs/{job_id}/retry"): (STABLE, "progress", "Queue a failed job again with its original settings."),
     ("DELETE", "/jobs/{job_id}"): (STABLE, "progress", "Remove a job."),
     ("POST", "/cancel"): (STABLE, "progress", "Ask a running video to stop at its next stage boundary."),

@@ -255,7 +255,7 @@ export default function UploadPostCard(): JSX.Element {
           <h3 className="font-semibold">{t('Upload-Post')}</h3>
           <p className="text-xs text-muted mt-1 max-w-xl">
             {t(
-              'Another way to post to your socials, if you already have an Upload-Post account or want Bluesky, custom thumbnails, first comments or a posting queue. Otherwise WoopSocial above covers most of this on a free plan.'
+              'Link your social accounts in Upload-Post and choose a destination in the clip editor.'
             )}
           </p>
         </div>
@@ -463,7 +463,7 @@ export default function UploadPostCard(): JSX.Element {
               <p className="text-sm font-medium">{t('Don’t have an Upload-Post account?')}</p>
               <p className="text-xs text-muted">
                 {t(
-                  'Create one, connect your social accounts, and copy your API key from their dashboard. Their free plan includes 10 uploads a month; TikTok needs a paid plan.'
+                  'Connect your social accounts and copy your API key from the Upload-Post dashboard.'
                 )}
               </p>
               <div className="flex gap-2 flex-wrap">

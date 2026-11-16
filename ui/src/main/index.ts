@@ -28,8 +28,30 @@ import { basename, join } from 'node:path'
 import { isInstallingUpdate, setupUpdater } from './updater'
 import { isMicrosoftStore } from './distribution'
 import { dropStalePartials } from './stalePartials'
+import pt from '../renderer/src/locales/pt.json'
 
 const API_PORT = 8765
+const portuguese: Record<string, string> = pt
+let interfaceLanguage = 'pt'
+
+function nativeText(source: string, ...values: unknown[]): string {
+  const message = interfaceLanguage === 'pt' ? portuguese[source] ?? source : source
+  return message.replace(/\{(\d+)\}/g, (token, index: string) =>
+    Number(index) < values.length ? String(values[Number(index)]) : token
+  )
+}
+
+function isStudioFrame(event: IpcMainInvokeEvent): boolean {
+  const url = event.senderFrame?.url ?? ''
+  const devUrl = process.env.ELECTRON_RENDERER_URL
+  return url.startsWith('file:') || Boolean(devUrl && url.startsWith(devUrl))
+}
+
+ipcMain.handle('interface-language', (event, language: unknown) => {
+  if (isStudioFrame(event) && typeof language === 'string' && /^[a-z]{2}$/.test(language)) {
+    interfaceLanguage = language
+  }
+})
 
 // One definition for both routes below: the in-app popup and, for Store
 // copies, the system browser. They must not be able to drift apart.
@@ -116,8 +138,8 @@ async function refreshTrayMenu(): Promise<void> {
   } catch { /* The optional feature can be unavailable in an older engine. */ }
   tray?.setContextMenu(
     Menu.buildFromTemplate([
-      { label: 'Open Clips Kitty', click: showWindow },
-      { label: 'Away from desk', type: 'checkbox', checked: status.away_from_desk === true,
+      { label: nativeText("Open Clips Kitty"), click: showWindow },
+      { label: nativeText("Away from desk"), type: 'checkbox', checked: status.away_from_desk === true,
         enabled: status.enabled === true && (status.away_from_desk === true || (status.connected === true && status.test_ok === true)),
         click: async (item) => {
           try {
@@ -131,7 +153,7 @@ async function refreshTrayMenu(): Promise<void> {
         } },
       { type: 'separator' },
       // before-quit asks first if a model is downloading.
-      { label: 'Quit Clips Kitty', click: () => app.quit() }
+      { label: nativeText("Quit Clips Kitty"), click: () => app.quit() }
     ])
   )
 }
@@ -183,15 +205,15 @@ async function confirmQuit(parent: BrowserWindow | null): Promise<boolean> {
   if (!(await isDownloadingModel())) return true
   const options = {
     type: 'warning' as const,
-    buttons: ['Quit anyway', 'Keep downloading'],
+    buttons: [nativeText("Quit anyway"), nativeText("Keep downloading")],
     defaultId: 1,
     cancelId: 1,
     title: 'Clips Kitty',
-    message: 'A model is still downloading. Quit anyway?',
+    message: nativeText("A model is still downloading. Quit anyway?"),
     // Nothing starts it again by itself: the engine forgets its downloads
     // when it stops. Started again, it carries on rather than starting over
     // (OLLAMA_NOPRUNE below).
-    detail: 'Start it again from the Models page and it carries on where it stopped.'
+    detail: nativeText("Start it again from the Models page and it carries on where it stopped.")
   }
   if (parent && !parent.isDestroyed()) {
     if (!parent.isVisible()) parent.show() // hidden on the way to the tray
@@ -503,11 +525,11 @@ function createWindow(): void {
 // a local audio file (renderer stays sandboxed, no Node access needed).
 ipcMain.handle('pick-audio-file', async () => {
   const result = await dialog.showOpenDialog({
-    title: 'Choose background music',
+    title: nativeText("Choose background music"),
     properties: ['openFile'],
     filters: [
-      { name: 'Audio', extensions: ['mp3', 'wav', 'm4a', 'aac', 'ogg', 'flac'] },
-      { name: 'All files', extensions: ['*'] }
+      { name: nativeText("Audio"), extensions: ['mp3', 'wav', 'm4a', 'aac', 'ogg', 'flac'] },
+      { name: nativeText("All files"), extensions: ['*'] }
     ]
   })
   return result.canceled ? null : result.filePaths[0]
@@ -515,11 +537,11 @@ ipcMain.handle('pick-audio-file', async () => {
 
 ipcMain.handle('pick-video-file', async () => {
   const result = await dialog.showOpenDialog({
-    title: 'Choose a video to make clips from',
+    title: nativeText("Choose a video to make clips from"),
     properties: ['openFile'],
     filters: [
-      { name: 'Video', extensions: ['mp4', 'mov', 'mkv', 'avi', 'webm', 'm4v', 'ts', 'flv'] },
-      { name: 'All files', extensions: ['*'] }
+      { name: nativeText("Video"), extensions: ['mp4', 'mov', 'mkv', 'avi', 'webm', 'm4v', 'ts', 'flv'] },
+      { name: nativeText("All files"), extensions: ['*'] }
     ]
   })
   return result.canceled ? null : result.filePaths[0]
@@ -527,11 +549,11 @@ ipcMain.handle('pick-video-file', async () => {
 
 ipcMain.handle('pick-video-files', async () => {
   const result = await dialog.showOpenDialog({
-    title: 'Choose videos to add to the queue',
+    title: nativeText("Choose videos to add to the queue"),
     properties: ['openFile', 'multiSelections'],
     filters: [
-      { name: 'Video', extensions: ['mp4', 'mov', 'mkv', 'avi', 'webm', 'm4v', 'ts', 'flv'] },
-      { name: 'All files', extensions: ['*'] }
+      { name: nativeText("Video"), extensions: ['mp4', 'mov', 'mkv', 'avi', 'webm', 'm4v', 'ts', 'flv'] },
+      { name: nativeText("All files"), extensions: ['*'] }
     ]
   })
   return result.canceled ? [] : result.filePaths
@@ -567,10 +589,10 @@ const THUMBNAIL_MAX_BYTES = 2 * 1024 * 1024
 // for an image capped at 2 MB.
 ipcMain.handle('pick-thumbnail-image', async () => {
   const result = await dialog.showOpenDialog({
-    title: 'Choose a thumbnail',
+    title: nativeText("Choose a thumbnail"),
     properties: ['openFile'],
     // YouTube takes JPEG and PNG. WebP is deliberately absent.
-    filters: [{ name: 'Image', extensions: ['png', 'jpg', 'jpeg'] }]
+    filters: [{ name: nativeText("Image"), extensions: ['png', 'jpg', 'jpeg'] }]
   })
   if (result.canceled || !result.filePaths[0]) return null
   const path = result.filePaths[0]
@@ -599,11 +621,11 @@ ipcMain.handle('pick-thumbnail-image', async () => {
 
 ipcMain.handle('pick-image-file', async () => {
   const result = await dialog.showOpenDialog({
-    title: 'Choose a logo image',
+    title: nativeText("Choose a logo image"),
     properties: ['openFile'],
     filters: [
-      { name: 'Image', extensions: ['png', 'jpg', 'jpeg', 'webp'] },
-      { name: 'All files', extensions: ['*'] }
+      { name: nativeText("Image"), extensions: ['png', 'jpg', 'jpeg', 'webp'] },
+      { name: nativeText("All files"), extensions: ['*'] }
     ]
   })
   return result.canceled ? null : result.filePaths[0]
@@ -631,7 +653,7 @@ ipcMain.handle('open-donate-window', (event) => {
     parent,
     modal: false,
     autoHideMenuBar: true,
-    title: 'Donate — paypal.me/clipsstudio',
+    title: nativeText("Donate — paypal.me/clipsstudio"),
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
@@ -697,6 +719,8 @@ const EXTERNAL_ALLOWED = [
   // It must open in the system browser: Google rejects OAuth inside an
   // embedded webview with disallowed_useragent, and offers no way to opt out.
   /^https:\/\/accounts\.google\.com\//,
+  /^https:\/\/(app|connect)\.composio\.dev\/link\//,
+  /^https:\/\/docs\.composio\.dev\/kb\/guide\/toolkits-tiktok$/,
   /^https:\/\/www\.youtube\.com\/watch\?v=/,
   // A short uploaded straight to YouTube links to its Shorts page.
   /^https:\/\/(www\.|m\.)?youtube\.com\/shorts\/[\w-]{11}$/,
@@ -779,13 +803,7 @@ ipcMain.handle('get-downloads-path', () => app.getPath('downloads'))
 // The plugin-manager session secret, for this app's own pages only: the
 // window loads the bundled renderer (file:) or, in development, the Vite
 // server, and anything else asking gets nothing.
-ipcMain.handle('plugin-session', (event) => {
-  const url = event.senderFrame?.url ?? ''
-  const own =
-    url.startsWith('file:') ||
-    (!!process.env.ELECTRON_RENDERER_URL && url.startsWith(process.env.ELECTRON_RENDERER_URL))
-  return own ? SESSION_SECRET : ''
-})
+ipcMain.handle('plugin-session', (event) => isStudioFrame(event) ? SESSION_SECRET : '')
 
 // A pipeline's links come from its developer's manifest, and a catalog entry's
 // point at someone else's project, so they get no allow-list entry: each one
@@ -802,11 +820,11 @@ async function openAfterAsking(event: IpcMainInvokeEvent, url: unknown, from: st
   if (parsed.protocol !== 'https:' || parsed.username || parsed.password || !parsed.hostname) return false
   const options = {
     type: 'question' as const,
-    buttons: ['Open in browser', 'Cancel'],
+    buttons: [nativeText("Open in browser"), nativeText("Cancel")],
     defaultId: 1,
     cancelId: 1,
-    title: 'Open a website?',
-    message: `Open ${parsed.host} in your browser?`,
+    title: nativeText("Open a website?"),
+    message: nativeText("Open {0} in your browser?", parsed.host),
     detail: `${parsed.href}\n\n${from}`
   }
   const parent = BrowserWindow.fromWebContents(event.sender)
@@ -836,7 +854,7 @@ ipcMain.handle('open-catalog-link', (event, url: unknown, ours: unknown) =>
 // Folder picker for installing a plugin from a folder on this PC.
 ipcMain.handle('pick-plugin-folder', async () => {
   const result = await dialog.showOpenDialog({
-    title: 'Choose the pipeline folder (the one with clipskitty.yaml)',
+    title: nativeText("Choose the pipeline folder (the one with clipskitty.yaml)"),
     properties: ['openDirectory']
   })
   return result.canceled ? null : result.filePaths[0]
@@ -845,7 +863,7 @@ ipcMain.handle('pick-plugin-folder', async () => {
 // Folder picker for choosing where exported clips are saved.
 ipcMain.handle('pick-folder', async () => {
   const result = await dialog.showOpenDialog({
-    title: 'Choose where to save exported clips',
+    title: nativeText("Choose where to save exported clips"),
     defaultPath: app.getPath('downloads'),
     properties: ['openDirectory', 'createDirectory']
   })

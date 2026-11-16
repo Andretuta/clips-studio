@@ -1,3 +1,4 @@
+import { t as tr } from "../lib/i18n"
 import { useEffect, useState } from 'react'
 import { api } from '../lib/api'
 import { t } from '../lib/i18n'
@@ -43,26 +44,26 @@ interface Props {
 
 /** Common caption/audio languages, matching the app's own language support. */
 const LANGUAGES: [string, string][] = [
-  ['', 'Not set'],
-  ['en', 'English'],
-  ['es', 'Spanish'],
-  ['pt', 'Portuguese'],
-  ['fr', 'French'],
-  ['de', 'German'],
-  ['it', 'Italian'],
-  ['hi', 'Hindi'],
-  ['id', 'Indonesian'],
-  ['ja', 'Japanese'],
-  ['ko', 'Korean'],
-  ['ru', 'Russian'],
-  ['tr', 'Turkish'],
-  ['vi', 'Vietnamese'],
-  ['th', 'Thai'],
-  ['ar', 'Arabic'],
-  ['bn', 'Bengali'],
-  ['ur', 'Urdu'],
-  ['tl', 'Filipino'],
-  ['zh', 'Chinese']
+  ['', tr("Not set")],
+  ['en', tr("English")],
+  ['es', tr("Spanish")],
+  ['pt', tr("Portuguese")],
+  ['fr', tr("French")],
+  ['de', tr("German")],
+  ['it', tr("Italian")],
+  ['hi', tr("Hindi")],
+  ['id', tr("Indonesian")],
+  ['ja', tr("Japanese")],
+  ['ko', tr("Korean")],
+  ['ru', tr("Russian")],
+  ['tr', tr("Turkish")],
+  ['vi', tr("Vietnamese")],
+  ['th', tr("Thai")],
+  ['ar', tr("Arabic")],
+  ['bn', tr("Bengali")],
+  ['ur', tr("Urdu")],
+  ['tl', tr("Filipino")],
+  ['zh', tr("Chinese")]
 ]
 
 export default function YouTubeMetadataForm({

@@ -1,3 +1,4 @@
+import { t as tr } from "../lib/i18n"
 import { useEffect, useState } from 'react'
 import { api } from '../lib/api'
 import type { SystemStats as Stats } from '../lib/types'
@@ -47,9 +48,9 @@ export default function SystemStats({ compact = false }: { compact?: boolean }):
 
   if (!stats) {
     return compact ? (
-      <span className="text-muted text-sm">Connecting…</span>
+      <span className="text-muted text-sm">{tr("Connecting…")}</span>
     ) : (
-      <div className="card text-muted">Connecting to backend…</div>
+      <div className="card text-muted">{tr("Connecting to backend…")}</div>
     )
   }
 
@@ -66,7 +67,7 @@ export default function SystemStats({ compact = false }: { compact?: boolean }):
               : 'CPU-only'
           }
         />
-        <Inline label="Storage" value={`${gb(stats.data_dir_bytes)} (${gb(stats.disk_free_bytes)} free)`} />
+        <Inline label={tr("Storage")} value={`${gb(stats.data_dir_bytes)} (${gb(stats.disk_free_bytes)} free)`} />
       </div>
     )
   }
@@ -84,7 +85,7 @@ export default function SystemStats({ compact = false }: { compact?: boolean }):
       ) : (
         <Widget label="GPU" value="—" sub="CPU-only mode" />
       )}
-      <Widget label="Storage" value={gb(stats.data_dir_bytes)} sub={`${gb(stats.disk_free_bytes)} free`} />
+      <Widget label={tr("Storage")} value={gb(stats.data_dir_bytes)} sub={`${gb(stats.disk_free_bytes)} free`} />
     </div>
   )
 }

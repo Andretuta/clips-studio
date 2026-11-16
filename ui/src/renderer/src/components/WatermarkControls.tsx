@@ -1,3 +1,4 @@
+import { t as tr } from "../lib/i18n"
 import { api } from '../lib/api'
 import { CAPTION_FONTS } from './CaptionStyleControls'
 import { Folder, Rotate } from './icons'
@@ -9,17 +10,17 @@ const POSITIONS: {
   label: JSX.Element | string
   title: string
 }[] = [
-  { id: 'top_left', label: '↖', title: 'top left' },
-  { id: 'top_right', label: '↗', title: 'top right' },
-  { id: 'center', label: '⊙', title: 'center' },
-  { id: 'bottom_left', label: '↙', title: 'bottom left' },
-  { id: 'bottom_right', label: '↘', title: 'bottom right' },
+  { id: 'top_left', label: '↖', title: tr("top left") },
+  { id: 'top_right', label: '↗', title: tr("top right") },
+  { id: 'center', label: '⊙', title: tr("center") },
+  { id: 'bottom_left', label: '↙', title: tr("bottom left") },
+  { id: 'bottom_right', label: '↘', title: tr("bottom right") },
   {
     id: 'moving',
     label: <Rotate />,
     title:
-      'Moving — drifts in a small circle at one side edge, then jumps to the other. ' +
-      'Hard to crop out, and it never crosses the middle of the shot.'
+      tr("Moving — drifts in a small circle at one side edge, then jumps to the other. ") +
+      tr("Hard to crop out, and it never crosses the middle of the shot.")
   }
 ]
 
@@ -79,22 +80,12 @@ function Preview({ config, landscape }: { config: WatermarkConfig; landscape?: b
       aria-label={t('Watermark preview')}
     >
       {moving && (
-        <style>{`@keyframes wm-side {
-          0%   { top:50%; bottom:auto; left:auto; right:${padPct}%; transform:translateY(-50%); }
-          50%  { top:50%; bottom:auto; left:${padPct}%; right:auto; transform:translateY(-50%); }
-        }
-        @keyframes wm-orbit {
-          0%   { transform: translate(3px, 0); }
-          25%  { transform: translate(0, 3px); }
-          50%  { transform: translate(-3px, 0); }
-          75%  { transform: translate(0, -3px); }
-          100% { transform: translate(3px, 0); }
-        }`}</style>
+        <style>{tr("@keyframes wm-side {\n          0%   { top:50%; bottom:auto; left:auto; right:{0}%; transform:translateY(-50%); }\n          50%  { top:50%; bottom:auto; left:{1}%; right:auto; transform:translateY(-50%); }\n        }\n        @keyframes wm-orbit {\n          0%   { transform: translate(3px, 0); }\n          25%  { transform: translate(0, 3px); }\n          50%  { transform: translate(-3px, 0); }\n          75%  { transform: translate(0, -3px); }\n          100% { transform: translate(3px, 0); }\n        }", padPct, padPct)}</style>
       )}
       <div style={place}>
         <div
           className="flex flex-col items-center gap-0.5 leading-none"
-          style={moving ? { animation: 'wm-orbit 3.4s linear infinite' } : undefined}
+          style={moving ? { animation: tr("wm-orbit 3.4s linear infinite") } : undefined}
         >
           {showImg && (
             <img
@@ -110,7 +101,7 @@ function Preview({ config, landscape }: { config: WatermarkConfig; landscape?: b
                 color: config.color ?? '#FFFFFF',
                 fontFamily: config.font,
                 fontSize: `${Math.max(7, (config.font_size ?? 42) * 0.16)}px`,
-                textShadow: config.shadow ? '0 1px 2px rgba(0,0,0,0.9)' : 'none',
+                textShadow: config.shadow ? tr("0 1px 2px rgba(0,0,0,0.9)") : 'none',
                 transform: config.rotation ? `rotate(${config.rotation}deg)` : undefined,
                 fontWeight: 700
               }}
@@ -143,7 +134,7 @@ export default function WatermarkControls({
       const { asset } = await api.uploadBrandingAsset(path)
       onChange({ image_asset: asset })
     } catch (e) {
-      alert(`Couldn't add that image: ${e instanceof Error ? e.message : String(e)}`)
+      alert(tr("Couldn't add that image: {0}", e instanceof Error ? e.message : String(e)))
     }
   }
 
@@ -151,7 +142,7 @@ export default function WatermarkControls({
     <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-4 items-start">
       <div className="space-y-3">
         <div className="flex items-center gap-2 text-xs">
-          <span className="label">Type</span>
+          <span className="label">{tr("Type")}</span>
           {(['text', 'image', 'both'] as const).map((t) => (
             <button
               key={t}
@@ -169,9 +160,9 @@ export default function WatermarkControls({
           <div className="flex items-center gap-2 text-xs">
             <button className="bg-raised px-2.5 py-1.5 rounded-md hover:bg-raised/70" onClick={upload}>
               <Folder className="mr-1.5" />
-              {config.image_asset ? 'Replace logo' : 'Upload logo (PNG)'}
+              {config.image_asset ? tr("Replace logo") : tr("Upload logo (PNG)")}
             </button>
-            {config.image_asset && <span className="text-muted truncate">✓ logo added</span>}
+            {config.image_asset && <span className="text-muted truncate">{tr("✓ logo added")}</span>}
           </div>
         )}
 
@@ -196,7 +187,7 @@ export default function WatermarkControls({
                 ))}
               </select>
               <label className="flex items-center gap-1">
-                Size
+                {tr("Size")}
                 <input
                   type="number"
                   min={12}
@@ -207,7 +198,7 @@ export default function WatermarkControls({
                 />
               </label>
               <label className="flex items-center gap-1">
-                Colour
+                {tr("Colour")}
                 <input
                   type="color"
                   value={config.color ?? '#FFFFFF'}
@@ -221,7 +212,7 @@ export default function WatermarkControls({
                   checked={config.shadow ?? true}
                   onChange={(e) => onChange({ shadow: e.target.checked })}
                 />
-                Shadow
+                {tr("Shadow")}
               </label>
             </div>
           </div>
@@ -229,7 +220,7 @@ export default function WatermarkControls({
 
         {/* position + sliders */}
         <div className="flex items-center gap-2 text-xs flex-wrap">
-          <span className="label">Position</span>
+          <span className="label">{tr("Position")}</span>
           {POSITIONS.map((p) => (
             <button
               key={p.id}
@@ -244,12 +235,12 @@ export default function WatermarkControls({
           ))}
           {config.position === 'moving' && (
             <span className="text-[11px] text-muted">
-              circles at one edge, then jumps to the other — never the middle
+              {tr("circles at one edge, then jumps to the other — never the middle")}
             </span>
           )}
         </div>
         <label className="flex items-center gap-2 text-xs">
-          Opacity
+          {tr("Opacity")}
           <input
             type="range"
             min={20}
@@ -262,7 +253,7 @@ export default function WatermarkControls({
         </label>
         {withImage && (
           <label className="flex items-center gap-2 text-xs">
-            Logo size
+            {tr("Logo size")}
             <input
               type="range"
               min={6}
@@ -275,7 +266,7 @@ export default function WatermarkControls({
           </label>
         )}
         <label className="flex items-center gap-2 text-xs">
-          Edge padding
+          {tr("Edge padding")}
           <input
             type="range"
             min={0}

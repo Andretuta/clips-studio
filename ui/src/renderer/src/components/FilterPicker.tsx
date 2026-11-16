@@ -1,3 +1,4 @@
+import { t as tr } from "../lib/i18n"
 import type { FilterName } from '../lib/types'
 import { t } from '../lib/i18n'
 
@@ -27,22 +28,22 @@ export const FILTER_CSS: Record<FilterName, string> = {
 export const FILTER_NAMES = Object.keys(FILTER_CSS) as FilterName[]
 
 const LABELS: Record<FilterName, string> = {
-  none: 'None',
-  vibrant: 'Vibrant',
-  warm: 'Warm',
-  cool: 'Cool',
-  cinematic: 'Cinematic',
-  vintage: 'Vintage',
+  none: tr("None"),
+  vibrant: tr("Vibrant"),
+  warm: tr("Warm"),
+  cool: tr("Cool"),
+  cinematic: tr("Cinematic"),
+  vintage: tr("Vintage"),
   bw: 'B&W',
-  fade: 'Fade',
-  golden: 'Golden Hour',
-  tealorange: 'Teal & Orange',
-  cleangirl: 'Clean Girl',
-  pinkglow: 'Pink Glow',
-  peachy: 'Peachy',
-  dreamy: 'Dreamy',
-  coast: 'Gold Coast',
-  glow: 'Soft Glow'
+  fade: tr("Fade"),
+  golden: tr("Golden Hour"),
+  tealorange: tr("Teal & Orange"),
+  cleangirl: tr("Clean Girl"),
+  pinkglow: tr("Pink Glow"),
+  peachy: tr("Peachy"),
+  dreamy: tr("Dreamy"),
+  coast: tr("Gold Coast"),
+  glow: tr("Soft Glow")
 }
 
 /** A colorful sample every preset visibly transforms. */

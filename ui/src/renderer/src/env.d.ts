@@ -34,6 +34,7 @@ interface UpdateState {
 
 interface Window {
   studio: {
+    setInterfaceLanguage?: (language: string) => Promise<void>
     platform: string
     pickAudioFile: () => Promise<string | null>
     pickVideoFile: () => Promise<string | null>

@@ -1,3 +1,4 @@
+import { messageText, t as tr } from "../lib/i18n"
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import Assistant from '../components/Assistant'
 import NoClipsExplanation from '../components/NoClipsExplanation'
@@ -52,13 +53,13 @@ type SortMode = 'newest' | 'channel'
 
 function describeEvent(e: StudioEvent): string {
   if (e.type === 'progress') {
-    if (e.stage === 'render') return `Rendering clip ${e.clip}/${e.total}${e.remote ? ` · ${e.remote}` : ''}`
+    if (e.stage === 'render') return tr("Rendering clip {0}/{1}{2}", e.clip, e.total, e.remote ? ` · ${e.remote}` : '')
     if (e.stage === 'done') return `Finished — ${e.clips} clip(s) created`
-    if (e.stage === 'prefetch') return 'Downloading the next queued video in the background'
-    return `Stage: ${e.stage}${e.title ? ` — ${e.title}` : ''}`
+    if (e.stage === 'prefetch') return tr("Downloading the next queued video in the background")
+    return tr("Stage: {0}{1}", tr(e.stage ?? ''), e.title ? ` — ${e.title}` : '')
   }
-  if (e.type === 'job') return `Job ${e.job_id}: ${e.status}${e.error ? ` (${e.error})` : ''}`
-  if (e.type === 'model_pull') return `Model ${e.tag}: ${e.status}`
+  if (e.type === 'job') return tr("Job {0}: {1}{2}", e.job_id, tr(e.status ?? ''), e.error ? ` (${messageText(e.error)})` : '')
+  if (e.type === 'model_pull') return tr("Model {0}: {1}", e.tag, tr(e.status ?? ''))
   return JSON.stringify(e)
 }
 
@@ -337,13 +338,13 @@ export default function Dashboard({
   useJobWatch({ active: busy, lastEventAt, onSettled: refresh })
 
   const remove = async (videoId: string, label: string): Promise<void> => {
-    if (!window.confirm(`Delete "${label}" and all its clips? This removes the files from disk too.`))
+    if (!window.confirm(tr("Delete \"{0}\" and all its clips? This removes the files from disk too.", label)))
       return
     try {
       await api.deleteVideo(videoId)
       refresh()
     } catch (e) {
-      window.alert(`Could not delete: ${e instanceof Error ? e.message : String(e)}`)
+      window.alert(tr("Could not delete: {0}", e instanceof Error ? e.message : String(e)))
     }
   }
 
@@ -415,7 +416,7 @@ export default function Dashboard({
           <h2 className="text-2xl font-bold">{t('Dashboard')}</h2>
           {settings && (
             <span className="bg-raised px-3 py-1.5 rounded-lg text-sm">
-              model: <span className="text-accent font-medium">{settings.model}</span>
+              {tr("model:")} <span className="text-accent font-medium">{settings.model}</span>
             </span>
           )}
         </div>
@@ -499,13 +500,13 @@ export default function Dashboard({
                           onClick={() =>
                             setChannelFilter({
                               creatorId: v.creator_id ?? null,
-                              label: v.creator_name || v.channel_name || 'Unknown channel'
+                              label: v.creator_name || v.channel_name || tr("Unknown channel")
                             })
                           }
-                          aria-label={`Show all videos from ${v.creator_name || v.channel_name || 'unknown channel'}`}
+                          aria-label={tr("Show all videos from {0}", v.creator_name || v.channel_name || tr("unknown channel"))}
                           title={
                             v.creator_id != null
-                              ? 'Show this creator’s videos from all their linked channels'
+                              ? tr("Show this creator’s videos from all their linked channels")
                               : undefined
                           }
                         >
@@ -517,7 +518,7 @@ export default function Dashboard({
                           className="text-left hover:text-accent truncate block max-w-64"
                           onClick={() => toggleExpand(v.video_id)}
                           aria-expanded={expanded === v.video_id}
-                          aria-label={`Show generated clip titles for ${v.title || v.video_id}`}
+                          aria-label={tr("Show generated clip titles for {0}", v.title || v.video_id)}
                         >
                           {expanded === v.video_id ? '▾ ' : '▸ '}
                           {v.title || v.video_id}
@@ -533,7 +534,7 @@ export default function Dashboard({
                                 : 'text-warn'
                           }
                         >
-                          {v.status}
+                          {tr(v.status)}
                         </span>
                       </td>
                       <td className="py-2 text-right tabular-nums">{v.clip_count}</td>
@@ -544,7 +545,7 @@ export default function Dashboard({
                         <button
                           className="text-muted hover:text-error px-1"
                           onClick={() => remove(v.video_id, v.title || v.video_id)}
-                          aria-label={`Delete ${v.title || v.video_id}`}
+                          aria-label={tr("Delete {0}", v.title || v.video_id)}
                           title={t("Delete this video and its clips")}
                         >
                           <Trash />
@@ -570,7 +571,7 @@ export default function Dashboard({
                                     {c.title || c.hook || 'Untitled'}
                                   </button>{' '}
                                   <span className="text-muted">
-                                    ({Math.round(c.end_s - c.start_s)}s · score {c.score})
+                                    ({Math.round(c.end_s - c.start_s)}{tr("s · score")} {c.score})
                                   </span>
                                 </li>
                               ))}

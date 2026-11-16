@@ -1,9 +1,11 @@
+import { t as tr } from "../lib/i18n"
 import { useEffect, useRef, useState } from 'react'
 import { API_BASE, api } from '../lib/api'
 import type { Clip, LiveOverlay, TranslationPreview, WatermarkConfig } from '../lib/types'
 import { Scissors, YouTube } from './icons'
 import LiveTextOverlay from './LiveTextOverlay'
 import TimelineEditor from './TimelineEditor'
+import { CortesGamerOverlay, DEFAULT_CORTES_GAMER_STYLE } from './CortesGamerWatermark'
 import { DEFAULT_CAPTION_STYLE } from './CaptionStyleControls'
 import { youtubeEnabledSync } from '../lib/youtube'
 import { t } from '../lib/i18n'
@@ -79,7 +81,7 @@ function WatermarkOverlay({
               color: config.color ?? '#FFFFFF',
               fontFamily: config.font,
               fontSize: `${Math.max(8, (config.font_size ?? 42) * (box.h / 1920))}px`,
-              textShadow: config.shadow ? '0 1px 3px rgba(0,0,0,0.9)' : 'none',
+              textShadow: config.shadow ? tr("0 1px 3px rgba(0,0,0,0.9)") : 'none',
               transform: config.rotation ? `rotate(${config.rotation}deg)` : undefined,
               fontWeight: 700,
               whiteSpace: 'nowrap'
@@ -118,7 +120,7 @@ function WatermarkOverlay({
             <Mark ghost />
           </div>
           <span className="absolute bottom-14 left-1/2 -translate-x-1/2 text-[10px] text-white/80 bg-black/40 px-1.5 py-0.5 rounded">
-            moves left ↔ right
+            {tr("moves left ↔ right")}
           </span>
         </>
       ) : (
@@ -153,6 +155,10 @@ export default function EditorView({
   const videoRef = useRef<HTMLVideoElement>(null)
   const [previewSrc, setPreviewSrc] = useState<string | null>(null)
   const [watermark, setWatermark] = useState<WatermarkConfig | null>(clip.render_opts?.watermark ?? null)
+  const storedCortesGamer = Boolean(clip.render_opts?.cortes_gamer_watermark)
+  const [cortesGamer, setCortesGamer] = useState(storedCortesGamer)
+  const storedCortesGamerStyle = clip.render_opts?.cortes_gamer_style ?? DEFAULT_CORTES_GAMER_STYLE
+  const [cortesGamerStyle, setCortesGamerStyle] = useState(storedCortesGamerStyle)
   const [liveOverlay, setLiveOverlay] = useState<LiveOverlay | null>(null)
   const isLandscape = !!clip.render_opts?.profile
 
@@ -161,6 +167,8 @@ export default function EditorView({
   useEffect(() => {
     setPreviewSrc(null)
     setWatermark(clip.render_opts?.watermark ?? null)
+    setCortesGamer(storedCortesGamer)
+    setCortesGamerStyle(storedCortesGamerStyle)
     setLiveOverlay(null)
     setTranslated(null)
   }, [clip.id])
@@ -233,10 +241,10 @@ export default function EditorView({
           onClick={onClose}
           className="px-3 py-1.5 rounded-lg bg-raised text-sm hover:bg-raised/70"
         >
-          ← Back to clips
+          {tr("← Back to clips")}
         </button>
         <p className="font-semibold truncate inline-flex items-center gap-2">
-          <Scissors size={15} /> Editing — {clip.title || clip.hook || 'Untitled clip'}
+          <Scissors size={15} /> {tr("Editing —")} {clip.title || clip.hook || tr("Untitled clip")}
         </p>
         {/* Nothing at all when publishing is switched off in Settings. */}
         {ytEnabled && (
@@ -267,6 +275,9 @@ export default function EditorView({
               className="absolute inset-0 w-full h-full object-contain rounded-xl bg-base"
               aria-label={t('Editing preview')}
             />
+            {cortesGamer && !(storedCortesGamer && storedCortesGamerStyle.opacity > 0) && !previewSrc && (
+              <CortesGamerOverlay videoRef={videoRef} style={cortesGamerStyle} />
+            )}
             {/* Live watermark overlay — hidden while a baked draft is shown. */}
             {watermark && !previewSrc && (
               <WatermarkOverlay
@@ -279,17 +290,17 @@ export default function EditorView({
             {!previewSrc && <LiveTextOverlay videoRef={videoRef} overlay={overlay} />}
             {translated && !previewSrc && (
               <span className="absolute bottom-2 left-2 z-20 bg-black/70 text-white/85 text-[10px] px-2 py-0.5 rounded">
-                {translated.language.toUpperCase()} preview — this is how the burn will look
+                {translated.language.toUpperCase()} {tr("preview — this is how the burn will look")}
               </span>
             )}
             {previewSrc && (
               <span className="absolute top-2 left-2 z-20 bg-accent/90 text-black text-[10px] font-bold px-2 py-0.5 rounded">
-                PREVIEW — all edits applied (not saved until Apply)
+                {tr("PREVIEW — all edits applied (not saved until Apply)")}
               </span>
             )}
           </div>
           {isLandscape && (
-            <p className="text-center text-xs text-muted">Longform clip — 1920×1080 horizontal</p>
+            <p className="text-center text-xs text-muted">{tr("Longform clip — 1920×1080 horizontal")}</p>
           )}
         </div>
         <div className="lg:col-span-3 min-w-0 space-y-4">
@@ -302,6 +313,10 @@ export default function EditorView({
             onTranslationPreview={setTranslated}
             watermark={watermark}
             setWatermark={setWatermark}
+            cortesGamer={cortesGamer}
+            setCortesGamer={setCortesGamer}
+            cortesGamerStyle={cortesGamerStyle}
+            setCortesGamerStyle={setCortesGamerStyle}
             tabRequest={tabRequest ?? undefined}
           />
         </div>

@@ -1,3 +1,4 @@
+import { t as tr } from "../lib/i18n"
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { api } from '../lib/api'
 import { t } from '../lib/i18n'
@@ -674,12 +675,12 @@ function ListingPage({
           )}
           <TechnicalDetails
             rows={[
-              ['Repository', listing.repository],
-              ['Folder', listing.path && listing.path !== '.' ? listing.path : null],
-              ['Commit', chosen?.commit],
+              [tr("Repository"), listing.repository],
+              [tr("Folder"), listing.path && listing.path !== '.' ? listing.path : null],
+              [tr("Commit"), chosen?.commit],
               ['Tag', chosen?.tag],
               ['requires.clips_kitty', chosen?.requires?.clips_kitty],
-              ['List', isOurList(listing.index) ? null : listing.index]
+              [tr("List"), isOurList(listing.index) ? null : listing.index]
             ]}
           />
         </div>
@@ -934,7 +935,7 @@ function CountingNote({ manage }: { manage: boolean }): JSX.Element | null {
         </span>
       </label>
       {state.locked_off && (
-        <TechnicalDetails rows={[['Setting', 'plugins.count_installs: false in settings.yaml']]} />
+        <TechnicalDetails rows={[[tr("Setting"), 'plugins.count_installs: false in settings.yaml']]} />
       )}
       {problem && <p className="text-error">{problem}</p>}
     </div>
@@ -1266,9 +1267,9 @@ function Browse({
 
 const SOURCE_LABELS: Record<string, string> = {
   huggingface: 'Hugging Face',
-  url: 'A file from the web',
+  url: tr("A file from the web"),
   ollama: 'Ollama',
-  bundled: 'Ships with Clips Kitty'
+  bundled: tr("Ships with Clips Kitty")
 }
 
 /** One model an installed plugin lists: whether it is on this PC, its
@@ -1673,7 +1674,7 @@ function InstalledCard({
             {t('Versions kept')}: {plugin.versions.join(', ')}
             {plugin.installed_at ? ` · ${t('installed')} ${plugin.installed_at}` : ''}
           </p>
-          <TechnicalDetails rows={[['Source', plugin.source_text]]} />
+          <TechnicalDetails rows={[[tr("Source"), plugin.source_text]]} />
         </div>
       )}
     </div>
@@ -1926,8 +1927,8 @@ function InstallDialog({
             <Links links={listingLinks(plan.plugin)} />
             <TechnicalDetails
               rows={[
-                ['Source', plan.source_text],
-                ['Warnings', plan.technical]
+                [tr("Source"), plan.source_text],
+                [tr("Warnings"), plan.technical]
               ]}
             />
             {plan.ok && counted && (
@@ -2039,8 +2040,8 @@ export default function Marketplace(): JSX.Element {
 
   // Two tabs. For developers opens from the bottom of Browse and keeps Browse lit.
   const TABS: { id: Tab; label: string }[] = [
-    { id: 'browse', label: 'Browse' },
-    { id: 'installed', label: 'Installed' }
+    { id: 'browse', label: tr("Browse") },
+    { id: 'installed', label: tr("Installed") }
   ]
   const lit: Tab = tab === 'developers' ? 'browse' : tab
 

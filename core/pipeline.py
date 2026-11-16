@@ -23,7 +23,7 @@ from core.paths import cached_source, discard
 from core.state import StateDB
 from llm.registry import create_backend
 from transcription.transcriber import transcribe
-from video.captions import build_captions
+from video.captions import build_captions, middle_caption_band
 from video.cutter import cut_clip
 
 # A latch, not a flag: _share_the_cpu() is called from worker threads, and an
@@ -1075,7 +1075,8 @@ def _gaming_prepare(source: Path, candidates: list, clip_dir: Path, config: dict
 
 
 def _try_gaming_render(intermediate: Path, render_path: Path, opts: dict, config: dict,
-                       ass_path: Path | None, vf_extra: str, normalize: bool) -> dict | None:
+                       ass_path: Path | None, vf_extra: str, normalize: bool, *,
+                       caption_band: int = 0) -> dict | None:
     """One clip in the gaming layout (gaming/run.py). None means the standard
     renderer takes it: a camera filling the frame, or any error at all."""
     try:
@@ -1083,7 +1084,8 @@ def _try_gaming_render(intermediate: Path, render_path: Path, opts: dict, config
 
         g = opts.get("gaming")
         return gaming_run.render(intermediate, render_path, g if isinstance(g, dict) else {}, config,
-                                 ass_path=ass_path, vf_extra=vf_extra, normalize=normalize)
+                                 ass_path=ass_path, vf_extra=vf_extra, normalize=normalize,
+                                 caption_band=caption_band)
     except Exception as e:
         if config.get("clips", {}).get("whole"):
             # Detection can fail; preserve the entire frame using the existing
@@ -1093,7 +1095,7 @@ def _try_gaming_render(intermediate: Path, render_path: Path, opts: dict, config
 
             width, height = probe_size(intermediate)
             settings = {"preset": "blurred", "cam": None, "game_box": [0, 0, 1, 1], "panels": []}
-            plan = layout.plan(width, height, settings)
+            plan = layout.plan(width, height, settings, caption_band=caption_band)
             compose.render(intermediate, render_path, plan, ass_path=ass_path,
                            vf_extra=vf_extra, normalize=normalize)
             return {**settings, "layout": plan.kind, "used_preset": plan.preset, "used_cam": None}
@@ -1587,6 +1589,8 @@ def _render_files(
             language=content_language,
         )
 
+    caption_band = middle_caption_band(caption_style) if gaming and ass_path is not None else 0
+
     # Hook title (big text, top third, first few seconds) burns through the
     # same ASS/subtitles path as captions — correct at final resolution.
     if edit is not None and edit.hook:
@@ -1654,7 +1658,7 @@ def _render_files(
 
             if gaming:
                 gaming_kept = _try_gaming_render(intermediate, render_path, opts, config,
-                                                 ass_path, vf_extra, normalize)
+                                                 ass_path, vf_extra, normalize, caption_band=caption_band)
             if gaming_kept is not None:
                 pass  # rendered in the gaming layout (split or game only)
             elif podcast:
@@ -1772,6 +1776,14 @@ def _render_files(
     # replacing it, which is what a held file permits.
     if wants_card:
         _outro.finish(render_path, final_path, config)
+
+    if opts.get("cortes_gamer_watermark", config["clips"].get("cortes_gamer_watermark", False)):
+        from video_editor.cortes_gamer import apply, style_for
+
+        style = style_for(opts.get("cortes_gamer_style", config["clips"].get("cortes_gamer_style")))
+        if style.opacity:
+            apply(final_path, style=style)
+        opts = {**opts, "cortes_gamer_watermark": True, "cortes_gamer_style": style.model_dump()}
 
     # A clip the gaming layout handed to the standard renderer (the camera
     # filled the frame) is saved as what it got, so the editor shows that and

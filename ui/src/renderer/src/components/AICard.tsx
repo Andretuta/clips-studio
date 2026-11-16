@@ -204,7 +204,7 @@ function JobChoice({
           title={`🚀 ${p.label}`}
           badge={t('Recommended cloud AI')}
           tone="recommended"
-          tagline={p.tagline}
+          tagline={t(p.tagline)}
         >
           <ProviderPanel provider={p} job={job} inUse={inUse(p.id)} busy={busy} run={run} recommended />
         </TierRow>
@@ -230,7 +230,7 @@ function JobChoice({
             {direct.map((p) => (
               <option key={p.id} value={p.id}>
                 {p.label}
-                {planFor(p.id) ? ` / ${planFor(p.id)?.label}` : ''}
+                {planFor(p.id) ? ` / ${t(planFor(p.id)?.label ?? '')}` : ''}
                 {activeId === p.id || activePlan?.group === p.id ? ` · ${t('in use')}` : ''}
               </option>
             ))}
@@ -247,7 +247,7 @@ function JobChoice({
                   }`}
                   onClick={() => setUsePlan(plan)}
                 >
-                  {plan ? planFor(directId)?.label : `${provider(directId)?.label ?? ''} ${t('API key')}`}
+                  {plan ? t(planFor(directId)?.label ?? 'ChatGPT plan') : `${provider(directId)?.label ?? ''} ${t('API key')}`}
                 </button>
               ))}
             </div>
@@ -737,7 +737,7 @@ function SignInPanel({
         .then((next) => {
           setPlan(next)
           if (next.flow.state !== 'waiting') {
-            void run(() => api.ai(), next.signed_in ? `${t('Signed in to your')} ${next.label}.` : '')
+            void run(() => api.ai(), next.signed_in ? `${t('Signed in to your')} ${t(next.label)}.` : '')
           }
         })
         .catch(() => {
@@ -794,7 +794,7 @@ function SignInPanel({
 
   return (
     <div className="space-y-2">
-      <p className="text-xs text-muted">{plan.tagline}</p>
+      <p className="text-xs text-muted">{t(plan.tagline)}</p>
       {plan.experimental && (
         <p className="text-[11px] text-amber-400">
           {t('Experimental: not yet tested on a paid plan with a full clip job.')}
@@ -804,7 +804,7 @@ function SignInPanel({
       {!plan.signed_in && !waiting && (
         <div className="flex gap-2 flex-wrap items-center">
           <button className="btn-accent !py-1 text-sm" disabled={busy} onClick={() => void start(false)}>
-            {plan.signin_label}
+            {t(plan.signin_label)}
           </button>
           <button className="btn-ghost !py-0.5 !px-2 text-xs" disabled={busy} onClick={() => void start(true)}>
             {t('Use a code instead')}
@@ -860,7 +860,7 @@ function SignInPanel({
                 e.target.value &&
                 void run(
                   () => api.activateAI(plan.id, e.target.value),
-                  `${t('Now using')} ${plan.label} · ${e.target.value}.`
+                  `${t('Now using')} ${t(plan.label)} · ${e.target.value}.`
                 )
               }
               aria-label={t('Model')}
@@ -915,7 +915,7 @@ function SignInPanel({
               <p className="text-[11px] text-muted">{t('Usage: managed by the provider.')}</p>
             )}
             <p className="text-[11px] text-muted">
-              {plan.limit_note} {link(plan.usage_url, t('View usage'))}
+              {t(plan.limit_note)} {link(plan.usage_url, t('View usage'))}
             </p>
           </div>
 
@@ -929,7 +929,7 @@ function SignInPanel({
             />
             <span>
               {t('Let Watched channels use this plan')}
-              <span className="block text-[11px] text-muted">{plan.automation_note}</span>
+              <span className="block text-[11px] text-muted">{t(plan.automation_note)}</span>
             </span>
           </label>
 
@@ -956,14 +956,14 @@ function SignInPanel({
               {test.message}
             </p>
           )}
-          <p className="text-[11px] text-muted">{plan.sign_out_note}</p>
+          <p className="text-[11px] text-muted">{t(plan.sign_out_note)}</p>
         </div>
       )}
 
       <p className="text-[11px] text-muted leading-snug">
-        {plan.privacy} {link(plan.terms_url, t('What the plan includes'))}
+        {t(plan.privacy)} {link(plan.terms_url, t('What the plan includes'))}
         <br />
-        {plan.disclaimer}
+        {t(plan.disclaimer)}
       </p>
     </div>
   )

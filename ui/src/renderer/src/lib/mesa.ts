@@ -1,4 +1,6 @@
-import { API_BASE } from './api'
+import { t as tr } from "./i18n"
+import { API_BASE, responseErrorText } from './api'
+import type { CortesGamerStyle } from './types'
 import { sessionSecret } from './plugins'
 
 /** The approval desk and control room: the engine's /mesa routes
@@ -26,6 +28,9 @@ export interface Corte {
   video_id: string | null
   criado_em: string | null
   destinos: string[] | null
+  cortes_gamer_watermark: boolean | null
+  cortes_gamer_baked: boolean | null
+  cortes_gamer_style: CortesGamerStyle | null
   /** Whether the clip is still in Clips Kitty, so the editor can open it. */
   no_editor: boolean
   /** Null for cuts that didn't come from a recorded live. */
@@ -73,6 +78,8 @@ export interface Edicao {
   descricao?: string
   hashtags?: string[]
   destinos?: string[]
+  cortes_gamer_watermark?: boolean
+  cortes_gamer_style?: CortesGamerStyle
 }
 
 // ponytail: the recorder's block length (16 min); read it from the engine if it ever changes.
@@ -108,19 +115,13 @@ async function call<T>(path: string, init: RequestInit = {}, guarded = false): P
   const headers: Record<string, string> = { 'Content-Type': 'application/json' }
   if (guarded) {
     const s = await sessionSecret()
-    if (!s) throw new Error('Approving and discarding cuts needs the Clips Kitty desktop app.')
+    if (!s) throw new Error(tr("Approving and discarding cuts needs the Clips Kitty desktop app."))
     headers['X-Clips-Kitty-Session'] = s
   }
   const res = await fetch(`${API_BASE}${path}`, { ...init, headers })
   if (!res.ok) {
     const text = await res.text().catch(() => '')
-    let detail = ''
-    try {
-      detail = JSON.parse(text).detail
-    } catch {
-      // not JSON: the raw text below
-    }
-    throw new Error(typeof detail === 'string' && detail ? detail : text.slice(0, 300) || `${res.status}`)
+    throw new Error(responseErrorText(text, res.status))
   }
   return res.json() as Promise<T>
 }

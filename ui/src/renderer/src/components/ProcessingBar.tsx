@@ -1,3 +1,4 @@
+import { t as tr } from "../lib/i18n"
 import { useEffect, useRef, useState } from 'react'
 import { applyEvent, emptyProgress, etaSeconds, formatEta, progressStore } from '../lib/jobProgress'
 import { api } from '../lib/api'
@@ -70,14 +71,14 @@ export default function ProcessingBar(): JSX.Element | null {
       <div className="flex items-baseline justify-between gap-3">
         <p className="text-sm font-medium truncate">
           {progress.title ? `${progress.title} — ` : ''}
-          {progress.label || 'Working…'}
+          {progress.label || tr("Working…")}
         </p>
         <div className="flex items-center gap-3 shrink-0">
           <p className="text-xs text-muted tabular-nums">
             {pct}% ·{' '}
             {eta !== null
-              ? `Estimated time: ~${formatEta(eta)} left`
-              : 'Estimated time: calculating…'}
+              ? tr("Estimated time: ~{0} left", formatEta(eta))
+              : tr("Estimated time: calculating…")}
           </p>
           {/* Reachable from wherever the bar is shown: while a long batch
               runs, the queue is the screen that answers "what's left?" */}
@@ -85,11 +86,11 @@ export default function ProcessingBar(): JSX.Element | null {
             className="btn-ghost !px-2.5 !py-1 text-xs"
             onClick={() => window.dispatchEvent(new CustomEvent('open-queue'))}
           >
-            Queue
+            {tr("Queue")}
           </button>
           {waiting && (
             <button className="btn-ghost !px-2.5 !py-1 text-xs" onClick={renderHere}>
-              Render here instead
+              {tr("Render here instead")}
             </button>
           )}
           <button

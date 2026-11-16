@@ -1,3 +1,4 @@
+import { t as tr } from "../lib/i18n"
 import { useEffect, useRef, useState } from 'react'
 import {
   destinationDraft,
@@ -31,9 +32,9 @@ const BADGE: Record<string, string> = {
 }
 
 const STATE_LABEL: Record<string, string> = {
-  connected: 'Connected',
-  gone: 'Gone',
-  denied: 'Not allowed'
+  connected: tr("Connected"),
+  gone: tr("Gone"),
+  denied: tr("Not allowed")
 }
 
 export default function DiscordCard(): JSX.Element {

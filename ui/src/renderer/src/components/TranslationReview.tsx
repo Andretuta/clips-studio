@@ -1,3 +1,4 @@
+import { t as tr } from "../lib/i18n"
 import { useEffect, useState } from 'react'
 import { api } from '../lib/api'
 import type { CaptionLine, Translation } from '../lib/types'
@@ -102,7 +103,7 @@ export default function TranslationReview({
       })
       setNote(`${nameOf(item.language)} ${t('saved - Export will use your version.')}`)
     } catch (e) {
-      setNote(`Error: ${e instanceof Error ? e.message : String(e)}`)
+      setNote(tr("Error: {0}", e instanceof Error ? e.message : String(e)))
     } finally {
       setSaving('')
     }
@@ -122,7 +123,7 @@ export default function TranslationReview({
       setOpen(null)
       setNote(`${nameOf(item.language)} ${t('discarded - translate again for a fresh version.')}`)
     } catch (e) {
-      setNote(`Error: ${e instanceof Error ? e.message : String(e)}`)
+      setNote(tr("Error: {0}", e instanceof Error ? e.message : String(e)))
     }
   }
 
@@ -175,7 +176,7 @@ export default function TranslationReview({
                       </span>
                       <input
                         className="input !py-1 text-xs"
-                        aria-label={`${nameOf(item.language)} caption at ${line.start.toFixed(1)} seconds`}
+                        aria-label={tr("{0} caption at {1} seconds", nameOf(item.language), line.start.toFixed(1))}
                         value={textsFor(item)[i] ?? ''}
                         onChange={(e) => edit(item.language, i, e.target.value, item)}
                       />

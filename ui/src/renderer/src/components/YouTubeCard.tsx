@@ -1,3 +1,4 @@
+import { t as tr } from "../lib/i18n"
 import { useEffect, useRef, useState } from 'react'
 import { api } from '../lib/api'
 import { t } from '../lib/i18n'
@@ -12,7 +13,6 @@ import { rememberYoutubeEnabled, type YouTubeStatus } from '../lib/youtube'
  *  they cannot use.
  */
 
-const AUDIT_FORM = 'https://support.google.com/youtube/contact/yt_api_form'
 const CLOUD_CONSOLE = 'https://console.cloud.google.com/projectcreate'
 
 export default function YouTubeCard(): JSX.Element {
@@ -174,7 +174,7 @@ export default function YouTubeCard(): JSX.Element {
           <h3 className="font-semibold">{t('Publish to YouTube')}</h3>
           <p className="text-xs text-muted mt-0.5">
             {t(
-              'Upload finished clips straight from the editor. Needs your own Google API key - free, about ten minutes to set up.'
+              'Upload Shorts or horizontal videos directly with a Google Cloud Desktop OAuth client.'
             )}
           </p>
         </div>
@@ -282,7 +282,7 @@ export default function YouTubeCard(): JSX.Element {
                   className="input mt-1 h-24 font-mono text-xs"
                   value={common}
                   disabled={busy}
-                  placeholder={'Watch me live: twitch.tv/you' + String.fromCharCode(10) + 'Discord: discord.gg/you'}
+                  placeholder={tr("Watch me live: twitch.tv/you") + String.fromCharCode(10) + tr("Discord: discord.gg/you")}
                   onChange={(e) => setCommon(e.target.value)}
                   onBlur={saveCommon}
                 />
@@ -343,20 +343,6 @@ function SetupWizard(props: WizardProps): JSX.Element {
 
   return (
     <div className="space-y-3 text-sm">
-      {/* Stated before anything else, because it is the one thing that can
-          make this whole feature useless and no code can work around it. */}
-      <div className="border border-warn/60 bg-warn/10 rounded-lg p-3 space-y-1">
-        <p className="text-xs font-medium text-warn">{t('Read this first')}</p>
-        <p className="text-[11px]">
-          {t(
-            'Until your Google Cloud project passes YouTube’s free audit, YouTube locks every video uploaded through it to private - permanently. You cannot make it public afterwards in Studio; the only fix is uploading it again from an audited project. Clips Kitty checks after each upload and tells you if it happened.'
-          )}
-        </p>
-        <button className="text-[11px] text-accent hover:underline" onClick={open(AUDIT_FORM)}>
-          {t('Apply for the audit')}
-        </button>
-      </div>
-
       <ol className="space-y-2 text-xs list-decimal list-inside">
         <li>
           {t('Create a Google Cloud project.')}{' '}
@@ -371,7 +357,7 @@ function SetupWizard(props: WizardProps): JSX.Element {
           </span>
           <span className="block text-muted mt-0.5">
             {t(
-              'This one matters: leaving it on Testing makes Google expire your sign-in every 7 days, so you would have to reconnect weekly. "In production" does not mean verified and costs nothing - you will see a "Google hasn’t verified this app" warning when you connect, and Advanced → Go to (unsafe) gets past it. It is your own app warning you about yourself.'
+              'Google can expire a sign-in after 7 days while the app is in Testing. Follow the verification instructions shown in Google Cloud for your project.'
             )}
           </span>
         </li>
@@ -426,7 +412,7 @@ function SetupWizard(props: WizardProps): JSX.Element {
           disabled={props.busy || !props.clientId.trim() || !props.clientSecret.trim()}
           onClick={props.onSave}
         >
-          {t('Save API key')}
+          {t('Save OAuth credentials')}
         </button>
       </div>
 

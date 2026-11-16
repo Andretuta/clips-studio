@@ -1,3 +1,4 @@
+import { t as tr } from "./i18n"
 /** Types and helpers for publishing to several platforms through Upload-Post.
  *
  * Kept apart from lib/youtube.ts on purpose: the two providers share no
@@ -159,23 +160,23 @@ export const MAX_POLLS = 80
 export function describeState(row: PlatformRow): string {
   switch (row.state) {
     case 'published':
-      return 'Published'
+      return tr("Published")
     case 'failed':
-      return row.error || 'Failed'
+      return row.error || tr("Failed")
     case 'skipped':
-      return row.error || 'Not connected'
+      return row.error || tr("Not connected")
     case 'processing':
-      return 'Processing'
+      return tr("Processing")
     case 'sending':
-      return 'Sending'
+      return tr("Sending")
     case 'scheduled':
-      return 'Scheduled'
+      return tr("Scheduled")
     case 'checking':
-      return 'Checking it went live'
+      return tr("Checking it went live")
     case 'private':
-      return row.error || 'Private'
+      return row.error || tr("Private")
     default:
-      return 'Queued'
+      return tr("Queued")
   }
 }
 

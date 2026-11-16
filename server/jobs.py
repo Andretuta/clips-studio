@@ -60,7 +60,7 @@ class Worker(threading.Thread):
             self.db_path, Path(config["paths"]["data_dir"]) / "downloads"
         )
         self._wake = threading.Event()
-        self._stop = threading.Event()
+        self._stop_requested = threading.Event()
         # Latest progress per running job, for a client that was not connected
         # to /ws when the events went out, such as a dock opened mid-run.
         self._progress: dict[int, dict] = {}
@@ -73,7 +73,7 @@ class Worker(threading.Thread):
         self._wake.set()
 
     def stop(self) -> None:
-        self._stop.set()
+        self._stop_requested.set()
         self._wake.set()
 
     def _prune_logs(self) -> None:
@@ -126,7 +126,7 @@ class Worker(threading.Thread):
 
         progress.set_handler(on_progress)
 
-        while not self._stop.is_set():
+        while not self._stop_requested.is_set():
             # Paused means "claim nothing new". The video already running is
             # left alone — throwing away an hour of finished GPU work because
             # someone wants the queue to stop after this one would be its own
@@ -281,6 +281,10 @@ class Worker(threading.Thread):
                         # Style chosen in the Generate bar: applied to every
                         # clip of this job (and persisted per clip).
                         cfg["clips"]["caption_style"] = payload["caption_style"]
+                    if payload.get("cortes_gamer_watermark"):
+                        cfg["clips"]["cortes_gamer_watermark"] = True
+                        if payload.get("cortes_gamer_style") is not None:
+                            cfg["clips"]["cortes_gamer_style"] = payload["cortes_gamer_style"]
                     if payload.get("watermark_profile_id"):
                         # Branding chosen in the Generate bar: resolve the
                         # profile to its config and apply it to every clip.
@@ -302,6 +306,26 @@ class Worker(threading.Thread):
                     self._rerender_clip(db, payload)
                 elif job["type"] == "translate":
                     self._translate_clips(db, payload)
+                elif job["type"] == "compilation":
+                    from longform.compilation import save
+                    from server.compilation_api import source_has_cortes_gamer, source_path
+
+                    video_id = job["video_id"]
+                    cancel.clear(video_id)
+                    cancel.set_active(video_id)
+                    data_dir = self.db_path.parent.resolve()
+                    sources = []
+                    watermark_indices = set()
+                    for index, source_id in enumerate(payload["sources"], 1):
+                        source = source_path(source_id, db, self.config, data_dir)
+                        if source is None:
+                            raise ValueError(f"O corte {index} da sequência não está mais disponível.")
+                        sources.append(source)
+                        if payload.get("cortes_gamer_watermark") and not source_has_cortes_gamer(source_id, source, db):
+                            watermark_indices.add(index)
+                    save(db, data_dir, video_id, payload["title"], sources, watermark_indices=watermark_indices,
+                         cortes_gamer=bool(payload.get("cortes_gamer_watermark")),
+                         watermark_style=payload.get("cortes_gamer_style"))
                 else:
                     raise ValueError(f"Unknown job type {job['type']!r}")
                 db.finish_job(job["id"], "done")

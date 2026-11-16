@@ -1,3 +1,4 @@
+import { t as tr } from "./lib/i18n"
 import { useEffect, useState } from 'react'
 import Dashboard from './pages/Dashboard'
 import ClipStudio from './pages/ClipStudio'
@@ -6,6 +7,7 @@ import Creators from './pages/Creators'
 import Marketplace from './pages/Marketplace'
 import Mesa from './pages/Mesa'
 import Models from './pages/Models'
+import Publication from './pages/Publication'
 import Queue from './pages/Queue'
 import Settings from './pages/Settings'
 import Watch from './pages/Watch'
@@ -13,7 +15,7 @@ import FeedbackHub from './components/FeedbackHub'
 import ModelSwitcher from './components/ModelSwitcher'
 import SetupWizard, { setupDone } from './components/SetupWizard'
 import UpdateBanner from './components/UpdateBanner'
-import { activeLocale, t } from './lib/i18n'
+import { opensLanguageSettings, t } from './lib/i18n'
 import { api } from './lib/api'
 import { mesa } from './lib/mesa'
 import type { StudioEvent } from './lib/types'
@@ -23,26 +25,27 @@ import { ApprovalCards, ClipUpdatesProvider } from './components/ApprovalCard'
 import { OPEN_MARKETPLACE, checkOnlineListAtStart } from './lib/plugins'
 import mascot from './assets/mascot.png'
 
-type Page = 'mesa' | 'controle' | 'dashboard' | 'queue' | 'watch' | 'studio' | 'creators' | 'marketplace' | 'models' | 'settings'
+type Page = 'mesa' | 'controle' | 'dashboard' | 'queue' | 'watch' | 'studio' | 'publication' | 'creators' | 'marketplace' | 'models' | 'settings'
 
 const GITHUB_URL = 'https://github.com/ColinGPT9/clips-studio'
 
 const NAV: { id: Page; label: string; icon: string }[] = [
   // The approval desk and control room (settings.yaml `mesa:`), shown only when on.
-  { id: 'mesa', label: 'Approval desk', icon: '✓' },
-  { id: 'controle', label: 'Control room', icon: '◈' },
-  { id: 'dashboard', label: 'Dashboard', icon: '◧' },
-  { id: 'queue', label: 'Queue', icon: '≡' },
-  { id: 'watch', label: 'Watched channels', icon: '◎' },
+  { id: 'mesa', label: tr("Approval desk"), icon: '✓' },
+  { id: 'controle', label: tr("Control room"), icon: '◈' },
+  { id: 'dashboard', label: tr("Dashboard"), icon: '◧' },
+  { id: 'queue', label: tr("Queue"), icon: '≡' },
+  { id: 'watch', label: tr("Watched channels"), icon: '◎' },
   // Renamed in 1.1.3. The previous label matched an existing product closely
   // enough to block the Microsoft Store listing, so do not change it back —
   // "Clip Editor" is also just what the page is.
-  { id: 'studio', label: 'Clip Editor', icon: '✂' },
-  { id: 'creators', label: 'Creators', icon: '◉' },
+  { id: 'studio', label: tr("Clip Editor"), icon: '✂' },
+  { id: 'publication', label: 'Publicação', icon: '↗' },
+  { id: 'creators', label: tr("Creators"), icon: '◉' },
   // Community pipelines: browse the registry, install, manage (plugins/).
-  { id: 'marketplace', label: 'Marketplace', icon: '⊞' },
-  { id: 'models', label: 'Models', icon: '⬢' },
-  { id: 'settings', label: 'Settings', icon: '⚙' }
+  { id: 'marketplace', label: tr("Marketplace"), icon: '⊞' },
+  { id: 'models', label: tr("Models"), icon: '⬢' },
+  { id: 'settings', label: tr("Settings"), icon: '⚙' }
 ]
 
 export interface StudioTarget {
@@ -51,7 +54,7 @@ export interface StudioTarget {
 }
 
 export default function App(): JSX.Element {
-  const [page, setPage] = useState<Page>('dashboard')
+  const [page, setPage] = useState<Page>(opensLanguageSettings ? 'settings' : 'dashboard')
   const [studioTarget, setStudioTarget] = useState<StudioTarget | null>(null)
   const [creatorTarget, setCreatorTarget] = useState<number | null>(null)
   const [mesaTarget, setMesaTarget] = useState<string | null>(null)
@@ -162,12 +165,6 @@ export default function App(): JSX.Element {
   })
   // Language switches re-render the tree IN PLACE (no reload): the page
   // state lives here, so the user stays wherever they were (e.g. Settings).
-  const [locale, setLocale] = useState(activeLocale())
-  useEffect(() => {
-    const onLang = (): void => setLocale(activeLocale())
-    window.addEventListener('app-language-changed', onLang)
-    return () => window.removeEventListener('app-language-changed', onLang)
-  }, [])
 
   const openInStudio = (videoId: string, clipId?: number): void => {
     setStudioTarget({ videoId, clipId })
@@ -181,7 +178,7 @@ export default function App(): JSX.Element {
   }
 
   return (
-    <ClipUpdatesProvider><div className="flex h-screen" key={locale}>
+    <ClipUpdatesProvider><div className="flex h-screen">
       <ApprovalCards onOpen={videoId => { setStudioTarget({videoId}); setPage('studio') }} />
       <aside className="w-52 shrink-0 bg-surface border-r border-raised/60 flex flex-col">
         {/* Same lockup as the website header: Clippy, then the name and
@@ -249,7 +246,7 @@ export default function App(): JSX.Element {
               licence rather than leaving "open source" to mean anything. */}
           <p className="text-[10px] text-muted/60 mt-1.5">
             {cloudAI
-              ? `AGPL-3.0 · ${t('cloud AI on your key')} (${cloudAI})`
+              ? tr("AGPL-3.0 · {0} ({1})", t('cloud AI on your key'), cloudAI)
               : t('AGPL-3.0 · 100% local · no cloud AI')}
           </p>
         </div>
@@ -281,6 +278,7 @@ export default function App(): JSX.Element {
         )}
         {page === 'marketplace' && <Marketplace />}
         {page === 'models' && <Models />}
+        {page === 'publication' && <Publication onOpenInStudio={openInStudio} />}
         {page === 'settings' && <Settings />}
       </main>
       {wizard && (

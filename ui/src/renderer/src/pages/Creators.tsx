@@ -1,3 +1,4 @@
+import { t as tr } from "../lib/i18n"
 import { t } from '../lib/i18n'
 import { useCallback, useEffect, useState } from 'react'
 import { api } from '../lib/api'
@@ -18,13 +19,13 @@ const PLATFORM_BADGE: Record<string, string> = {
 }
 
 const KNOWLEDGE_LABELS: Record<string, string> = {
-  topic: 'Topics',
-  game: 'Games',
-  series: 'Series',
-  catchphrase: 'Catchphrases',
-  joke: 'Running jokes',
-  collaborator: 'Collaborators',
-  format: 'Formats'
+  topic: tr("Topics"),
+  game: tr("Games"),
+  series: tr("Series"),
+  catchphrase: tr("Catchphrases"),
+  joke: tr("Running jokes"),
+  collaborator: tr("Collaborators"),
+  format: tr("Formats")
 }
 
 // Why a learned fact is or isn't being used. Catchphrases used to fill up
@@ -32,16 +33,16 @@ const KNOWLEDGE_LABELS: Record<string, string> = {
 // play is dimmed and labelled rather than quietly listed as fact.
 const STATE_CHIP: Record<string, { label: string; className: string; title: string }> = {
   candidate: {
-    label: 'not confirmed',
+    label: tr("not confirmed"),
     className: 'bg-raised text-muted',
     title:
-      'Only heard once or twice. It stays here in case they say it again, but it is not used for scoring or titles until it repeats.'
+      tr("Only heard once or twice. It stays here in case they say it again, but it is not used for scoring or titles until it repeats.")
   },
   dormant: {
     label: 'dormant',
     className: 'bg-raised text-muted',
     title:
-      'They have not said this again in months of videos, so it no longer affects scoring or titles. It comes back the next time they say it.'
+      tr("They have not said this again in months of videos, so it no longer affects scoring or titles. It comes back the next time they say it.")
   }
 }
 
@@ -151,10 +152,9 @@ export default function Creators({
   return (
     <div className="p-6 max-w-5xl mx-auto space-y-5">
       <div>
-        <h2 className="text-xl font-bold">Creators</h2>
+        <h2 className="text-xl font-bold">{tr("Creators")}</h2>
         <p className="text-sm text-muted mt-1">
-          The app learns each creator over time — their channels, topics, running jokes and
-          storylines — to pick and title clips better. Everything stays on this computer.
+          {tr("The app learns each creator over time — their channels, topics, running jokes and storylines — to pick and title clips better. Everything stays on this computer.")}
         </p>
       </div>
 
@@ -167,7 +167,7 @@ export default function Creators({
       {suggestions.length > 0 && (
         <div className="bg-surface border border-accent/40 rounded-xl p-4 space-y-3">
           <h3 className="font-semibold text-sm">
-            Possible matches — are these the same creator?
+            {tr("Possible matches — are these the same creator?")}
           </h3>
           {suggestions.map((s, i) => (
             <div key={i} className="flex items-center gap-3 text-sm flex-wrap">
@@ -181,12 +181,12 @@ export default function Creators({
                 onClick={() => act(() => api.mergeCreators(s.creator_b.id, s.creator_a.id))}
                 className="ml-auto px-3 py-1 rounded-lg bg-accent/15 text-accent text-xs font-medium hover:bg-accent/25 disabled:opacity-50"
               >
-                Link as same creator
+                {tr("Link as same creator")}
               </button>
             </div>
           ))}
           <p className="text-xs text-muted">
-            Linking combines their videos, stats and learned knowledge under one profile.
+            {tr("Linking combines their videos, stats and learned knowledge under one profile.")}
           </p>
         </div>
       )}
@@ -195,7 +195,7 @@ export default function Creators({
         <div className="lg:col-span-2 space-y-2">
           {creators.length === 0 && (
             <p className="text-sm text-muted">
-              No creators yet — process a video and its channel will appear here automatically.
+              {tr("No creators yet — process a video and its channel will appear here automatically.")}
             </p>
           )}
           {creators.map((c) => (
@@ -221,23 +221,23 @@ export default function Creators({
                       className="text-[10px] px-1.5 py-0.5 rounded font-medium uppercase bg-success/15 text-success"
                       title={t("A watched channel learns into this profile")}
                     >
-                      Watched
+                      {tr("Watched")}
                     </span>
                   )}
                 </div>
                 <p className="text-xs text-muted mt-1.5">
-                  {c.videos} video{c.videos === 1 ? '' : 's'} · {c.clips} clip
+                  {c.videos} {tr("video")}{c.videos === 1 ? '' : 's'} · {c.clips} {tr("clip")}
                   {c.clips === 1 ? '' : 's'}
-                  {c.avg_score != null && ` · avg score ${c.avg_score}`}
+                  {c.avg_score != null && tr(" · avg score {0}", c.avg_score)}
                 </p>
               </button>
               <button
                 disabled={busy}
-                aria-label={`Delete ${c.display_name}`}
+                aria-label={tr("Delete {0}", c.display_name)}
                 title={
                   c.videos
-                    ? `Delete this profile. Its ${c.videos} video(s) stay — they just lose their creator.`
-                    : 'Delete this empty profile'
+                    ? tr("Delete this profile. Its {0} video(s) stay — they just lose their creator.", c.videos)
+                    : tr("Delete this empty profile")
                 }
                 onClick={() => {
                   const tail = c.videos
@@ -245,7 +245,7 @@ export default function Creators({
                     : ''
                   if (
                     window.confirm(
-                      `Delete the profile for ${c.display_name}?\n\nIts channels, learned knowledge, storylines and protected words are removed. No video or clip is deleted.${tail}`
+                      tr("Delete the profile for {0}?\n\nIts channels, learned knowledge, storylines and protected words are removed. No video or clip is deleted.{1}", c.display_name, tail)
                     )
                   ) {
                     void act(async () => {
@@ -265,7 +265,7 @@ export default function Creators({
         <div className="lg:col-span-3">
           {!detail ? (
             <p className="text-sm text-muted pt-2">
-              Select a creator to see their channels and what the app has learned.
+              {tr("Select a creator to see their channels and what the app has learned.")}
             </p>
           ) : (
             <div className="bg-surface border border-raised/60 rounded-xl p-5 space-y-5">
@@ -274,7 +274,7 @@ export default function Creators({
                   <h3 className="font-bold text-lg">{detail.display_name}</h3>
                   {detail.aliases.length > 1 && (
                     <p className="text-xs text-muted mt-0.5">
-                      Also known as: {detail.aliases.filter((a) => a !== detail.display_name).join(', ')}
+                      {tr("Also known as:")} {detail.aliases.filter((a) => a !== detail.display_name).join(', ')}
                     </p>
                   )}
                 </div>
@@ -290,7 +290,7 @@ export default function Creators({
                         if (
                           !enabled &&
                           window.confirm(
-                            `Learning is now off for ${detail.display_name}. Also wipe everything already learned about them (knowledge, storylines, feedback history) to save space? This can't be undone.`
+                            tr("Learning is now off for {0}. Also wipe everything already learned about them (knowledge, storylines, feedback history) to save space? This can't be undone.", detail.display_name)
                           )
                         ) {
                           await api.wipeCreatorMemory(detail.creator_id)
@@ -298,12 +298,12 @@ export default function Creators({
                       })
                     }}
                   />
-                  Learning enabled
+                  {tr("Learning enabled")}
                 </label>
               </div>
 
               <div>
-                <h4 className="text-sm font-semibold mb-2">Default branding</h4>
+                <h4 className="text-sm font-semibold mb-2">{tr("Default branding")}</h4>
                 <div className="flex items-center gap-2 flex-wrap">
                   <select
                     className="input !w-56 !py-1.5 text-sm"
@@ -314,7 +314,7 @@ export default function Creators({
                       void act(() => api.setCreatorBranding(detail.creator_id, v))
                     }}
                   >
-                    <option value="">None</option>
+                    <option value="">{tr("None")}</option>
                     {brandingProfiles.map((p) => (
                       <option key={p.id} value={p.id}>
                         {p.name}
@@ -330,11 +330,11 @@ export default function Creators({
                         setWmConfig({ ...DEFAULT_WATERMARK, text: `@${detail.display_name}` })
                       }}
                     >
-                      + New branding
+                      {tr("+ New branding")}
                     </button>
                   )}
                   <span className="text-[11px] text-muted">
-                    auto-applied to this creator’s videos
+                    {tr("auto-applied to this creator’s videos")}
                   </span>
                 </div>
 
@@ -363,10 +363,10 @@ export default function Creators({
                           })
                         }
                       >
-                        Create &amp; assign
+                        {tr("Create &amp; assign")}
                       </button>
                       <button className="text-xs text-muted hover:text-ink" onClick={() => setWmCreating(false)}>
-                        Cancel
+                        {tr("Cancel")}
                       </button>
                     </div>
                   </div>
@@ -374,7 +374,7 @@ export default function Creators({
               </div>
 
               <div>
-                <h4 className="text-sm font-semibold mb-2">Channels</h4>
+                <h4 className="text-sm font-semibold mb-2">{tr("Channels")}</h4>
                 <div className="space-y-1.5">
                   {detail.accounts.map((a) => (
                     <div key={a.account_id} className="flex items-center gap-2 text-sm">
@@ -387,7 +387,7 @@ export default function Creators({
                           className="ml-auto text-xs text-muted hover:text-red-400"
                           title={t("Detach this channel into its own profile")}
                         >
-                          Detach
+                          {tr("Detach")}
                         </button>
                       )}
                     </div>
@@ -429,14 +429,13 @@ export default function Creators({
                   </button>
                 </form>
                 <p className="text-[11px] text-muted mt-1.5">
-                  Use this when the same creator has a channel the app didn&apos;t connect
-                  automatically. Their future videos will land on this profile.
+                  {tr("Use this when the same creator has a channel the app didn&apos;t connect automatically. Their future videos will land on this profile.")}
                 </p>
               </div>
 
               {detail.events.length > 0 && (
                 <div>
-                  <h4 className="text-sm font-semibold mb-2">Storylines &amp; events</h4>
+                  <h4 className="text-sm font-semibold mb-2">{tr("Storylines &amp; events")}</h4>
                   <div className="space-y-1.5">
                     {detail.events.map((ev) => (
                       <div key={ev.event_id} className="flex items-center gap-2 text-sm">
@@ -453,24 +452,22 @@ export default function Creators({
               )}
 
               <div>
-                <h4 className="text-sm font-semibold mb-2">Learned knowledge</h4>
+                <h4 className="text-sm font-semibold mb-2">{tr("Learned knowledge")}</h4>
                 {detail.knowledge.length === 0 ? (
                   <p className="text-xs text-muted">
-                    Nothing yet — knowledge builds up as this creator&apos;s videos are processed.
+                    {tr("Nothing yet — knowledge builds up as this creator&apos;s videos are processed.")}
                   </p>
                 ) : (
                   <div className="space-y-3">
                     <p className="text-[11px] text-muted -mt-1">
-                      A catchphrase has to actually repeat before it counts, and anything they
-                      stop saying goes dormant. Greyed-out entries aren&apos;t used for scoring or
-                      titles.{' '}
+                      {tr("A catchphrase has to actually repeat before it counts, and anything they stop saying goes dormant. Greyed-out entries aren&apos;t used for scoring or titles.")}{' '}
                       {unusedCount > 0 && (
                         <button
                           disabled={busy}
                           onClick={() => {
                             if (
                               window.confirm(
-                                `Forget ${unusedCount} unused entr${unusedCount === 1 ? 'y' : 'ies'} for ${detail.display_name}?\n\nThese are phrases heard only once and facts they've stopped mentioning — none of them affect your clips today. Anything they say again is relearned.`
+                                tr("Forget {0} unused entr{1} for {2}?\n\nThese are phrases heard only once and facts they've stopped mentioning — none of them affect your clips today. Anything they say again is relearned.", unusedCount, unusedCount === 1 ? 'y' : 'ies', detail.display_name)
                               )
                             ) {
                               void act(() => api.clearUnusedKnowledge(detail.creator_id))
@@ -478,7 +475,7 @@ export default function Creators({
                           }}
                           className="text-accent hover:underline disabled:opacity-50"
                         >
-                          Forget the {unusedCount} unused.
+                          {tr("Forget the")} {unusedCount} {tr("unused.")}
                         </button>
                       )}
                     </p>
@@ -501,7 +498,7 @@ export default function Creators({
                                 {k.times_seen > 1 && (
                                   <span
                                     className="text-[10px] text-muted tabular-nums shrink-0"
-                                    title={`Heard ${k.times_seen} times across this creator's videos`}
+                                    title={tr("Heard {0} times across this creator's videos", k.times_seen)}
                                   >
                                     {k.times_seen}×
                                   </span>
@@ -523,7 +520,7 @@ export default function Creators({
                                   }
                                   className="text-xs text-muted hover:text-red-400"
                                   title={t("Delete — this fact is wrong")}
-                                  aria-label={`Delete learned fact: ${k.information}`}
+                                  aria-label={tr("Delete learned fact: {0}", k.information)}
                                 >
                                   <Trash />
                                 </button>
@@ -543,7 +540,7 @@ export default function Creators({
                   onClick={() => {
                     if (
                       window.confirm(
-                        `Wipe everything learned about ${detail.display_name} from this computer — knowledge, storylines and feedback history? The profile, videos and clips stay. This can't be undone.`
+                        tr("Wipe everything learned about {0} from this computer — knowledge, storylines and feedback history? The profile, videos and clips stay. This can't be undone.", detail.display_name)
                       )
                     ) {
                       void act(() => api.wipeCreatorMemory(detail.creator_id))
@@ -552,7 +549,7 @@ export default function Creators({
                   className="text-xs text-muted hover:text-red-400 transition-colors"
                 >
                   <Trash className="mr-1.5" />
-                  Wipe learned memory for this creator
+                  {tr("Wipe learned memory for this creator")}
                 </button>
                 {/* Removing the profile itself. Videos and clips are only
                     unlinked, never deleted — say so in the prompt, and say
@@ -567,7 +564,7 @@ export default function Creators({
                       : ''
                     if (
                       window.confirm(
-                        `Delete the profile for ${detail.display_name}?\n\nIts channels, learned knowledge, storylines and protected words are removed. No video or clip is deleted.${tail}`
+                        tr("Delete the profile for {0}?\n\nIts channels, learned knowledge, storylines and protected words are removed. No video or clip is deleted.{1}", detail.display_name, tail)
                       )
                     ) {
                       void act(async () => {
@@ -579,24 +576,22 @@ export default function Creators({
                   className="ml-4 text-xs text-muted hover:text-red-400 transition-colors"
                 >
                   <Trash className="mr-1.5" />
-                  Delete this creator
+                  {tr("Delete this creator")}
                 </button>
               </div>
 
               <div>
-                <h4 className="text-sm font-semibold mb-1">Your preferences for this creator</h4>
+                <h4 className="text-sm font-semibold mb-1">{tr("Your preferences for this creator")}</h4>
                 {detail.preferences ? (
                   <p className="text-xs text-muted">
-                    Active — based on {detail.preferences.signals} of your exports/edits, clip
-                    scoring now leans toward what you keep
+                    {tr("Active — based on")} {detail.preferences.signals} {tr("of your exports/edits, clip scoring now leans toward what you keep")}
                     {detail.preferences.preferred_duration != null &&
-                      ` (you tend to keep ~${Math.round(detail.preferences.preferred_duration)}s clips)`}
+                      tr(" (you tend to keep ~{0}s clips)", Math.round(detail.preferences.preferred_duration))}
                     .
                   </p>
                 ) : (
                   <p className="text-xs text-muted">
-                    Not enough data yet — as you export and edit clips, scoring will learn what
-                    works for this creator.
+                    {tr("Not enough data yet — as you export and edit clips, scoring will learn what works for this creator.")}
                   </p>
                 )}
               </div>

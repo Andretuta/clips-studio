@@ -1,3 +1,4 @@
+import { t as tr } from "../lib/i18n"
 import { t } from '../lib/i18n'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { api, errorText } from '../lib/api'
@@ -34,11 +35,11 @@ export default function Models(): JSX.Element {
   }, [])
   const cloudNote = cloud && (
     <div className="card text-sm">
-      You&apos;re using <span className="text-ink">{cloud}</span> with your own API key, chosen in{' '}
+      {tr("You&apos;re using")} <span className="text-ink">{cloud}</span> {tr("with your own API key, chosen in")}{' '}
       <button className="text-accent hover:underline" onClick={() => window.dispatchEvent(new Event('open-settings'))}>
-        Settings → AI
+        {tr("Settings → AI")}
       </button>
-      . Local models are only needed if you switch back to running AI on this PC.
+      {tr(". Local models are only needed if you switch back to running AI on this PC.")}
     </div>
   )
 
@@ -143,32 +144,32 @@ export default function Models(): JSX.Element {
   if (offline) {
     return (
       <div className="p-6">
-        <h2 className="text-2xl font-bold mb-4">Models</h2>
+        <h2 className="text-2xl font-bold mb-4">{tr("Models")}</h2>
         {cloudNote || (
           <div className="card text-warn">
-            Ollama isn’t reachable. Make sure it’s installed and running, then reopen this page.
+            {tr("Ollama isn’t reachable. Make sure it’s installed and running, then reopen this page.")}
           </div>
         )}
       </div>
     )
   }
-  if (!info) return <div className="p-6 text-muted">Loading…</div>
+  if (!info) return <div className="p-6 text-muted">{tr("Loading…")}</div>
 
   return (
     <div className="p-6 space-y-5 max-w-3xl">
-      <h2 className="text-2xl font-bold">Models</h2>
+      <h2 className="text-2xl font-bold">{tr("Models")}</h2>
       {cloudNote || (
         // Highlighted when the card is under the "Under 6 GB VRAM" tier or
         // there is no reading of one: the model guide's own threshold.
         <OpenRouterPrompt
           prominent={vram !== null && vram < 5.5 * 1024 ** 3}
           title={t("Don't want to run models locally?")}
-          body="Try OpenRouter with your own key: one key for many cloud models, billed by OpenRouter to your account."
+          body={tr("Try OpenRouter with your own key: one key for many cloud models, billed by OpenRouter to your account.")}
         />
       )}
 
       <section className="card space-y-3">
-        <h3 className="font-semibold">Installed</h3>
+        <h3 className="font-semibold">{tr("Installed")}</h3>
         {info.installed.map((m) => {
           const isActive = info.active === `ollama/${m.name}`
           return (
@@ -176,9 +177,9 @@ export default function Models(): JSX.Element {
               <div className="flex-1">
                 <p className="font-medium">
                   {m.name}
-                  {isActive && <span className="ml-2 text-xs bg-accent/15 text-accent px-2 py-0.5 rounded">active</span>}
+                  {isActive && <span className="ml-2 text-xs bg-accent/15 text-accent px-2 py-0.5 rounded">{tr("active")}</span>}
                 </p>
-                <p className="text-xs text-muted">{m.size_gb.toFixed(1)} GB on disk</p>
+                <p className="text-xs text-muted">{m.size_gb.toFixed(1)} {tr("GB on disk")}</p>
                 {(() => {
                   const note = speedNote(m, info.installed, vram)
                   if (!note) return null
@@ -204,7 +205,7 @@ export default function Models(): JSX.Element {
                     Use
                   </button>
                   <button className="btn-ghost !py-1.5" onClick={() => remove(m.name)} disabled={busy !== null}>
-                    Remove
+                    {tr("Remove")}
                   </button>
                 </>
               )}
@@ -214,27 +215,27 @@ export default function Models(): JSX.Element {
       </section>
 
       <section className="card space-y-3">
-        <h3 className="font-semibold">Download a model</h3>
+        <h3 className="font-semibold">{tr("Download a model")}</h3>
         <div className="flex gap-2">
           <input
             className="input flex-1"
-            placeholder="e.g. gemma3:12b"
+            placeholder={tr("e.g. gemma3:12b")}
             value={pullTag}
             onChange={(e) => setPullTag(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && pull()}
           />
           <button className="btn-accent" onClick={pull}>
-            Download
+            {tr("Download")}
           </button>
         </div>
         {Object.values(pulls).map((p) => (
           <div key={p.tag} className="flex items-center gap-3">
             <p className={`flex-1 text-sm ${p.status === 'error' ? 'text-red-400' : 'text-accent'}`}>
-              {p.tag}: {p.status === 'error' ? `Download failed: ${p.error || 'unknown error'}` : pullText(p)}
+              {p.tag}: {p.status === 'error' ? tr("Download failed: {0}", p.error || tr("unknown error")) : pullText(p)}
             </p>
             {p.status === 'error' && (
               <button className="btn-ghost !py-1.5" onClick={() => void startPull(p.tag)}>
-                Try again
+                {tr("Try again")}
               </button>
             )}
           </div>
@@ -251,8 +252,8 @@ export default function Models(): JSX.Element {
         <table className="w-full text-sm mt-2">
           <thead>
             <tr className="label text-left">
-              <th className="pb-2 pr-6 font-normal whitespace-nowrap">Your hardware</th>
-              <th className="pb-2 pr-6 font-normal whitespace-nowrap">Model</th>
+              <th className="pb-2 pr-6 font-normal whitespace-nowrap">{tr("Your hardware")}</th>
+              <th className="pb-2 pr-6 font-normal whitespace-nowrap">{tr("Model")}</th>
               <th className="pb-2 font-normal whitespace-nowrap">Why</th>
             </tr>
           </thead>
@@ -274,22 +275,19 @@ export default function Models(): JSX.Element {
             made the old single table read as nonsense. */}
         {info.other_models && info.other_models.length > 0 && (
           <>
-            <h3 className="label mt-6">Other models</h3>
+            <h3 className="label mt-6">{tr("Other models")}</h3>
             <p className="text-xs text-muted mt-1">
-              Picked for a purpose rather than for your graphics card. All run locally, and all
-              are free to use on clips you earn from.
+              {tr("Picked for a purpose rather than for your graphics card. All run locally, and all are free to use on clips you earn from.")}
             </p>
             <p className="text-xs text-muted mt-1">
-              Only <code>gemma:7b</code>, <code>gemma3:4b</code> and <code>gemma3:12b</code> have
-              been tested against real streams. The rest should work &mdash; they are all driven
-              the same way &mdash; but nobody has measured whether they pick better clips.
+              {tr("Only")} <code>gemma:7b</code>, <code>gemma3:4b</code> and <code>gemma3:12b</code> {tr("have been tested against real streams. The rest should work &mdash; they are all driven the same way &mdash; but nobody has measured whether they pick better clips.")}
             </p>
             <table className="w-full text-sm mt-2">
               <thead>
                 <tr className="label text-left">
                   <th className="pb-2 pr-6 font-normal whitespace-nowrap">For</th>
-                  <th className="pb-2 pr-6 font-normal whitespace-nowrap">Model</th>
-                  <th className="pb-2 font-normal whitespace-nowrap">Notes</th>
+                  <th className="pb-2 pr-6 font-normal whitespace-nowrap">{tr("Model")}</th>
+                  <th className="pb-2 font-normal whitespace-nowrap">{tr("Notes")}</th>
                 </tr>
               </thead>
               <tbody>

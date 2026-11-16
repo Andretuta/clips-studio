@@ -25,6 +25,18 @@ from longform.profiles import PROFILES
 _NUDGE = 0.011
 
 
+def _assembled_render_opts(profile: str, path: Path, config: dict) -> str:
+    opts = {"profile": profile}
+    if config["clips"].get("cortes_gamer_watermark"):
+        from video_editor.cortes_gamer import apply, style_for
+
+        style = style_for(config["clips"].get("cortes_gamer_style"))
+        if style.opacity:
+            apply(path, style=style, cancellable=True)
+        opts.update(cortes_gamer_watermark=True, cortes_gamer_style=style.model_dump())
+    return json.dumps(opts)
+
+
 def process_longform(url: str, config: dict, db: StateDB, options: dict) -> None:
     from analysis.fusion import find_clips
     from video import outro as _outro
@@ -312,7 +324,7 @@ def _highlights(
         hashtags=[],
     )
     _register_clip(db, video.video_id, candidate, out, meta,
-                   json.dumps({"profile": "highlights"}), config)
+                   _assembled_render_opts("highlights", out, config), config)
 
     elapsed = time.monotonic() - started
     db.set_process_seconds(video.video_id, elapsed)
@@ -376,7 +388,7 @@ def _edited_stream(video, config: dict, db: StateDB, data_dir: Path, profile: di
         hashtags=[],
     )
     _register_clip(db, video.video_id, candidate, out, meta,
-                   json.dumps({"profile": "edited_stream"}), config)
+                   _assembled_render_opts("edited_stream", out, config), config)
 
     elapsed = time.monotonic() - started
     db.set_process_seconds(video.video_id, elapsed)

@@ -1,3 +1,4 @@
+import { t as tr } from "./i18n"
 /** User-adjustable appearance (font, text size, text color).
  *
  * Implemented as runtime overrides of the design tokens, so every component
@@ -12,13 +13,13 @@ export interface Appearance {
 }
 
 export const FONTS = [
-  { label: 'Default (Segoe UI)', value: "'Segoe UI', system-ui, sans-serif" },
+  { label: tr("Default (Segoe UI)"), value: "'Segoe UI', system-ui, sans-serif" },
   { label: 'Arial', value: 'Arial, sans-serif' },
-  { label: 'Verdana (high legibility)', value: 'Verdana, sans-serif' },
+  { label: tr("Verdana (high legibility)"), value: 'Verdana, sans-serif' },
   { label: 'Tahoma', value: 'Tahoma, sans-serif' },
   { label: 'Trebuchet MS', value: "'Trebuchet MS', sans-serif" },
-  { label: 'Georgia (serif)', value: 'Georgia, serif' },
-  { label: 'Comic Sans MS (dyslexia-friendly)', value: "'Comic Sans MS', sans-serif" }
+  { label: tr("Georgia (serif)"), value: 'Georgia, serif' },
+  { label: tr("Comic Sans MS (dyslexia-friendly)"), value: "'Comic Sans MS', sans-serif" }
 ]
 
 export const DEFAULT_APPEARANCE: Appearance = {

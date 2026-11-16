@@ -12,6 +12,7 @@ import sys
 import threading
 import time
 import types
+from pathlib import Path
 
 import pytest
 
@@ -449,3 +450,29 @@ def test_limits_are_read_as_openai_reports_them():
     weekly = parse_limits(limits(used=100.0, minutes=10080))
     assert weekly["windows"][0]["label"] == "Weekly" and weekly["reached"] is True
     assert weekly["resets_at"] == 1_900_000_000
+
+
+def test_signin_completion_waits_for_persistent_marker(tmp_path, monkeypatch):
+    world = World()
+    plan = ChatGPTPlan(tmp_path, client_factory=world.factory)
+    entered, release = threading.Event(), threading.Event()
+    original_touch = Path.touch
+
+    def delayed_touch(path, *args, **kwargs):
+        if path == plan._marker:
+            entered.set()
+            assert release.wait(5)
+        return original_touch(path, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "touch", delayed_touch)
+    plan.start()
+    world.login_done.set()
+    assert entered.wait(5)
+    # The completion state must not be published before the marker is saved.
+    assert plan._flow["state"] == "waiting"
+    release.set()
+    deadline = time.monotonic() + 5
+    while plan.status()["flow"]["state"] == "waiting" and time.monotonic() < deadline:
+        time.sleep(0.01)
+    assert plan.status()["signed_in"] is True
+    assert plan.status()["flow"]["state"] == "done"

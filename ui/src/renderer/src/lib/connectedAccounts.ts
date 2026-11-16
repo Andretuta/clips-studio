@@ -1,3 +1,4 @@
+import { t as tr } from "./i18n"
 import { API_BASE } from './api'
 
 /** Account metadata only. OAuth credentials remain in the trusted engine. */
@@ -153,7 +154,7 @@ async function authenticatedRequest<T>(
   try {
     return await response.json() as T
   } catch {
-    throw new Error('The account operation returned an unreadable response. Try again.')
+    throw new Error(tr("The account operation returned an unreadable response. Try again."))
   }
 }
 

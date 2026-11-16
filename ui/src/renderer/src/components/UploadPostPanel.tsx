@@ -1,3 +1,4 @@
+import { t as tr } from "../lib/i18n"
 import { useEffect, useRef, useState } from 'react'
 import { api } from '../lib/api'
 import { t } from '../lib/i18n'
@@ -43,7 +44,8 @@ export default function UploadPostPanel({
   status,
   provider,
   otherAvailable,
-  onSwitchProvider
+  onSwitchProvider,
+  onlyPlatform
 }: {
   clip: Clip
   status: UploadPostStatus
@@ -51,9 +53,10 @@ export default function UploadPostPanel({
   /** True when the other provider is also set up, so switching is offered. */
   otherAvailable: boolean
   onSwitchProvider: (p: Provider) => void
+  onlyPlatform?: string
 }): JSX.Element {
   const [platforms, setPlatforms] = useState<string[]>(
-    status.platforms.length ? status.platforms : ['youtube']
+    onlyPlatform ? [onlyPlatform] : status.platforms.length ? status.platforms : ['youtube']
   )
   const [title, setTitle] = useState(clip.title || clip.hook || '')
   const [discordDestination, setDiscordDestination] = useState<number | null>(null)
@@ -68,7 +71,7 @@ export default function UploadPostPanel({
   const [error, setError] = useState('')
   const [caps, setCaps] = useState<Capabilities | null>(null)
   // WoopSocial reaches eight of the nine; Upload-Post all of them.
-  const usable = platformsFor(provider)
+  const usable = platformsFor(provider).filter((p) => !onlyPlatform || p.id === onlyPlatform)
   // One place that knows which provider's routes to call, so nothing below
   // has to branch on it.
   const backend =
@@ -404,7 +407,7 @@ export default function UploadPostPanel({
             id="up-hashtags"
             className="input !py-1 text-sm"
             value={hashtags}
-            placeholder="#gaming #twitch #clips"
+            placeholder={tr("#gaming #twitch #clips")}
             onChange={(e) => setHashtags(e.target.value)}
           />
         </div>

@@ -1,3 +1,4 @@
+import { t as tr } from "../lib/i18n"
 import type { SuggestionCard } from '../lib/editSuggestions'
 import { t } from '../lib/i18n'
 
@@ -70,7 +71,7 @@ export default function EditSuggestions({
                 onClick={() => onTakeBack(card.id)}
                 title={t("Take out only what this suggestion put in. Your own changes stay.")}
               >
-                Take it back
+                {tr("Take it back")}
               </button>
             )}
             {card.actions.includes('make_again') && (
@@ -78,9 +79,9 @@ export default function EditSuggestions({
                 className={button}
                 disabled={busy || Boolean(makeAgainOff)}
                 onClick={onMakeAgain}
-                title={makeAgainOff || 'Make this clip again with the edits saved for it'}
+                title={makeAgainOff || tr("Make this clip again with the edits saved for it")}
               >
-                Make it again with my edits
+                {tr("Make it again with my edits")}
               </button>
             )}
             {card.actions.includes('hide') && (
@@ -90,7 +91,7 @@ export default function EditSuggestions({
                 onClick={() => onHide(card.id)}
                 title={t("Put this suggestion away. A later run that suggests the same keeps it hidden.")}
               >
-                Hide
+                {tr("Hide")}
               </button>
             )}
           </div>
@@ -98,9 +99,9 @@ export default function EditSuggestions({
       ))}
       {hidden > 0 && (
         <p className="text-xs text-muted">
-          {hidden} {hidden === 1 ? 'hidden suggestion' : 'hidden suggestions'} ·{' '}
+          {hidden} {hidden === 1 ? tr("hidden suggestion") : tr("hidden suggestions")} ·{' '}
           <button className="text-accent hover:underline disabled:opacity-40" disabled={busy} onClick={onShowHidden}>
-            Show
+            {tr("Show")}
           </button>
         </p>
       )}

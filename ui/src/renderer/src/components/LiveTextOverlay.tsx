@@ -1,3 +1,4 @@
+import { t as tr } from "../lib/i18n"
 import { useEffect, useRef, useState } from 'react'
 import type { LiveOverlay } from '../lib/types'
 import { bakedToOrig } from './TimelineEditor'
@@ -93,7 +94,7 @@ export default function LiveTextOverlay({
 
   const outline = (px: number): React.CSSProperties => ({
     WebkitTextStroke: `${Math.max(1, px)}px black`,
-    textShadow: `0 ${Math.max(1, 2 * s)}px ${Math.max(2, 5 * s)}px rgba(0,0,0,0.85)`
+    textShadow: tr("0 {0}px {1}px rgba(0,0,0,0.85)", Math.max(1, 2 * s), Math.max(2, 5 * s))
   })
 
   return (
@@ -172,7 +173,7 @@ export default function LiveTextOverlay({
       )}
       {overlay.captions && (
         <span className="absolute top-2 right-2 bg-black/60 text-white/80 text-[10px] px-1.5 py-0.5 rounded">
-          caption preview — Apply burns it in
+          {tr("caption preview — Apply burns it in")}
         </span>
       )}
     </div>

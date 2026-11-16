@@ -1,3 +1,4 @@
+import { t as tr } from "./i18n"
 import type { ModelPull, StudioEvent } from './types'
 
 /** How far a model download has got, for the Models page and setup.
@@ -12,7 +13,7 @@ import type { ModelPull, StudioEvent } from './types'
  *
  *  Pure helpers, no React and no fetch, so both screens word it the same. */
 
-export const CHECKING = 'Checking the download… keep Clips Kitty open'
+export const CHECKING = tr("Checking the download… keep Clips Kitty open")
 
 /** Ollama's steps once the bytes are in. None of them has a percentage. */
 export function isChecking(status: string | undefined): boolean {
@@ -31,9 +32,9 @@ export function pullPercent(completed?: number | null, total?: number | null): n
  *  ("pulling 6a0746a1ec1a"), which means nothing to anyone. */
 export function pullStep(status: string | undefined): string {
   const s = status ?? ''
-  if (!s || s === 'starting' || s === 'pulling manifest') return 'Starting…'
+  if (!s || s === 'starting' || s === 'pulling manifest') return tr("Starting…")
   if (isChecking(s)) return CHECKING
-  if (s.startsWith('pulling')) return 'Downloading'
+  if (s.startsWith('pulling')) return tr("Downloading")
   return s
 }
 
@@ -52,7 +53,7 @@ export function foldPullEvent(shown: Record<string, ModelPull>, e: StudioEvent):
   if (e.status === 'done') {
     delete next[e.tag]
   } else if (e.status === 'error') {
-    next[e.tag] = { tag: e.tag, status: 'error', completed: null, total: null, error: e.error ?? 'unknown error', done: true }
+    next[e.tag] = { tag: e.tag, status: 'error', completed: null, total: null, error: e.error ?? tr("unknown error"), done: true }
   } else {
     next[e.tag] = {
       tag: e.tag,

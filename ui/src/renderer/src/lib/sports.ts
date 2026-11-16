@@ -1,3 +1,4 @@
+import { t as tr } from "./i18n"
 import { useEffect, useState } from 'react'
 import { api } from './api'
 import type { SportChoice, SportOption, SubScores } from './types'
@@ -71,32 +72,32 @@ export function fitSport(o: SportOption, list: SportChoice[]): SportOption | nul
 
 /** What each Crop choice does, shown under its name in the list. */
 export const SCREEN_HINTS: Record<string, string> = {
-  safe: 'The game sits between the apps’ top bar and the caption at the bottom, with a blurred band above and below, so neither hides the basket or the floor. The buttons on the right still sit over the edge',
-  full: 'The game fills the whole phone screen. The apps’ top bar, caption and buttons may cover the top of the picture and the floor'
+  safe: tr("The game sits between the apps’ top bar and the caption at the bottom, with a blurred band above and below, so neither hides the basket or the floor. The buttons on the right still sit over the edge"),
+  full: tr("The game fills the whole phone screen. The apps’ top bar, caption and buttons may cover the top of the picture and the floor")
 }
 
 /** What each Highlights choice keeps, shown under its name in the list. */
 export const HIGHLIGHT_HINTS: Record<string, string> = {
-  best: 'The match’s biggest moments, of any kind',
-  goals: 'Every goal, with its build-up and celebration',
-  goals_celebrations: 'Every goal, with a longer celebration after it',
-  saves: 'The goalkeepers’ best saves',
-  chances: 'Near misses, big chances and shots',
-  attacking: 'Goals, chances, shots and set pieces',
-  cards: 'Yellow and red cards, and VAR checks',
-  penalties: 'Every penalty, scored or missed',
-  plays_reactions: 'The biggest plays, each with the crowd, bench or courtside reaction after it',
-  scoring: 'Every basket the scoreboard or the commentary confirms, best first',
-  dunks: 'Dunks, alley-oops and putback slams',
-  threes: 'Made threes, from the corner to the logo',
-  blocks: 'Blocked shots, with the play around them',
-  steals: 'Steals and deflections, and the break that follows',
-  assists: 'Assists, lobs and the best passes',
-  clutch: 'Game winners, buzzer-beaters and late baskets in a close game',
-  fan_reactions: 'The crowd, the bench and courtside reacting, with the play before it',
-  celebrity_reactions: 'Courtside reactions, named only when the broadcast captions them',
-  crowd_reactions: 'The arena erupting after a big play',
-  bench_reactions: 'The bench and the coaches reacting'
+  best: tr("The match’s biggest moments, of any kind"),
+  goals: tr("Every goal, with its build-up and celebration"),
+  goals_celebrations: tr("Every goal, with a longer celebration after it"),
+  saves: tr("The goalkeepers’ best saves"),
+  chances: tr("Near misses, big chances and shots"),
+  attacking: tr("Goals, chances, shots and set pieces"),
+  cards: tr("Yellow and red cards, and VAR checks"),
+  penalties: tr("Every penalty, scored or missed"),
+  plays_reactions: tr("The biggest plays, each with the crowd, bench or courtside reaction after it"),
+  scoring: tr("Every basket the scoreboard or the commentary confirms, best first"),
+  dunks: tr("Dunks, alley-oops and putback slams"),
+  threes: tr("Made threes, from the corner to the logo"),
+  blocks: tr("Blocked shots, with the play around them"),
+  steals: tr("Steals and deflections, and the break that follows"),
+  assists: tr("Assists, lobs and the best passes"),
+  clutch: tr("Game winners, buzzer-beaters and late baskets in a close game"),
+  fan_reactions: tr("The crowd, the bench and courtside reacting, with the play before it"),
+  celebrity_reactions: tr("Courtside reactions, named only when the broadcast captions them"),
+  crowd_reactions: tr("The arena erupting after a big play"),
+  bench_reactions: tr("The bench and the coaches reacting")
 }
 
 /** Each sport's icon in the Sport menu. */
@@ -104,7 +105,7 @@ export const SPORT_ICONS: Record<string, string> = { soccer: '⚽', basketball: 
 
 /** A sport's name as the app shows it, where it differs from the engine's
  *  (which also goes into the scoring prompt, so it stays as it is). */
-const SPORT_NAMES: Record<string, string> = { soccer: 'Soccer / Football' }
+const SPORT_NAMES: Record<string, string> = { soccer: tr("Soccer / Football") }
 
 export function sportName(s: { id: string; label: string }): string {
   return SPORT_NAMES[s.id] ?? s.label
@@ -112,24 +113,24 @@ export function sportName(s: { id: string; label: string }): string {
 
 /** Sports on the way: listed under the ones on offer, greyed out, to hint at
  *  what's next. UI only, so one can never be sent in a job. */
-export const COMING_SOON: { label: string; icon: string }[] = [{ label: 'Cricket', icon: '🏏' }]
+export const COMING_SOON: { label: string; icon: string }[] = [{ label: tr("Cricket"), icon: '🏏' }]
 
 /** The story reels a match can have joined from its clips, in their order. */
 export const REELS: { id: string; label: string; title: string }[] = [
   {
     id: 'recap',
-    label: 'Match recap',
-    title: 'Every named moment of the match in one video, in match order: the goals and saves, or the baskets and blocks.'
+    label: tr("Match recap"),
+    title: tr("Every named moment of the match in one video, in match order: the goals and saves, or the baskets and blocks.")
   },
   {
     id: 'teams',
-    label: 'Team reels',
-    title: 'A video per team of its moments: the ones the score box or your match events give it.'
+    label: tr("Team reels"),
+    title: tr("A video per team of its moments: the ones the score box or your match events give it.")
   },
   {
     id: 'players',
-    label: 'Player reels',
-    title: 'A video per player named in two moments or more: by your match events, or by the commentary for a name in Teams or players.'
+    label: tr("Player reels"),
+    title: tr("A video per player named in two moments or more: by your match events, or by the commentary for a name in Teams or players.")
   }
 ]
 
@@ -227,5 +228,5 @@ export function sportMoment(s: SubScores | undefined): string | null {
     when = h > 0 ? `${h}:${String(m).padStart(2, '0')}:${sec}` : `${m}:${sec}`
   }
   const parts = [s.sport_label, when, s.sport_person ?? s.sport_team ?? s.sport_player ?? ''].filter(Boolean)
-  return `${parts.join(' · ')}${s.sport_replay ? ' (replay)' : ''}`
+  return `${parts.join(' · ')}${s.sport_replay ? tr(" (replay)") : ''}`
 }

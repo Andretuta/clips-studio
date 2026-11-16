@@ -1,3 +1,4 @@
+import { t as tr } from "../../lib/i18n"
 import { platformLabel } from '../../lib/uploadpost'
 import { t } from '../../lib/i18n'
 
@@ -8,27 +9,27 @@ export type PlatformOverrides = Record<string, Record<string, string | boolean>>
 type Choice = { value: string; label: string }
 
 const YOUTUBE_PRIVACY: Choice[] = [
-  { value: 'public', label: 'Public' },
-  { value: 'unlisted', label: 'Unlisted' },
-  { value: 'private', label: 'Private' }
+  { value: 'public', label: tr("Public") },
+  { value: 'unlisted', label: tr("Unlisted") },
+  { value: 'private', label: tr("Private") }
 ]
 
 // WoopSocial's own enums, checked against their create-post schema. Only the
 // kinds a vertical video can be are offered.
 const TIKTOK_PRIVACY: Choice[] = [
-  { value: 'PUBLIC_TO_EVERYONE', label: 'Everyone' },
-  { value: 'FOLLOWER_OF_CREATOR', label: 'Followers' },
-  { value: 'MUTUAL_FOLLOW_FRIENDS', label: 'Friends' },
-  { value: 'SELF_ONLY', label: 'Only me' }
+  { value: 'PUBLIC_TO_EVERYONE', label: tr("Everyone") },
+  { value: 'FOLLOWER_OF_CREATOR', label: tr("Followers") },
+  { value: 'MUTUAL_FOLLOW_FRIENDS', label: tr("Friends") },
+  { value: 'SELF_ONLY', label: tr("Only me") }
 ]
 const INSTAGRAM_TYPE: Choice[] = [
-  { value: 'REEL', label: 'Reel' },
-  { value: 'STORY', label: 'Story' }
+  { value: 'REEL', label: tr("Reel") },
+  { value: 'STORY', label: tr("Story") }
 ]
 const FACEBOOK_TYPE: Choice[] = [
-  { value: 'REEL', label: 'Reel' },
-  { value: 'VIDEO', label: 'Video' },
-  { value: 'STORY', label: 'Story' }
+  { value: 'REEL', label: tr("Reel") },
+  { value: 'VIDEO', label: tr("Video") },
+  { value: 'STORY', label: tr("Story") }
 ]
 
 /** The settings each chosen platform takes, set once for every post from a

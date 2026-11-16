@@ -30,14 +30,10 @@ FRAME_W, FRAME_H = 160, 90  # analysis resolution; plenty for motion/cuts
 
 
 def extract_visual_features(video_path: Path) -> dict[str, np.ndarray]:
-    frames = _decode_sampled_gray(video_path)
-    if frames.shape[0] < 2:
+    diffs, brightness = _sampled_signals(video_path)
+    if diffs.size < 2:
         return {}
 
-    # Per-sample raw signals.
-    diffs = np.abs(np.diff(frames.astype(np.float32), axis=0)).mean(axis=(1, 2))
-    diffs = np.concatenate([[0.0], diffs])
-    brightness = frames.mean(axis=(1, 2), dtype=np.float32)
     flash_raw = np.abs(np.concatenate([[0.0], np.diff(brightness)]))
 
     # A hard cut is a frame difference far above the local baseline AND
@@ -46,7 +42,7 @@ def extract_visual_features(video_path: Path) -> dict[str, np.ndarray]:
     cuts_raw = (diffs > np.maximum(3.0 * baseline, 15.0)).astype(np.float32)
 
     # Bin per-sample arrays into per-second arrays.
-    n_secs = int(frames.shape[0] / SAMPLE_FPS)
+    n_secs = int(diffs.size / SAMPLE_FPS)
     if n_secs == 0:
         return {}
 
@@ -61,8 +57,34 @@ def extract_visual_features(video_path: Path) -> dict[str, np.ndarray]:
     }
 
 
-def _decode_sampled_gray(video_path: Path) -> np.ndarray:
+def _sampled_signals(video_path: Path) -> tuple[np.ndarray, np.ndarray]:
     from video.encoding import hwaccel_input_args
+
+    frame_bytes = FRAME_W * FRAME_H
+    tail = b""
+    previous = None
+    motion_batches = []
+    brightness_batches = []
+
+    def collect(chunk: bytes) -> None:
+        nonlocal tail, previous
+
+        data = tail + chunk
+        complete = len(data) // frame_bytes * frame_bytes
+        tail = data[complete:]
+        if not complete:
+            return
+
+        frames = np.frombuffer(data, dtype=np.uint8, count=complete).reshape(-1, frame_bytes)
+        brightness_batches.append(frames.mean(axis=1, dtype=np.float32))
+        frames = frames.astype(np.float32)
+        delta = np.diff(frames, axis=0)
+        np.abs(delta, out=delta)
+        motion = np.empty(len(frames), dtype=np.float32)
+        motion[0] = 0.0 if previous is None else np.abs(frames[0] - previous).mean()
+        motion[1:] = delta.mean(axis=1)
+        motion_batches.append(motion)
+        previous = frames[-1].copy()
 
     cmd = [
         ffmpeg(), "-v", "error",
@@ -71,12 +93,12 @@ def _decode_sampled_gray(video_path: Path) -> np.ndarray:
         "-vf", f"fps={SAMPLE_FPS},scale={FRAME_W}:{FRAME_H}",
         "-f", "rawvideo", "-pix_fmt", "gray", "-",
     ]
-    result = cancel.run(cmd)  # stops if the video is cancelled (#113)
+    result = cancel.run(cmd, consume_stdout=collect)
     if result.returncode != 0:
         raise RuntimeError(f"ffmpeg visual decode failed:\n{result.stderr[-1000:].decode(errors='replace')}")
-    buf = np.frombuffer(result.stdout, dtype=np.uint8)
-    n = buf.size // (FRAME_W * FRAME_H)
-    return buf[: n * FRAME_W * FRAME_H].reshape(n, FRAME_H, FRAME_W)
+    if not motion_batches:
+        return np.empty(0, dtype=np.float64), np.empty(0, dtype=np.float32)
+    return np.concatenate(motion_batches, dtype=np.float64), np.concatenate(brightness_batches)
 
 
 def _rolling_median(x: np.ndarray, window: int) -> np.ndarray:

@@ -1,3 +1,4 @@
+import { t as tr } from "../lib/i18n"
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { api, errorText } from '../lib/api'
 import { t } from '../lib/i18n'
@@ -177,7 +178,7 @@ export default function RemoteRenderCard(): JSX.Element {
                   />
                   <input
                     className="input !py-1 text-sm w-32 font-mono"
-                    placeholder="ABCD-EFGH"
+                    placeholder={tr("ABCD-EFGH")}
                     value={code}
                     onChange={(e) => setCode(e.target.value)}
                   />
@@ -331,8 +332,8 @@ function WorkerRow({
       <p className="text-xs text-muted mt-1">{status}</p>
       {w.caps.gpu?.vram_total_gb ? (
         <p className="text-xs text-muted">
-          VRAM {w.caps.gpu.vram_used_gb ?? '?'} / {w.caps.gpu.vram_total_gb} GB
-          {typeof w.caps.gpu.utilisation === 'number' ? ` · GPU ${w.caps.gpu.utilisation}%` : ''}
+          {tr("VRAM")} {w.caps.gpu.vram_used_gb ?? '?'} / {w.caps.gpu.vram_total_gb} GB
+          {typeof w.caps.gpu.utilisation === 'number' ? tr(" · GPU {0}%", w.caps.gpu.utilisation) : ''}
           {w.caps.framing === false ? ` · ${t('no face tracking: only whole-frame clips')}` : ''}
         </p>
       ) : null}

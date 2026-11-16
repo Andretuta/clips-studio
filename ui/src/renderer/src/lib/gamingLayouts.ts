@@ -1,3 +1,4 @@
+import { t as tr } from "./i18n"
 /** Gaming / Reaction layouts and platform safe zones: a copy of
  *  gaming/layouts.json, which the renderer reads. A test keeps the two
  *  identical (tests/test_ui_gaming_layout_sync.py); edit the JSON, then this. */
@@ -16,7 +17,7 @@ export const LAYOUTS = {
       "right": 190
     },
     "reels": {
-      "label": "Instagram Reels",
+      "label": tr("Instagram Reels"),
       "top": 245,
       "bottom": 400,
       "left": 60,
@@ -30,14 +31,14 @@ export const LAYOUTS = {
       "right": 190
     },
     "all": {
-      "label": "All three",
+      "label": tr("All three"),
       "top": 250,
       "bottom": 420,
       "left": 60,
       "right": 205
     },
     "none": {
-      "label": "None",
+      "label": tr("None"),
       "top": 0,
       "bottom": 0,
       "left": 0,
@@ -47,7 +48,7 @@ export const LAYOUTS = {
   "headroom": 0.06,
   "presets": {
     "split": {
-      "label": "Split",
+      "label": tr("Split"),
       "type": "stack",
       "rows": [
         [
@@ -66,7 +67,7 @@ export const LAYOUTS = {
       "game_fit": "fill"
     },
     "basecam": {
-      "label": "Basecam",
+      "label": tr("Basecam"),
       "type": "stack",
       "rows": [
         [
@@ -85,7 +86,7 @@ export const LAYOUTS = {
       "game_fit": "fill"
     },
     "half": {
-      "label": "Half",
+      "label": tr("Half"),
       "type": "stack",
       "rows": [
         [
@@ -104,17 +105,17 @@ export const LAYOUTS = {
       "game_fit": "fill"
     },
     "fullscreen": {
-      "label": "Fullscreen",
+      "label": tr("Fullscreen"),
       "type": "full",
       "game_fit": "fill"
     },
     "blurred": {
-      "label": "Blurred",
+      "label": tr("Blurred"),
       "type": "full",
       "game_fit": "fit"
     },
     "small_cam": {
-      "label": "Small facecam",
+      "label": tr("Small facecam"),
       "type": "pip",
       "cams": [
         "cam"
@@ -125,7 +126,7 @@ export const LAYOUTS = {
       "game_fit": "fill"
     },
     "circle_cam": {
-      "label": "Circle facecam",
+      "label": tr("Circle facecam"),
       "type": "pip",
       "cams": [
         "cam"
@@ -136,7 +137,7 @@ export const LAYOUTS = {
       "game_fit": "fill"
     },
     "game_ui": {
-      "label": "Game UI",
+      "label": tr("Game UI"),
       "type": "stack",
       "rows": [
         [
@@ -159,7 +160,7 @@ export const LAYOUTS = {
       "game_fit": "fill"
     },
     "mosaic": {
-      "label": "Mosaic",
+      "label": tr("Mosaic"),
       "type": "stack",
       "rows": [
         [
@@ -179,7 +180,7 @@ export const LAYOUTS = {
       "game_fit": "fill"
     },
     "dual_cam": {
-      "label": "Dual facecam",
+      "label": tr("Dual facecam"),
       "type": "pip",
       "cams": [
         "cam",
@@ -191,7 +192,7 @@ export const LAYOUTS = {
       "game_fit": "fill"
     },
     "duo_split": {
-      "label": "Duo split",
+      "label": tr("Duo split"),
       "type": "stack",
       "rows": [
         [

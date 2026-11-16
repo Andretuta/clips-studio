@@ -19,6 +19,7 @@ encoder, audio and captions handling as the standard renderer.
 
 import subprocess
 from pathlib import Path
+from tempfile import TemporaryDirectory
 
 from core.binaries import ffmpeg
 from gaming.layout import OUT_H, OUT_W, Element, Plan
@@ -85,6 +86,20 @@ def filter_graph(p: Plan, vf_extra: str = "", ass_name: str | None = None) -> st
 
 def render(clip_path: Path, output_path: Path, p: Plan, ass_path: Path | None = None,
            vf_extra: str = "", normalize: bool = True) -> Path:
+    if ass_path is not None and p.caption_y is not None:
+        from video.captions import place_middle_captions
+
+        # Keep the original ASS in case the pipeline falls back to another layout.
+        with TemporaryDirectory(prefix="gaming-caption-", dir=ass_path.parent) as folder:
+            placed = Path(folder) / "captions.ass"
+            placed.write_text(place_middle_captions(ass_path.read_text(encoding="utf-8"),
+                                                   OUT_W // 2, p.caption_y), encoding="utf-8")
+            return _render(clip_path, output_path, p, placed, vf_extra, normalize)
+    return _render(clip_path, output_path, p, ass_path, vf_extra, normalize)
+
+
+def _render(clip_path: Path, output_path: Path, p: Plan, ass_path: Path | None,
+            vf_extra: str, normalize: bool) -> Path:
     cmd = [
         ffmpeg(), "-y",
         "-i", str(clip_path.resolve()),

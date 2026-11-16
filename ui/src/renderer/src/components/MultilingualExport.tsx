@@ -1,3 +1,4 @@
+import { t as tr } from "../lib/i18n"
 import { useEffect, useState } from 'react'
 import { api } from '../lib/api'
 import { getExportFolder, pickExportFolder, setExportFolder } from '../lib/exportFolder'
@@ -215,7 +216,7 @@ export default function MultilingualExport({
     const name = installed.find((n) => n.startsWith('qwen')) ?? RECOMMENDED
     await api.patchSettings({ translation_model: name })
     setTransModel(name)
-    setNotice(`Translation will use ${name}.`)
+    setNotice(tr("Translation will use {0}.", name))
   }
 
   // How many of the picked languages actually have text waiting to export.
@@ -249,7 +250,7 @@ export default function MultilingualExport({
     setNotice('')
     try {
       const ids = await targetClips()
-      setRun({ kind: 'translate', startedAt: Date.now(), fraction: 0, label: 'Starting…' })
+      setRun({ kind: 'translate', startedAt: Date.now(), fraction: 0, label: tr("Starting…") })
       const res = await api.translateClips({
         clip_ids: ids,
         languages: picked,
@@ -257,7 +258,7 @@ export default function MultilingualExport({
       })
       watchJob(res.job_id)
     } catch (e) {
-      setNotice(`Error: ${e instanceof Error ? e.message : String(e)}`)
+      setNotice(tr("Error: {0}", e instanceof Error ? e.message : String(e)))
       setRun(null)
       setBusy(false)
     }
@@ -274,7 +275,7 @@ export default function MultilingualExport({
         setWaiting(false)
         setBusy(false)
         setRun(null)
-        setNotice(`${kind === 'export' ? 'Export' : 'Translation'} is taking unusually long — check the Dashboard activity feed.`)
+        setNotice(tr("{0} is taking unusually long — check the Dashboard activity feed.", kind === 'export' ? tr("Export") : tr("Translation")))
         return
       }
       try {
@@ -285,12 +286,12 @@ export default function MultilingualExport({
           setRun(null)
           setReloadKey((k) => k + 1)
           const took = formatEta((Date.now() - started) / 1000)
-          const what = kind === 'export' ? 'Export' : 'Translation'
+          const what = kind === 'export' ? tr("Export") : tr("Translation")
           setNotice(
             job.status === 'done'
               ? kind === 'export'
-                ? `Exported in ${took} — the files are in your export folder.`
-                : `Translated in ${took}. It's on the video now — fix anything wrong, then export.`
+                ? tr("Exported in {0} — the files are in your export folder.", took)
+                : tr("Translated in {0}. It's on the video now — fix anything wrong, then export.", took)
               : `${what} ${job.status}${job.error ? `: ${job.error}` : ''}`
           )
           return
@@ -309,7 +310,7 @@ export default function MultilingualExport({
     setNotice('')
     try {
       const ids = await targetClips()
-      setRun({ kind: 'export', startedAt: Date.now(), fraction: 0, label: 'Starting…' })
+      setRun({ kind: 'export', startedAt: Date.now(), fraction: 0, label: tr("Starting…") })
       const res = await api.translateClips({
         clip_ids: ids,
         languages: picked,
@@ -324,7 +325,7 @@ export default function MultilingualExport({
       })
       watchJob(res.job_id, 'export')
     } catch (e) {
-      setNotice(`Error: ${e instanceof Error ? e.message : String(e)}`)
+      setNotice(tr("Error: {0}", e instanceof Error ? e.message : String(e)))
       setRun(null)
       setBusy(false)
     }
@@ -417,8 +418,8 @@ export default function MultilingualExport({
           onClick={translate}
           title={
             picked.length === 0
-              ? 'Pick at least one language'
-              : 'Translate the captions so you can read and fix them before anything is written'
+              ? tr("Pick at least one language")
+              : tr("Translate the captions so you can read and fix them before anything is written")
           }
         >
           {waiting ? t('Translating…') : t('Translate & review')}
@@ -429,7 +430,7 @@ export default function MultilingualExport({
           onClick={exportNow}
           title={
             readyCount === 0
-              ? 'Translate first, so you can check the text before it is written'
+              ? tr("Translate first, so you can check the text before it is written")
               : undefined
           }
         >
@@ -445,7 +446,7 @@ export default function MultilingualExport({
             <span className="truncate">{run.label}</span>
             <span className="text-muted tabular-nums shrink-0">
               {Math.round(run.fraction * 100)}% · {formatEta(elapsed)}
-              {eta !== null ? ` · ~${formatEta(eta)} left` : ''}
+              {eta !== null ? tr(" · ~{0} left", formatEta(eta)) : ''}
             </span>
           </div>
           <div className="h-1.5 rounded-full bg-raised overflow-hidden">
@@ -562,14 +563,14 @@ export default function MultilingualExport({
                 disabled={pulling}
                 onClick={async () => {
                   setPulling(true)
-                  setNotice(`Downloading ${RECOMMENDED} — watch the Models page for progress.`)
+                  setNotice(tr("Downloading {0} — watch the Models page for progress.", RECOMMENDED))
                   try {
                     await api.pullModel(RECOMMENDED)
                     await api.patchSettings({ translation_model: RECOMMENDED })
                     setTransModel(RECOMMENDED)
-                    setNotice(`${RECOMMENDED} installed and set as the translation model.`)
+                    setNotice(tr("{0} installed and set as the translation model.", RECOMMENDED))
                   } catch (e) {
-                    setNotice(`Install failed: ${e instanceof Error ? e.message : String(e)}`)
+                    setNotice(tr("Install failed: {0}", e instanceof Error ? e.message : String(e)))
                   } finally {
                     setPulling(false)
                   }
@@ -638,7 +639,7 @@ export default function MultilingualExport({
                 muted
                 className="h-8 flex-1 min-w-0"
                 onError={() =>
-                  setNotice('That voice could not be played — check the Dashboard activity feed.')
+                  setNotice(tr("That voice could not be played — check the Dashboard activity feed."))
                 }
               />
               <button

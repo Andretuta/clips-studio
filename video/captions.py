@@ -12,6 +12,7 @@ word-level timestamps are missing (transcripts cached before they were
 enabled).
 """
 
+import os
 import re
 from collections.abc import Iterable
 from pathlib import Path
@@ -20,9 +21,9 @@ from core.models import ClipCandidate, Segment
 
 DEFAULT_STYLE = {
     "font": "Arial",          # must be in FONTS (installed on stock Windows)
-    "font_size": 84,          # at 1080x1920 playback resolution
+    "font_size": 68,          # at 1080x1920 playback resolution
     "color": "#FFFFFF",       # text colour (hex RGB)
-    "position": "bottom",     # bottom | middle | top
+    "position": "middle",     # bottom | middle | top
     "words_per_caption": 3,
     "uppercase": True,
     "highlight": False,           # light up each word as it is spoken
@@ -87,6 +88,65 @@ def caption_font_for(language: str, chosen: str | None) -> str | None:
 
 # position -> (ASS numpad alignment, vertical margin)
 _POSITIONS = {"bottom": (2, 440), "middle": (5, 0), "top": (8, 140)}
+_NO_WRAP = r"{\q2"
+_ROW_BREAK = r"\N"
+_FONT_FILES = {
+    "Arial": "arialbd.ttf", "Arial Black": "ariblk.ttf", "Impact": "impact.ttf",
+    "Verdana": "verdanab.ttf", "Tahoma": "tahomabd.ttf", "Trebuchet MS": "trebucbd.ttf",
+    "Segoe UI": "segoeuib.ttf", "Georgia": "georgiab.ttf", "Comic Sans MS": "comicbd.ttf",
+    "Courier New": "courbd.ttf", "Nirmala UI": "NirmalaB.ttf", "Yu Gothic UI": "YuGothB.ttc",
+    "Malgun Gothic": "malgunbd.ttf", "Microsoft YaHei": "msyhbd.ttc", "Leelawadee UI": "LeelaUIb.ttf",
+}
+
+
+def _font_size(opts: dict, height: int) -> int:
+    size = max(40, min(200, int(opts["font_size"])))
+    return max(24, round(size * height / 1920))
+
+
+def middle_caption_band(style: dict | None) -> int:
+    """Pixels for two animated rows in a portrait gaming layout."""
+    opts = {**DEFAULT_STYLE, **(style or {})}
+    if opts["position"] != "middle":
+        return 0
+    return 2 * round((_font_size(opts, 1920) * 2.6 + 24) / 2)
+
+
+def place_middle_captions(ass: str, x: int, y: int) -> str:
+    """Move the caption events to the space reserved by the gaming plan."""
+    prefix = f",Default,,0,0,0,,{_NO_WRAP}"
+    return ass.replace(prefix, prefix + rf"\pos({x},{y})")
+
+
+def _caption_font(opts: dict) -> str:
+    return opts["font"] if opts.get("font") in FONTS else DEFAULT_STYLE["font"]
+
+
+def _measure(font: str, size: int):
+    """Get glyph advances for the font libass uses, with room for fallback glyphs."""
+    from video.filters import FONTS_DIR
+
+    if font == "Bebas Neue":
+        path = FONTS_DIR / "BebasNeue-Regular.ttf"
+    else:
+        path = Path(os.environ.get("WINDIR", r"C:\Windows")) / "Fonts" / _FONT_FILES[font]
+    try:
+        from PIL import ImageFont
+
+        face = ImageFont.truetype(str(path), size)
+    except (ImportError, OSError):
+        # Without the face, allow an em per character instead of assuming Latin widths.
+        return lambda text: len(text) * size * 1.15
+    return lambda text: face.getlength(text) * 1.12
+
+
+def _caption_rows(tokens: list[str], measure, width: float) -> list[list[str]]:
+    rows: list[list[str]] = [[]]
+    for word in tokens:
+        if rows[-1] and measure(" ".join([*rows[-1], word])) > width:
+            rows.append([])
+        rows[-1].append(word)
+    return rows
 
 
 def build_caption_lines(
@@ -476,16 +536,16 @@ def build_captions(
     if lines is None:
         lines = build_caption_lines(segments, candidate, opts["words_per_caption"])
 
-    # Word timings for the highlight, clip-relative like `lines` are.
-    spoken = (
-        [
-            {"start": w["start"] - candidate.start, "end": w["end"] - candidate.start,
-             "word": w["word"]}
-            for w in _words_in_window(segments, candidate.start, candidate.end)
-        ]
-        if opts.get("highlight")
-        else []
-    )
+    # Word timings for splitting a long cue and highlighting it.
+    spoken = [
+        {"start": w["start"] - candidate.start, "end": w["end"] - candidate.start,
+         "word": w["word"]}
+        for w in _words_in_window(segments, candidate.start, candidate.end)
+    ]
+    font_size = _font_size(opts, canvas[1])
+    measure = _measure(_caption_font(opts), font_size)
+    # Leave room for the outline and the peak of the karaoke animation.
+    width = (canvas[0] * 0.80 - 20) / (1.22 if opts["highlight"] and opts["pop"] else 1)
 
     # The other speaker's lines (build_caption_lines, tag_lines) in their own
     # colour. Only with the option on: a "speaker" left on a saved line by an
@@ -496,24 +556,51 @@ def build_captions(
         else None
     )
 
-    dialogue = []
+    cues_by_start = {}
     for line in lines:
         text = str(line.get("text", "")).strip()
         if not text:
             continue  # a blanked-out line deletes that caption
         if opts["uppercase"]:
             text = text.upper()
-        text = text.replace("\\", "").replace("{", "").replace("}", "")  # ASS control chars
+        words = text.replace("\\", "").replace("{", "").replace("}", "").split()
         start, end = float(line["start"]), float(line["end"])
-        if end <= start:
+        if not words or end <= start:
             continue
-        tint = second if second and line.get("speaker") else None
-        if opts.get("highlight"):
-            dialogue.extend(_highlighted(text, start, end, spoken, opts, tint))
-        else:
-            dialogue.append(
-                f"Dialogue: 0,{_ass_time(start)},{_ass_time(end)},Default,,0,0,0,,{_tinted(text, tint)}"
-            )
+        previous_end, previous_words, tint = cues_by_start.get(
+            start, (end, [], second if line.get("speaker") else None)
+        )
+        cues_by_start[start] = max(end, previous_end), previous_words + words, tint
+    cues = sorted(cues_by_start.items())
+
+    dialogue = []
+    for idx, (start, (end, words, tint)) in enumerate(cues):
+        # Briefly overlapping transcript segments must not draw stacked captions.
+        if idx + 1 < len(cues):
+            end = min(end, cues[idx + 1][0])
+        if _ass_time(end) == _ass_time(start):
+            continue
+        rows = _caption_rows(words, measure, width)
+        times = _word_times(" ".join(words), start, end, spoken)
+        offset = 0
+        page_start = start
+        for i in range(0, len(rows), 2):
+            page = rows[i:i + 2]
+            offset_end = offset + sum(len(row) for row in page)
+            page_end = end if offset_end == len(words) else max(page_start, min(end, times[offset_end][0]))
+            if _ass_time(page_end) != _ass_time(page_start):
+                longest = max(measure(" ".join(row)) for row in page)
+                shrink = rf"\fs{max(1, int(font_size * width / longest))}" if longest > width else ""
+                tags = f"{_NO_WRAP}{shrink}}}"
+                if opts["highlight"]:
+                    dialogue.extend(_highlighted(page, page_start, page_end, times[offset:offset_end], opts, tags, tint))
+                else:
+                    body = _ROW_BREAK.join(" ".join(row) for row in page)
+                    dialogue.append(
+                        f"Dialogue: 0,{_ass_time(page_start)},{_ass_time(page_end)},Default,,0,0,0,,"
+                        f"{tags}{_tinted(body, tint)}"
+                    )
+            offset, page_start = offset_end, page_end
 
     if not dialogue:
         return None
@@ -553,7 +640,8 @@ def _tinted(text: str, tint: str | None) -> str:
 
 
 def _highlighted(
-    text: str, start: float, end: float, spoken: list[dict], opts: dict, tint: str | None = None
+    rows: list[list[str]], start: float, end: float, times: list[tuple[float, float]],
+    opts: dict, tags: str, tint: str | None = None,
 ) -> list[str]:
     """One Dialogue per word: the whole caption, with the word being spoken
     in the highlight colour. `tint` is the caption's own colour when it is
@@ -563,32 +651,36 @@ def _highlighted(
     coloured, which is the sing-along look. Short-form captions highlight
     exactly ONE word at a time, so each state is its own event.
     """
-    tokens = text.split()
-    times = _word_times(text, start, end, spoken)
+    tokens = [word for row in rows for word in row]
     if len(tokens) < 2 or not times:
-        return [f"Dialogue: 0,{_ass_time(start)},{_ass_time(end)},Default,,0,0,0,,{_tinted(text, tint)}"]
+        return [f"Dialogue: 0,{_ass_time(start)},{_ass_time(end)},Default,,0,0,0,,{tags}{_tinted(tokens[0], tint)}"]
 
     base = tint or _inline_color(opts["color"])
     hot = _inline_color(opts.get("highlight_color", DEFAULT_STYLE["highlight_color"]))
     grow, settle = (_POP, r"\fscx100\fscy100") if opts.get("pop") else ("", "")
     karaoke = bool(opts.get("karaoke"))
     events = []
-    for i, (w_start, w_end) in enumerate(times):
+    for i, (w_start, _) in enumerate(times):
         # Hold each state until the next word begins, so there is never a
         # frame with nothing on screen between words.
         seg_start = start if i == 0 else max(start, w_start)
         seg_end = end if i == len(times) - 1 else max(seg_start, min(end, times[i + 1][0]))
-        if seg_end <= seg_start:
+        if seg_end <= seg_start or _ass_time(seg_end) == _ass_time(seg_start):
             continue
-        body = " ".join(
+        colored = [
             f"{{{grow}\\1c{hot}}}{tok}{{{settle}\\1c{base}}}" if j == i
             else f"{{\\1c{hot}}}{tok}{{\\1c{base}}}" if karaoke and j < i
             else tok
             for j, tok in enumerate(tokens)
-        )
+        ]
+        if len(rows) == 2:
+            split = len(rows[0])
+            body = _ROW_BREAK.join((" ".join(colored[:split]), " ".join(colored[split:])))
+        else:
+            body = " ".join(colored)
         events.append(
             f"Dialogue: 0,{_ass_time(seg_start)},{_ass_time(seg_end)},Default,,0,0,0,,"
-            f"{{\\1c{base}}}{body}"
+            f"{tags}{{\\1c{base}}}{body}"
         )
     return events
 
@@ -599,15 +691,15 @@ _POP = r"\fscx100\fscy100\t(0,70,\fscx122\fscy122)\t(70,150,\fscx112\fscy112)"
 
 
 def _header(opts: dict, canvas: tuple[int, int] = (1080, 1920)) -> str:
-    alignment, margin_v = _POSITIONS.get(opts["position"], _POSITIONS["bottom"])
+    alignment, margin_v = _POSITIONS.get(opts["position"], _POSITIONS[DEFAULT_STYLE["position"]])
     color = _ass_color(opts["color"])
-    size = max(40, min(200, int(opts["font_size"])))  # condensed fonts (Bebas) need ~165
-    font = opts.get("font") if opts.get("font") in FONTS else "Arial"
+    size = _font_size(opts, canvas[1])
+    font = _caption_font(opts)
     # Style values are calibrated for the 1920-tall Shorts canvas; scale
     # them to whatever frame this clip renders at (e.g. landscape 1080).
     scale = canvas[1] / 1920
-    size = max(24, round(size * scale))
     margin_v = round(margin_v * scale)
+    outline = max(3, min(7, round(size / 14)))
     return f"""[Script Info]
 ScriptType: v4.00+
 PlayResX: {canvas[0]}
@@ -616,7 +708,7 @@ WrapStyle: 0
 
 [V4+ Styles]
 Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
-Style: Default,{font},{size},{color},{color},&H00000000,&H7F000000,-1,0,0,0,100,100,0,0,1,7,2,{alignment},60,60,{margin_v},1
+Style: Default,{font},{size},{color},{color},&H00000000,&H7F000000,-1,0,0,0,100,100,0,0,1,{outline},2,{alignment},60,60,{margin_v},1
 
 [Events]
 Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text

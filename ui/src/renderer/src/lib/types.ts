@@ -317,6 +317,11 @@ export interface Adjust {
   vignette?: number // 0..1, 0 = off
 }
 
+export interface CortesGamerStyle {
+  size: number
+  opacity: number
+}
+
 export interface WatermarkConfig {
   type: 'text' | 'image' | 'both'
   text?: string
@@ -389,6 +394,8 @@ export interface RenderOpts {
   /** Gaming / Reaction split (gaming/run.py). null turns it off for the clip. */
   gaming?: GamingSettings | null
   watermark?: WatermarkConfig | null
+  cortes_gamer_watermark?: boolean
+  cortes_gamer_style?: CortesGamerStyle
   /** A Sports job's clip: its sport, so a re-render frames the ball again. */
   sport?: string
 }
@@ -458,13 +465,27 @@ export interface Clip {
 
 export interface Job {
   id: number
-  type: 'process' | 'render' | 'translate'
+  type: 'process' | 'render' | 'translate' | 'compilation'
   payload: string
   // 'cancelled' is written by the worker on a user cancel (server/jobs.py).
   status: 'queued' | 'running' | 'done' | 'failed' | 'cancelled'
   error: string
   created_at: string
   updated_at: string
+}
+
+export interface CompilationSource {
+  id: string
+  cortes_gamer_baked?: boolean
+  title: string
+  channel: string
+  state: 'aprovado' | 'pendente' | 'biblioteca'
+  duration: number | null
+}
+
+export interface CompilationJob {
+  job_id: number
+  video_id: string
 }
 
 /** One video's processing settings, snapshotted when it entered the queue.
@@ -494,6 +515,8 @@ export interface JobOptions {
   /** `shorts`: also make the 9:16 Shorts, in the same job (#98). */
   longform?: { mode: string; shorts?: boolean } | null
   watermark_profile_id?: number | null
+  cortes_gamer_watermark?: boolean
+  cortes_gamer_style?: CortesGamerStyle
   filter?: FilterName
   min_score?: number
   /** What the clips should be about, in the person's words: only adds points. */

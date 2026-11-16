@@ -1,3 +1,4 @@
+import { t as tr } from "../lib/i18n"
 import { useEffect, useState } from 'react'
 import { api } from '../lib/api'
 import type { Adjust, Clip } from '../lib/types'
@@ -109,19 +110,19 @@ export default function ColorControls({
     max: number
     signed?: boolean
   }[] = [
-    { key: 'brightness', label: 'Brightness', min: -50, max: 50, signed: true },
-    { key: 'saturation', label: 'Saturation', min: 0, max: 300 },
-    { key: 'contrast', label: 'Contrast', min: 50, max: 200 },
-    { key: 'temperature', label: 'Temperature (cool ↔ warm)', min: -100, max: 100, signed: true },
-    { key: 'tint', label: 'Tint (green ↔ magenta)', min: -100, max: 100, signed: true },
-    { key: 'sharpen', label: 'Sharpen', min: 0, max: 100 },
-    { key: 'vignette', label: 'Vignette', min: 0, max: 100 }
+    { key: 'brightness', label: tr("Brightness"), min: -50, max: 50, signed: true },
+    { key: 'saturation', label: tr("Saturation"), min: 0, max: 300 },
+    { key: 'contrast', label: tr("Contrast"), min: 50, max: 200 },
+    { key: 'temperature', label: tr("Temperature (cool ↔ warm)"), min: -100, max: 100, signed: true },
+    { key: 'tint', label: tr("Tint (green ↔ magenta)"), min: -100, max: 100, signed: true },
+    { key: 'sharpen', label: tr("Sharpen"), min: 0, max: 100 },
+    { key: 'vignette', label: tr("Vignette"), min: 0, max: 100 }
   ]
 
   return (
     <div className="border border-raised/60 rounded-lg p-3 space-y-3">
       <p className="font-medium text-sm inline-flex items-center gap-1.5">
-        <Palette size={15} /> Color &amp; look
+        <Palette size={15} /> {tr("Color &amp; look")}
       </p>
       <FilterPicker value={clipFilter} onChange={setClipFilter} />
       <div className="space-y-2">
@@ -147,7 +148,7 @@ export default function ColorControls({
           </div>
         ))}
         <button className="text-xs text-muted hover:text-ink" onClick={() => setAdjust({ ...NEUTRAL_ADJUST })}>
-          Reset adjustments
+          {tr("Reset adjustments")}
         </button>
       </div>
       {dirty && (
@@ -158,7 +159,7 @@ export default function ColorControls({
             setBusy(true)
             try {
               await api.rerenderClip(clip.id, undefined, { filter: clipFilter, adjust })
-              setNotice('Color changes queued — re-rendering. Preview is approximate.')
+              setNotice(tr("Color changes queued — re-rendering. Preview is approximate."))
               onChanged()
             } catch (e) {
               setNotice(String(e))
@@ -167,7 +168,7 @@ export default function ColorControls({
             }
           }}
         >
-          {busy ? 'Queueing…' : 'Apply color changes (re-render)'}
+          {busy ? tr("Queueing…") : tr("Apply color changes (re-render)")}
         </button>
       )}
       {notice && <p className="text-xs text-muted">{notice}</p>}

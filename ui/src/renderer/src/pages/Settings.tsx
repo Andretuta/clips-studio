@@ -1,3 +1,4 @@
+import { t as tr } from "../lib/i18n"
 import { useEffect, useRef, useState } from 'react'
 import {
   DEFAULT_APPEARANCE,
@@ -16,7 +17,7 @@ import {
   setNotifyOnQueueEmpty
 } from '../lib/queueNotifications'
 import {
-  APP_LANGUAGES,
+  appLanguages,
   LANGUAGE_NAMES,
   appLanguageSetting,
   languageLabel,
@@ -63,7 +64,7 @@ function LanguageCard(): JSX.Element {
           value={appLanguageSetting()}
           onChange={(e) => setAppLanguage(e.target.value)}
         >
-          {APP_LANGUAGES.map(([code, label]) => (
+          {appLanguages().map(([code, label]) => (
             <option key={code} value={code}>
               {label}
             </option>
@@ -125,7 +126,7 @@ function ExportFolderCard(): JSX.Element {
             setFolder(e.target.value)
             setExportFolder(e.target.value)
           }}
-          placeholder="e.g. C:\\Users\\you\\Downloads"
+          placeholder={tr("e.g. C:\\\\Users\\\\you\\\\Downloads")}
           title={folder}
         />
         <button
@@ -162,12 +163,12 @@ function StorageCard(): JSX.Element {
   useEffect(load, [])
 
   const LABELS: Record<string, string> = {
-    partial_downloads: 'Interrupted downloads',
-    orphan_downloads: 'Downloads with no video',
-    orphan_transcripts: 'Transcripts with no video',
-    render_leftovers: 'Leftovers from failed renders',
-    orphan_clips: 'Clip files not in your library',
-    previews: 'Editor previews (rebuilt on demand)'
+    partial_downloads: tr("Interrupted downloads"),
+    orphan_downloads: tr("Downloads with no video"),
+    orphan_transcripts: tr("Transcripts with no video"),
+    render_leftovers: tr("Leftovers from failed renders"),
+    orphan_clips: tr("Clip files not in your library"),
+    previews: tr("Editor previews (rebuilt on demand)")
   }
 
   return (
@@ -355,7 +356,7 @@ function AppearanceCard(): JSX.Element {
       </div>
       <div>
         <label htmlFor="app-scale" className="label">
-          Text size — {appearance.scale}%
+          {tr("Text size —")} {appearance.scale}%
         </label>
         <input
           id="app-scale"
@@ -386,8 +387,7 @@ function AppearanceCard(): JSX.Element {
         </button>
       </div>
       <p className="text-xs text-muted">
-        Changes apply instantly and are remembered. Keyboard focus outlines and reduced-motion
-        preferences are always honored.
+        {tr("Changes apply instantly and are remembered. Keyboard focus outlines and reduced-motion preferences are always honored.")}
       </p>
     </div>
   )
@@ -407,7 +407,7 @@ function UpdateCard(): JSX.Element {
     // API must degrade to "updates unavailable", never take the window down.
     const updater = window.studio?.update
     if (!updater) {
-      setState({ state: 'error', message: 'Updates are unavailable — restart Clips Kitty.' })
+      setState({ state: 'error', message: tr("Updates are unavailable — restart Clips Kitty.") })
       return
     }
     updater.prefs().then((p) => setChannel(p.channel))
@@ -415,26 +415,26 @@ function UpdateCard(): JSX.Element {
   }, [])
 
   const line = ((): string => {
-    if (!asked && !state) return 'Clips Kitty checks for updates when it starts.'
+    if (!asked && !state) return tr("Clips Kitty checks for updates when it starts.")
     switch (state?.state) {
       case 'checking':
-        return 'Checking…'
+        return tr("Checking…")
       case 'available':
         return `Version ${state.version} is available — see the bar at the top.`
       case 'downloading':
         if (state.phase === 'package')
           return state.percent === undefined
-            ? 'Downloading the app files…'
+            ? tr("Downloading the app files…")
             : `Downloading the app files… ${state.percent}%`
         return (state.percent ?? 0) >= 100
-          ? 'Preparing the app files download…'
+          ? tr("Preparing the app files download…")
           : `Downloading… ${state.percent ?? 0}%`
       case 'ready':
         return `Version ${state.version} is ready to install.`
       case 'none':
-        return "You're on the latest version."
+        return tr("You're on the latest version.")
       case 'dev':
-        return 'Updates are disabled while running from source.'
+        return tr("Updates are disabled while running from source.")
       case 'store':
         if (state.behind)
           return `Version ${state.version} is in the Microsoft Store. This copy is ${state.current}.`
@@ -442,9 +442,9 @@ function UpdateCard(): JSX.Element {
           return `You're on the latest version (${state.current}). The Microsoft Store installs new versions for you.`
         return `Couldn't check the Microsoft Store just now. This copy is ${state.current}, and the Store keeps it up to date for you.`
       case 'error':
-        return `Could not check: ${state.message ?? 'unknown error'}`
+        return tr("Could not check: {0}", state.message ?? tr("unknown error"))
       default:
-        return 'Clips Kitty checks for updates when it starts.'
+        return tr("Clips Kitty checks for updates when it starts.")
     }
   })()
 
@@ -461,7 +461,7 @@ function UpdateCard(): JSX.Element {
             void window.studio.update.check()
           }}
         >
-          {state?.state === 'checking' ? 'Checking…' : t('Check for updates')}
+          {state?.state === 'checking' ? tr("Checking…") : t('Check for updates')}
         </button>
         {state?.state === 'store' && (
           <button
@@ -481,15 +481,14 @@ function UpdateCard(): JSX.Element {
               void window.studio.update.prefs({ channel: e.target.value })
             }}
           >
-            <option value="stable">Stable</option>
-            <option value="beta">Beta</option>
-            <option value="alpha">Alpha</option>
+            <option value="stable">{tr("Stable")}</option>
+            <option value="beta">{tr("Beta")}</option>
+            <option value="alpha">{tr("Alpha")}</option>
           </select>
         </label>
       </div>
       <p className="text-[11px] text-muted">
-        Stable is finished releases only. Beta and Alpha get new features earlier and break
-        more often. Nothing downloads or installs without you asking.
+        {tr("Stable is finished releases only. Beta and Alpha get new features earlier and break more often. Nothing downloads or installs without you asking.")}
       </p>
     </div>
   )
@@ -510,15 +509,15 @@ function SetupCard(): JSX.Element {
     <div className="card space-y-3" aria-label={t("Setup")}>
       <h3 className="font-semibold">{t('Setup')}</h3>
       {pre === null ? (
-        <p className="text-sm text-muted">Checking what this install has…</p>
+        <p className="text-sm text-muted">{tr("Checking what this install has…")}</p>
       ) : missing.length === 0 ? (
         <p className="text-sm text-muted">
-          Everything Clips Kitty needs is installed and working.
+          {tr("Everything Clips Kitty needs is installed and working.")}
         </p>
       ) : (
         <div className="text-sm">
           <p className="text-red-400 font-medium">
-            {missing.length} thing{missing.length === 1 ? '' : 's'} still missing:
+            {missing.length} {tr("thing")}{missing.length === 1 ? '' : 's'} {tr("still missing:")}
           </p>
           <ul className="mt-1.5 space-y-1">
             {missing.map((c) => (
@@ -818,8 +817,7 @@ export default function Settings(): JSX.Element {
       </div>
 
       <div className="card text-sm text-muted">
-        Local models are managed on the <span className="text-ink">Models</span> page; where the AI runs
-        is chosen under AI above. Advanced options (scoring weights, tracking, captions) live in{' '}
+        {tr("Local models are managed on the")} <span className="text-ink">{tr("Models")}</span> {tr("page; where the AI runs is chosen under AI above. Advanced options (scoring weights, tracking, captions) live in")}{' '}
         <code>config/settings.yaml</code>.
       </div>
 

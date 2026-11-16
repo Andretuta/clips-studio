@@ -1,3 +1,4 @@
+import { t as tr } from "../lib/i18n"
 import { useEffect, useState } from 'react'
 import { api } from '../lib/api'
 import { t } from '../lib/i18n'
@@ -314,11 +315,11 @@ export default function PublishAllDialog({
                           type="checkbox"
                           checked={on}
                           onChange={() => toggleClip(c.id)}
-                          aria-label={`Include clip ${c.id}`}
+                          aria-label={tr("Include clip {0}", c.id)}
                         />
                         <span
                           className={`text-xs flex-1 min-w-0 truncate ${on ? '' : 'text-muted line-through'}`}
-                          title={c.title || c.hook || `Clip ${c.id}`}
+                          title={c.title || c.hook || tr("Clip {0}", c.id)}
                         >
                           {c.title || c.hook || `${t('Clip')} ${c.id}`}
                         </span>
