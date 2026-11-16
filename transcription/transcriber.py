@@ -140,11 +140,16 @@ def _run(model, video_path: Path, language: str | None, hotwords: str | None = N
         # the opening audio (e.g. English game sound) misleads detection.
         language=language,
         vad_filter=True,
-        # Greedy decoding: ~2.4x faster than beam 5 with near-identical output
-        # (verified on real footage) — the turbo model's accuracy headroom
-        # more than covers the difference, and on 2-3h streams this saves
-        # many minutes.
-        beam_size=1,
+        # Default Silero threshold (0.5) drops quieter/shouted bursts and clips
+        # word onsets; 0.3 keeps real speech while still skipping pure silence.
+        vad_parameters={"threshold": 0.3},
+        # Greedy decoding (beam_size=1) can pick <|endoftext|> right after an
+        # early pause inside a VAD-concatenated 30s window, causing
+        # faster-whisper's single_timestamp_ending to skip the rest of the window
+        # (reproduced on clip 158: stopped at 4.4s of 25.5s). With turbo's
+        # 4-layer decoder on GPU, beam_size=5 matches beam_size=1 speed (~30x
+        # real-time) and recovers the skipped speech; CPU keeps beam_size=2.
+        beam_size=5 if _on_gpu(model) else 2,
         # Don't feed the previous window's text back in: on long streams with
         # music/noise this is what causes repeated-sentence hallucination
         # loops, and dropping it is a little faster too.

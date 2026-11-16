@@ -91,3 +91,32 @@ def test_segments_without_word_timings_are_left_alone():
     """Transcripts cached before word timestamps existed have no `words`."""
     s = Segment(start=0.0, end=200.0, text="we are ready. " * 45, words=None)
     assert _collapse_repetition_loops([s]) == 0
+
+
+def test_whisper_run_avoids_greedy_early_stop_and_strict_vad(tmp_path):
+    """Clip 158 stopped at 4.4s of 25.5s under beam_size=1 + default VAD (0.5).
+    Hold the non-greedy beam search and relaxed VAD threshold in place."""
+    import types
+    from transcription import transcriber
+
+    calls = []
+
+    class FakeModel:
+        def __init__(self, device):
+            self.model = types.SimpleNamespace(device=device)
+
+        def transcribe(self, path, **kwargs):
+            calls.append(kwargs)
+            return [], types.SimpleNamespace(duration=25.5, language="en")
+
+    transcriber._run(FakeModel("cuda"), tmp_path / "clip.mp4", None)
+    transcriber._run(FakeModel("cpu"), tmp_path / "clip.mp4", None)
+
+    assert len(calls) == 2
+    for kw, expected_beam in zip(calls, (5, 2)):
+        assert kw["vad_filter"] is True
+        assert kw["vad_parameters"] == {"threshold": 0.3}
+        assert kw["beam_size"] == expected_beam
+        assert kw["condition_on_previous_text"] is False
+        assert kw["word_timestamps"] is True
+
