@@ -6,7 +6,7 @@ A análise visual em lotes foi implementada e testada. O próximo ensaio mede o 
 
 ## Problema
 
-A transcrição e a seleção passam pelo mesmo trabalhador de vídeo. Uma sessão expirada, limitação do plano ou inferência lenta pode deixar origens prontas sem cortes, e a Cola trata falhas distintas com intervalos iguais.
+A transcrição e a seleção passam pelo mesmo trabalhador de vídeo. Uma sessão expirada, limitação do plano ou inferência lenta pode deixar origens prontas sem cortes. Desde 16/11 (R09, Cola `66cced8`) a Cola reconhece pela mensagem do erro login, limite, crédito ou chave da IA e tenta de novo a cada 30 min sem gastar tentativa nem apagar a fonte. As outras falhas ainda usam o mesmo intervalo, e o horário de retomada informado pelo ChatGPT ainda não é usado.
 
 ## Solução
 

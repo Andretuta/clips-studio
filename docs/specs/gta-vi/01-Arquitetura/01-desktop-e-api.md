@@ -2,7 +2,7 @@
 
 Estado `ready-for-agent`. Prioridade P0.
 
-Protótipo Tauri validado com a API, a Mesa e uma prévia no mudo. A próxima etapa é completar as funções nativas para operação diária.
+Protótipo Tauri validado com a API, a Mesa, uma prévia no mudo e a chave de sessão (`sessao: 200`). A próxima etapa é completar as funções nativas para operação diária.
 
 ## Problema
 
@@ -27,7 +27,8 @@ Adicionar a janela Tauri por etapas usando o frontend React e o motor Python exi
 ## Decisões de implementação
 
 - Tauri 2 em Rust abre o React no WebView2. O protótipo carrega a interface local na porta `5173` e consulta o motor Python na porta `8765`. A janela tem perfil próprio e o supervisor mantém o motor como processo independente.
-- Evoluir a ponte nativa aos poucos, começando com seleção de arquivos e pastas, sessão local, exportação e abertura de OAuth no navegador. Usar operações específicas da interface com permissões mínimas.
+- **Sessão local, feita em 16/11 (`672a7ce`).** O comando Rust `sessao_motor` lê `CLIPADOR_SESSAO` (o `session.secret`) a cada pedido e devolve a chave à interface. A capability `sessao-do-motor` libera só esse comando e só para `http://localhost:5173/*`, e o `build.rs` declara a lista de comandos. O perfil do WebView2 vai para `CLIPADOR_WEBVIEW_DIR`, no D. Limite: a janela confia no que escutar na `5173`. O frontend empacotado tira esse limite.
+- Evoluir a ponte nativa aos poucos: seleção de arquivos e pastas, exportação e abertura de OAuth no navegador. Usar operações específicas da interface com permissões mínimas.
 - Manter o motor em loopback. Exigir autenticação para API de escrita e leitura sensível. Dar credencial própria e escopo mínimo à Cola e às integrações.
 - Definir origens exatas para a interface web, a janela instalada e a conexão de eventos. Validar o identificador da janela, o frame e a navegação permitida antes de cada IPC privilegiado.
 - Limitar links externos a protocolos e destinos necessários. A página de doação deve permanecer isolada das funções nativas.
