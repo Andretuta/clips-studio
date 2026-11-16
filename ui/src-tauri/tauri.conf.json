@@ -7,9 +7,18 @@
     "devUrl": "http://localhost:5173"
   },
   "app": {
+    "withGlobalTauri": true,
     "windows": [],
     "security": {
-      "capabilities": []
+      "capabilities": [
+        {
+          "identifier": "sessao-do-motor",
+          "description": "A interface servida pelo Vite em localhost:5173 lê a chave de sessão do motor local.",
+          "windows": ["clipador"],
+          "remote": { "urls": ["http://localhost:5173/*"] },
+          "permissions": ["allow-sessao-motor"]
+        }
+      ]
     }
   },
   "bundle": {

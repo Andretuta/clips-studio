@@ -47,7 +47,14 @@ export function takeMarketplaceTab(): MarketplaceTab | null {
 
 let secret: Promise<string> | null = null
 
+type TauriGlobal = { core: { invoke: (cmd: string) => Promise<string> } }
+
 export function sessionSecret(): Promise<string> {
+  const tauri = (window as { __TAURI__?: TauriGlobal }).__TAURI__
+  if (!window.studio?.pluginSession && tauri) {
+    // Janela Tauri: lê a chave do arquivo a cada vez, então sobrevive ao reinício do motor.
+    return tauri.core.invoke('sessao_motor').catch(() => '')
+  }
   secret ??= (window.studio?.pluginSession?.() ?? Promise.resolve('')).catch(() => '')
   return secret
 }

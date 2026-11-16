@@ -22,6 +22,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     report.engine = health.ok && (await health.json()).ok
     const { contagens, cortes } = await (await fetch(`${api}/mesa/cortes`)).json()
     report.pendentes = contagens.pendentes
+    // A chave de sessão chega pelo comando do Tauri e o motor a aceita numa rota protegida.
+    const sessao = await window.__TAURI__.core.invoke('sessao_motor')
+    report.sessao = (await fetch(`${api}/diagnostics/errors`, { headers: { 'X-Clips-Kitty-Session': sessao } })).status
     report.react = Boolean(document.querySelector('#root')?.children.length)
     const first = cortes[0]
     if (!first) return finish(false, 'mesa_vazia')
@@ -40,7 +43,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       report.react = Boolean(document.querySelector('#root')?.children.length)
       report.width = preview.videoWidth
       report.muted = preview.muted
-      finish(Boolean(report.engine && report.react && report.width > 0 && report.muted))
+      finish(Boolean(report.engine && report.react && report.width > 0 && report.muted && report.sessao === 200))
     })
   } catch (error) {
     finish(false, error.name)

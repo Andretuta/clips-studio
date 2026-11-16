@@ -8,9 +8,14 @@ Primeiro bloco da migração da interface no Windows. A janela usa o WebView2 e 
 2. Se a interface estiver parada, mantenha `cola\abrir-app.cmd --web` aberto em outro terminal.
 3. Execute `cola\abrir-tauri.cmd`. O primeiro build do Cargo baixa e compila as dependências em `cache` no disco D.
 
-O perfil da janela é próprio. Nesta etapa, ela usa as funções disponíveis no modo web e restringe a navegação à origem local. Seleção nativa de arquivos, sessão privilegiada, OAuth externo e instalador são etapas posteriores. A operação diária usa o lançador habitual.
+A janela usa as funções do modo web e restringe a navegação à origem local. Desde 16/11 ela também recebe a chave de sessão do motor, então aprovar, descartar e editar na Mesa funcionam.
 
-Para testar uma Mesa com cortes, use `cola\abrir-tauri.cmd --verificar`. O ensaio abre a interface, consulta o motor, decodifica um quadro com a prévia silenciada e encerra a janela de teste com o resultado no terminal.
+- **Chave de sessão.** O comando `sessao_motor` lê `CLIPADOR_SESSAO`, que o `abrir-tauri.cmd` aponta para `data\plugins\session.secret`. O arquivo é lido a cada pedido, então a chave continua valendo depois que o motor reinicia. A capability `sessao-do-motor` em `tauri.conf.json` libera só esse comando, e só para `http://localhost:5173/*`. O `build.rs` declara a lista de comandos.
+- **Perfil do WebView2.** Fica em `cache\tauri-webview`, no D, pela variável `CLIPADOR_WEBVIEW_DIR`.
+- **Limite.** A janela confia no que estiver escutando na porta `5173`. Use-a só com o Vite do projeto no ar.
+- **Etapas posteriores.** Seleção nativa de arquivos, OAuth no navegador, frontend empacotado sem Vite e instalador. A operação diária usa o lançador habitual.
+
+Para testar, use `cola\abrir-tauri.cmd --verificar`. O ensaio abre a interface, consulta o motor, confere a chave de sessão numa rota protegida (`sessao: 200`), decodifica um quadro com a prévia silenciada e fecha a janela com o resultado no terminal.
 
 ## Atualização em blocos
 
