@@ -15,33 +15,29 @@ kanban-plugin: board
 
 ## A fazer · P0 (antes da estreia)
 
-- [ ] Exigir sessão nas mutações da API (fila, publicação) e nas leituras sensíveis #P0 #R02 [spec](../01-Arquitetura/01-desktop-e-api.md)
-- [ ] Cola: tirar concatenação e envio do tique; prazos e concorrência por recurso #P0 #R04 [spec](../02-Captura-e-fila/03-gravacao-e-entrega.md)
-- [ ] Motor: reservar vaga e bytes antes de importar o bloco #P0 #R05 [spec](../02-Captura-e-fila/04-fila-e-armazenamento.md)
-- [ ] Bloco com ID estável, sem apagar quando vier sem job_id; isolar segmento corrompido; órfãos pela identidade completa #P0 #R06 [spec](../02-Captura-e-fila/03-gravacao-e-entrega.md)
-- [ ] Twitch Helix: paginação, renovar categorias, respeitar `Ratelimit-Reset` no 429; domínio exato nas URLs #P0 #R07 [spec](../02-Captura-e-fila/02-descoberta-de-lives.md)
-- [ ] Orçamento de disco e fila por tipo; compilado não tira vaga da captura #P0 #R08 [spec](../02-Captura-e-fila/04-fila-e-armazenamento.md)
 
 
 ## A fazer · P1
 
+- [ ] Exigir sessão nas mutações da API (fila, publicação) e nas leituras sensíveis #P1 #R02 (segurança adiada pelo usuário em 16/11: roda só na máquina dele) [spec](../01-Arquitetura/01-desktop-e-api.md)
 - [ ] Corrigir os seis grupos das 119 falhas da suíte ampla: resolver i18n nos testes Node primeiro, isolar .venv/config/intérprete e verificar legendas antes de mudar expectativas #P1 [relatório](../90-Auditorias/suite-completa-2026-11-16.md)
 
 - [ ] Medir Whisper + render com um bloco real de 5 min (tempo, RAM, VRAM) #P1 [spec](../03-Producao-de-clips/05-ia-e-transcricao.md)
 - [ ] WebSocket: validar Origin e sessão, limitar assinantes #P1 #R10 [auditoria](../90-Auditorias/rev-code-review.md)
 - [ ] Mesa: par MP4 + JSON com transição recuperável; paginar a listagem #P1 #R11 [spec](../04-Mesa-e-publicacao/07-mesa-e-controle.md)
 - [ ] Compilado: limite de fontes e duração, reserva de espaço #P1 #R12 [spec](../04-Mesa-e-publicacao/08-compilados-youtube.md)
-- [ ] Publicação: guardar ID do TikTok, estados aceito/incerto, reconciliar antes de repetir #P1 #R13 [spec](../04-Mesa-e-publicacao/09-publicacao-e-contas.md)
 - [ ] Diagnóstico: eventos persistidos com ID de correlação, cache das métricas #P1 #R14 [spec](../05-Operacao/10-observabilidade-e-operacao.md)
 - [ ] Caches de prévia, relay e sondagem com expiração #P1 #R15 [auditoria](../90-Auditorias/rev-code-review.md)
 - [ ] Webhook: segredo HMAC fora do payload, destinos autorizados #P1 #R16 [auditoria](../90-Auditorias/rev-code-review.md)
-- [ ] Electron 31.7.7: política central de links externos e remetente nos IPCs #P1 #R03 [spec](../01-Arquitetura/01-desktop-e-api.md)
 - [ ] Tauri: importar/exportar nativo e OAuth no navegador #P1 [spec](../01-Arquitetura/01-desktop-e-api.md)
 - [ ] Tauri: instalador com cache de NSIS/WiX no D:; `bundle.active` fica desligado até configurar e ensaiar #P2 [spec](../01-Arquitetura/01-desktop-e-api.md)
 
 
 ## Fazendo
 
+- [ ] [Gravação] Lives inteiras: codecs mais leves sem perder qualidade, gravador pronto para até 3 lives e latência até a Mesa, chat ao vivo da Twitch junto de cada bloco; inclui R04, R06 e R07 #P0 #antigravity-gravacao [spec](../02-Captura-e-fila/03-gravacao-e-entrega.md)
+- [ ] [Motor] Chat do bloco entra na pontuação; pontuação de momento-chave validada contra clipes reais; inclui R05 e R08 #P0 #antigravity-motor [spec](../03-Producao-de-clips/05-ia-e-transcricao.md)
+- [ ] [Electron] Pronto para teste: publicação com OAuth (YouTube/TikTok), R13, análise do R03, autonomia da IA para editar e roteiro de teste #P0 #codex [spec](../04-Mesa-e-publicacao/09-publicacao-e-contas.md)
 
 ## Feito
 
