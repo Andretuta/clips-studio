@@ -65,3 +65,5 @@ A solução deve manter prévias no mudo e interfaces em português do Brasil. A
 - Relatório: `D:/clipador-gta6/cache/tauri-verificacao-20261116-1530.json`, gerado pelo próprio executável com `--verificar --relatorio=...`, sem credenciais.
 - Captura da Mesa: `D:/clipador-gta6/cache/tauri-mesa-20261116-validada.png`.
 - Aprovação, descarte, publicação, importação e OAuth não foram executados neste aceite. O ensaio de mídia usa um elemento de vídeo silenciado próprio; a captura visual comprova a Mesa montada com a prévia, sem substituir o ensaio completo do editor.
+
+Commits desta entrega: `clips-kitty 14cc0e5` (empacotamento, sessão, teste e evidências) e `cola 27079eb` (Rust e temporários no D: no lançador). Sem push.

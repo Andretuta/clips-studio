@@ -46,7 +46,7 @@ O binário sai em `cache\tauri-target\release\clipador-tauri.exe` e abre sem Vit
 - **Capabilities.** Uma única capability local libera `sessao_motor` para a janela `clipador`. Não há permissão `remote` para a porta 5173 no executável empacotado. No modo `cfg(dev)`, o próprio Tauri trata `devUrl` como origem local.
 - **Perfil do WebView2.** `CLIPADOR_WEBVIEW_DIR`, com padrão em `cache\tauri-webview`. Nunca no C:.
 - **Navegação.** Restrita à origem exata do modo em uso, sem credenciais na URL. Janelas novas são negadas.
-- **Limite que sobrou.** Só no build debug: a janela carrega o que estiver na porta `5173`, então um processo que ocupe a porta antes do Vite recebe a chave de sessão. Use o build debug só com o Vite do projeto no ar. No release isso não existe, porque o HTML vem de dentro do binário.
+- **Limite que sobrou.** Somente no modo de desenvolvimento (`cfg(dev)`): a janela carrega o que estiver na porta `5173`, então um processo que ocupe a porta antes do Vite recebe a chave de sessão. Use esse modo só com o Vite do projeto no ar. No release isso não existe, porque o HTML vem de dentro do binário.
 - **Etapas posteriores.** Seleção nativa de arquivos, OAuth no navegador e o instalador.
 
 ## Alcance da verificação

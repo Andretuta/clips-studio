@@ -38,7 +38,8 @@ kanban-plugin: board
 - [ ] Caches de prévia, relay e sondagem com expiração #P1 #R15 [auditoria](../90-Auditorias/rev-code-review.md)
 - [ ] Webhook: segredo HMAC fora do payload, destinos autorizados #P1 #R16 [auditoria](../90-Auditorias/rev-code-review.md)
 - [ ] Electron 31.7.7: política central de links externos e remetente nos IPCs #P1 #R03 [spec](../01-Arquitetura/01-desktop-e-api.md)
-- [ ] Tauri: importar/exportar nativo, OAuth no navegador, frontend empacotado sem Vite, build release e instalador #P1 [spec](../01-Arquitetura/01-desktop-e-api.md)
+- [ ] Tauri: importar/exportar nativo e OAuth no navegador #P1 [spec](../01-Arquitetura/01-desktop-e-api.md)
+- [ ] Tauri: instalador com cache de NSIS/WiX no D:; `bundle.active` fica desligado até configurar e ensaiar #P2 [spec](../01-Arquitetura/01-desktop-e-api.md)
 
 
 ## Fazendo
@@ -46,6 +47,10 @@ kanban-plugin: board
 
 
 ## Feito
+
+- [x] Tauri empacotado sem Vite, sessão local e contas conectadas; revisão Hydrogen xhigh integrada e Mesa inspecionada #P1 #codex [spec](../01-Arquitetura/01-desktop-e-api.md) (14cc0e5; Cola 27079eb) @{2026-11-16}
+
+- [x] Motor: aceitar a origem `http://tauri.localhost` no CORS, para a janela empacotada falar com a API #P1 #codex [spec](../01-Arquitetura/01-desktop-e-api.md) (bea3eea) @{2026-11-16}
 
 - [x] Claude e Codex na mesma raiz pelo T3: projeto registrado em `D:\clipador-gta6` com os botões "Estado do cofre" e "Health do motor", protocolo de dupla no `AGENTS.md` e briefing do Codex por `.claude/hooks/estado.py` [spec](Plugins-do-Cofre.md) @{2026-11-16}
 - [x] R09: login, limite ou crédito da IA não gasta tentativa nem apaga a fonte; volta a cada 30 min (Cola 66cced8) @{2026-11-16}
