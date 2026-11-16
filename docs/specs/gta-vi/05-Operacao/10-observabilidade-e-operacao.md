@@ -65,4 +65,9 @@ Commits: `clips-kitty` `c6ede52` · `cola` `5ab6354`.
     - **(b) Fila cheia (409 real com 5 vagas ocupadas):** ambos mantiveram clipe e bloco pendentes; ao liberar a fila, criaram **1 tarefa** cada.
     - **(c) Resposta perdida (timeout pós-POST na 5ª vaga `queued` e também já `done`):** no retorno sem timeout, o motor respondeu `already_queued` (mesmo com fila cheia) ou `already_processed`; a Cola recuperou o mesmo `job_id`, não abriu tarefa duplicada e `entrega.tick` gerou **1 MP4 + 1 JSON** cada em `saida/pendentes`.
 - **Observação operacional:** o motor vivo (`127.0.0.1:8765`) e a Cola ao vivo continuam com o código anterior até serem recarregados pelo operador.
+- **Revisão do Claude (16/11, 20h20):**
+  - **Defeito corrigido:** a guarda `estado.was_attempted()` do `already_processed` era lida depois de `mark_attempt()` na mesma iteração, então era sempre verdadeira. Um clipe processado por outro caminho (pelo app, por exemplo) virava job da Cola, que entregaria os cortes e apagaria o vídeo do motor no `_free`.
+  - **Correção:** garimpeiro e gravador agora leem a tentativa anterior antes de marcar a nova (Cola `c6093ab`).
+  - **Teste:** `test_already_processed_without_earlier_attempt_does_not_adopt_the_job` falha no código anterior e passa com a correção. A suíte da Cola deu **80 aprovados**, e os testes do motor (`test_transcript_repair`, `test_local_upload`, `test_api_contract`) deram **56 aprovados**.
+  - **Compatibilidade:** o motor vivo já devolve `queued_job_id` no `already_queued`, então a Cola nova roda com ele. Só a ordem "duplicata antes de fila cheia" (`c6ede52`) depende de reiniciar o motor.
 

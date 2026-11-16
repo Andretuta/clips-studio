@@ -146,9 +146,12 @@ def _run(model, video_path: Path, language: str | None, hotwords: str | None = N
         # Greedy decoding (beam_size=1) can pick <|endoftext|> right after an
         # early pause inside a VAD-concatenated 30s window, causing
         # faster-whisper's single_timestamp_ending to skip the rest of the window
-        # (reproduced on clip 158: stopped at 4.4s of 25.5s). With turbo's
-        # 4-layer decoder on GPU, beam_size=5 matches beam_size=1 speed (~30x
-        # real-time) and recovers the skipped speech; CPU keeps beam_size=2.
+        # (reproduced on clip 158: stopped at 4.4s of 25.5s; beam 5 + VAD 0.3
+        # reaches 25.2s). Cost, measured 16/11 on the RTX 3060 with turbo: a
+        # 5-min block takes 14.1s instead of 7.2s, with 397 words vs 462. Fine
+        # for short Twitch clips (the launch source); re-measure before relying
+        # on it for long blocks. CPU keeps beam_size=2.
+        # ponytail: one setting for clips and blocks; split by duration if blocks matter.
         beam_size=5 if _on_gpu(model) else 2,
         # Don't feed the previous window's text back in: on long streams with
         # music/noise this is what causes repeated-sentence hallucination

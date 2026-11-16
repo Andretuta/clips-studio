@@ -61,4 +61,17 @@ Commit: `clips-kitty` `35a226b`.
   - **Silêncio sintético (`silence_20s.wav`, 20 s):** **0 trechos** (`0.00 s`), sem alucinação.
   - **Mix de 150 s na GPU:** **4,41 s** (`beam_size=5`, VAD `0.3`, 218 palavras) contra **4,48 s** (`beam_size=1`, VAD `0.5`, 127 palavras).
 - **Testes:** `test_transcript_repair.py`, `test_whisper_gpu_libraries.py` e `test_cancel.py` passaram (**29 aprovados**). O motor vivo (`127.0.0.1:8765`) continua com o código anterior até ser recarregado pelo operador.
+- **Revisão do Claude (16/11, 20h20).** Mesmo modelo e mesma GPU (RTX 3060), comparando as configurações direto no `model.transcribe`:
+
+  | Configuração | Clipe 158 (25,5 s) | Clipe 159 (28 s) | Silêncio 20 s | Bloco real de 5 min (`local_afe4d6ad5172`, primeiros 300 s) |
+  | --- | --- | --- | --- | --- |
+  | A · beam 1, VAD 0,5 (antes) | até 4,5 s, 9 palavras | até 27,4 s, 41 | 0 | 7,2 s, 91 trechos, 462 palavras |
+  | B · beam 1, VAD 0,3 | até 20,7 s, 22 | até 27,4 s, 41 | 0 | 7,6 s, 89, 443 |
+  | C · beam 5, VAD 0,3 (adotada) | até 25,2 s, 58 | até 27,4 s, 41 | 0 | 14,1 s, 71, 397 |
+  | D · beam 5, VAD 0,5 | até 25,2 s, 33 | até 27,4 s, 42 | 0 | 10,6 s, 65, 454 |
+
+  - **Decisão:** fica a C. A fonte da estreia são clipes curtos da Twitch, e nos clipes ela é a que mais recupera fala.
+  - **Custo num bloco longo:** cerca de 2× o tempo e 14% menos palavras que antes.
+  - **Instabilidade:** em duas rodadas seguidas, a C deu 54 e 69 trechos no mesmo bloco, porque o *fallback* de temperatura introduz amostragem. A A deu o mesmo resultado nas duas.
+  - **Comentário do código:** dizia que o beam 5 "tem a velocidade do beam 1" e foi corrigido com os números medidos. Se os blocos longos voltarem a ser fonte, separar a configuração por duração.
 
