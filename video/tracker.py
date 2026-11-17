@@ -975,17 +975,8 @@ def compute_tracking(
             # included, starts its averages (_seed_from_sighting).
             seen_in_shot: set = set()
 
-        while True:
-            ok = cap.grab()
-            if not ok:
-                break
-            if frame_idx % frame_step != 0:
-                frame_idx += 1
-                continue
-            ok, frame = cap.retrieve()
-            if not ok:
-                break
-
+        for frame_idx, frame, detections in _detected_samples(
+                cap, frame_step, model, min_confidence):
             t = frame_idx / video_fps
             h, w = frame.shape[:2]
             n_samples += 1
@@ -1022,7 +1013,7 @@ def compute_tracking(
                 # pass, not here — see the loop below. Doing it in this pass sets
                 # a variable that pass never reads.
 
-            visible = _assign(tracks, _detect(model, frame, min_confidence), t)
+            visible = _assign(tracks, detections, t)
             faces_here: dict[int, tuple] = {}   # for TalkNet, after the pass
             for tid in visible:
                 tr = tracks[tid]
@@ -1454,6 +1445,76 @@ def _detect(model, frame, min_confidence) -> list[tuple]:
         results = model.predict(frame, classes=[0], conf=min_confidence,
                                 device="cpu" if getattr(model, "_tracking_cpu", False) else torch_device(),
                                 verbose=False)
+    return _person_detections(results)
+
+
+def _detect_batch(model, frames, min_confidence):
+    """Bounded FP32 inference; preserve one result per input, in order.
+
+    CPU keeps scalar inference. A failed GPU batch retries scalarly (also
+    handles limited VRAM); if CUDA itself fails, latch this model on CPU.
+    Never call _detect while holding the non-reentrant inference lock.
+    """
+    from core.gpu import torch_device
+
+    if not frames:
+        return []
+    with _infer_lock:
+        device = "cpu" if getattr(model, "_tracking_cpu", False) else torch_device()
+        if device != "cpu":
+            try:
+                results = model.predict(frames, classes=[0], conf=min_confidence,
+                                        device=device, verbose=False)
+                return [_person_detections([r]) for r in results]
+            except RuntimeError:
+                # A batch can run out of VRAM while a single image still fits.
+                pass
+        try:
+            return [_person_detections(model.predict(
+                frame, classes=[0], conf=min_confidence, device=device, verbose=False))
+                for frame in frames]
+        except RuntimeError:
+            if device == "cpu":
+                raise
+            model.to("cpu")
+            model._tracking_cpu = True
+            return [_person_detections(model.predict(
+                frame, classes=[0], conf=min_confidence, device="cpu", verbose=False))
+                for frame in frames]
+
+
+def _detected_samples(cap, step, model, confidence):
+    """Read the original sample grid, buffering at most eight decoded frames.
+
+    Consumers replay every sample (and scene-cut check) in its original order.
+    None is useful for scripted detectors in callers' tests; CPU avoids buffers.
+    """
+    from core.gpu import torch_device
+
+    batch_size = (8 if model is not None and not getattr(model, "_tracking_cpu", False)
+                  and torch_device() != "cpu" else 1)
+    pending = []
+    idx = 0
+    while cap.grab():
+        if idx % step == 0:
+            ok, frame = cap.retrieve()
+            if not ok:
+                break
+            pending.append((idx, frame))
+            if len(pending) == batch_size:
+                found = (_detect_batch(model, [f for _, f in pending], confidence)
+                         if batch_size > 1 else [_detect(model, frame, confidence)])
+                for (i, f), detections in zip(pending, found, strict=True):
+                    yield i, f, detections
+                pending.clear()
+        idx += 1
+    if pending:
+        found = _detect_batch(model, [f for _, f in pending], confidence)
+        for (i, f), detections in zip(pending, found, strict=True):
+            yield i, f, detections
+
+
+def _person_detections(results):
     out = []
     for r in results:
         kp = getattr(r, "keypoints", None)

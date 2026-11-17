@@ -51,6 +51,7 @@ from video.tracker import (
     _clip_pcm,
     _contested_spans,
     _detect,
+    _detected_samples,
     _get_model,
     _interp_boxes,
     _mouth_patch,
@@ -159,20 +160,12 @@ def sample_tracks(clip_path: Path, model_name: str, sample_fps: float = 8.0):
         model = _get_model(model_name)
         idx = 0
         last_t = 0.0
-        while True:
-            if not cap.grab():
-                break
-            if idx % step:
-                idx += 1
-                continue
-            ok, frame = cap.retrieve()
-            if not ok:
-                break
+        for idx, frame, detections in _detected_samples(cap, step, model, MIN_CONFIDENCE):
             h, w = frame.shape[:2]
             t = idx / video_fps
             last_t = t
             n_samples += 1
-            for tid in _assign(tracks_state, _detect(model, frame, MIN_CONFIDENCE), t):
+            for tid in _assign(tracks_state, detections, t):
                 det = tracks_state[tid].box
                 head = det[5]
                 tr = tracks.setdefault(tid, Track())
