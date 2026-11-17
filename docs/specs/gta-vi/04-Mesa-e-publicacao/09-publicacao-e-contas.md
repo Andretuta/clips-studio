@@ -97,7 +97,7 @@ Mesa → **Autonomia da IA e postagem automática**: edição e autoaprovação 
 
 A Cola entrega o par MP4/JSON e conserva `momento_chave` e transcrição temporizada disponível antes de liberar a fonte. Com a opção ligada, chama `/publication/mesa/{nome}/auto` com a sessão lida de `D:/clipador-gta6/data/plugins/session.secret`. O motor confere o sidecar persistido: sem score numérico finito em 0…1, ou abaixo do limiar, não autoaprova nem posta. A nota antiga 0…100 não vira confiança automaticamente. Score/limiar/motivos são registrados no sidecar e banco. Mudança de política permite reavaliar cortes que ficaram apenas em revisão.
 
-A IA configurada em `llm.backend` revisa texto e pode remover até 2 s de cada borda, mantendo ao menos 5 s (ou toda a duração quando o corte já era menor). Transcrição temporizada limita o aparo ao silêncio com margem de 0,1 s; sem evidência, bordas intactas. Mantém tag do jogo, áudio, legendas e enquadramento; não amplia trecho nem escolhe zoom. Exige a autorização de automação do plano no banco. Editar não autoriza postar.
+A IA configurada em `llm.backend` revisa texto e pode remover até 2 s de cada borda, mantendo ao menos 5 s (ou toda a duração quando o corte já era menor). Transcrição temporizada limita o aparo aos intervalos fora das falas detectadas, com margem de 0,1 s (isso não comprova silêncio do áudio do jogo); sem evidência, bordas intactas. Mantém tag do jogo, áudio, legendas e enquadramento; não amplia trecho nem escolhe zoom. Exige a autorização de automação do plano no banco. Editar não autoriza postar.
 
 A aprovação aplica a marca quando solicitada, conserva original e copia a versão aprovada para `data/clips/mesa`, com entrada própria na biblioteca. Publicação e tradução não dependem da fonte que a Cola libera depois. Há custo extra de disco para aprovado/original/biblioteca; nada é apagado em lote nesta entrega.
 
@@ -128,3 +128,5 @@ Sem login/upload real validado. Tauri continua sem abertura nativa OAuth nesta e
 | `npm run typecheck`; `npm run build` | Ambos com saída **0**. Build de main, preload e renderer concluído. |
 
 Os testes UI inicialmente expuseram perfil/cache compartilhado no C: e corrida na mensagem transitória Ringing do harness antigo. Perfis temporários foram isolados no D:, idioma fixado, execução sequencial e relógio do teste controlado; a rodada final ficou verde. Nenhum pacote foi instalado. A referência API foi regenerada sem iniciar serviço. Não foram apagados `saida/`, `gravacoes/`, `testes-legenda/` nem saídas do operador.
+
+Commits da entrega (16/11/2026, 21h36 de Brasília): `clips-kitty 7a1380e` (transporte/recibos), `0dc1a7a` (OAuth, API da Mesa e revisão editorial), `9427328` (Electron, testes UI e R03); `cola e1183d3` (entrega/autonomia). Sem push. Nenhuma alteração nos arquivos de captura, análise, transcrição, core/pipeline.py ou server/api.py dos agentes Antigravity.
