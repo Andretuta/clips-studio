@@ -33,6 +33,15 @@ from core.binaries import ffmpeg
 from video.capture import video_capture
 from video.encoding import audio_filter_args, final_movflags, video_encoder_args
 from video.filters import subtitles_filter
+from video.gpu_filters import (
+    cover_crop_rect,
+    cuda_filters_available,
+    gpu_blur_chain,
+    gpu_ffmpeg_thread_args,
+    hw_device_cuda_args,
+    hwaccel_cuda_decode_args,
+    is_nvenc_args,
+)
 
 CAM_H = 672    # webcam band height in the 1080x1920 split layout (35%)
 GAME_H = 1248  # gameplay band height (65%)
@@ -84,6 +93,79 @@ def render_vertical(
     )
 
 
+def _fit_blur_cmd(
+    clip_path: Path,
+    crop_region: str,
+    output_path: Path,
+    ass_path: Path | None,
+    vf_extra: str,
+    normalize: bool,
+    enc: list[str],
+    use_gpu: bool,
+    region_size: tuple[int, int] | None = None,
+) -> list[str]:
+    if use_gpu and region_size is not None:
+        reg_w, reg_h = region_size
+        eff_h = min(reg_h, max(2, int(reg_w * 16 / 9) & ~1))
+        fg_h = min(1920, max(2, int((1080 * eff_h / reg_w + 1.0) // 2) * 2))
+        oy = (1920 - fg_h) // 2
+        bg = f"{crop_region},{gpu_blur_chain(1080, 1920, 'nv12', (reg_w, reg_h))}"
+        trim_tall = f"crop={reg_w}:{eff_h}:0:{max(0, (reg_h - eff_h) // 2)}"
+        hw_enc = is_nvenc_args(enc)
+        if vf_extra:
+            fg = (
+                f"{crop_region},{trim_tall},scale=1080:{fg_h}:flags=lanczos,format=yuv420p,"
+                f"{vf_extra},format=nv12,hwupload_cuda"
+            )
+        else:
+            fg = (
+                f"{crop_region},{trim_tall},hwupload_cuda,"
+                f"scale_cuda=1080:{fg_h}:interp_algo=lanczos:format=nv12:reset_sar=1"
+            )
+        tail = ",hwdownload,format=nv12"
+        if not hw_enc:
+            tail += ",format=yuv420p"
+        if ass_path is not None:
+            tail += f",{subtitles_filter(ass_path.name)}"
+        filters = (
+            f"[0:v]split=2[a][b];[a]{bg}[bg];[b]{fg}[fg];"
+            f"[bg][fg]overlay_cuda=0:{oy}{tail}[v]"
+        )
+        vout = "[v]"
+        in_flags = [*hwaccel_cuda_decode_args(), *gpu_ffmpeg_thread_args()]
+    else:
+        bg = (
+            f"{crop_region},scale=1080:1920:force_original_aspect_ratio=increase,"
+            f"crop=1080:1920,scale=135:240,gblur=sigma=12,scale=1080:1920:flags=bilinear"
+        )
+        fg = (
+            f"{crop_region},scale=1080:-2:flags=lanczos,crop=w=1080:h=min(ih\\,1920)"
+            + (f",{vf_extra}" if vf_extra else "")
+        )
+        filters = f"[0:v]split=2[a][b];[a]{bg}[bg];[b]{fg}[fg];[bg][fg]overlay=0:(H-h)/2,setsar=1[v]"
+        if ass_path is not None:
+            filters += f";[v]{subtitles_filter(ass_path.name)}[v2]"
+            vout = "[v2]"
+        else:
+            vout = "[v]"
+        in_flags = []
+
+    return [
+        ffmpeg(), "-y",
+        *in_flags,
+        "-i", str(clip_path.resolve()),
+        "-filter_complex", filters,
+        "-map", vout, "-map", "0:a:0?",
+        *enc,
+        "-c:a", "aac", "-b:a", "128k",
+        *audio_filter_args(normalize),  # sync + loudness normalise (final encode)
+        "-fps_mode", "cfr",          # constant output frame rate
+        *final_movflags(),
+        "-shortest", "-shortest_buf_duration", "1",
+        str(output_path.resolve()),
+    ]
+
+
 def _render_fit_blur(
     clip_path: Path,
     region: tuple[float, float, float, float] | None,
@@ -105,41 +187,29 @@ def _render_fit_blur(
     rw, rh, rx, ry = x1 - x0, y1 - y0, x0, y0
     crop_region = f"crop=iw*{rw:.4f}:ih*{rh:.4f}:iw*{rx:.4f}:ih*{ry:.4f}"
 
-    # Background: the same crop, blown up to COVER 1080x1920, then destroyed:
-    # downscaled hard + blurred + upscaled = an unrecognizable color wash.
-    bg = (
-        f"{crop_region},scale=1080:1920:force_original_aspect_ratio=increase,"
-        f"crop=1080:1920,scale=135:240,gblur=sigma=12,scale=1080:1920:flags=bilinear"
-    )
-    # Foreground: full width; height follows the region's own aspect ratio
-    # (capped at the screen so an unusually tall region can never overflow).
-    fg = (
-        f"{crop_region},scale=1080:-2:flags=lanczos,crop=w=1080:h=min(ih\\,1920)"
-        + (f",{vf_extra}" if vf_extra else "")
-    )
-    filters = f"[0:v]split=2[a][b];[a]{bg}[bg];[b]{fg}[fg];[bg][fg]overlay=0:(H-h)/2,setsar=1[v]"
-    if ass_path is not None:
-        filters += f";[v]{subtitles_filter(ass_path.name)}[v2]"
-        vout = "[v2]"
-    else:
-        vout = "[v]"
+    enc = video_encoder_args()
+    if cuda_filters_available():
+        with video_capture(clip_path) as cap:
+            src_w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+            src_h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+        if src_w > 2 and src_h > 2:
+            reg_w = max(2, int(src_w * rw) & ~1)
+            reg_h = max(2, int(src_h * rh) & ~1)
+            reg_x = max(0, min(src_w - reg_w, int(src_w * rx) & ~1))
+            reg_y = max(0, min(src_h - reg_h, int(src_h * ry) & ~1))
+            gpu_region = f"crop={reg_w}:{reg_h}:{reg_x}:{reg_y}"
+            gpu_cmd = _fit_blur_cmd(
+                clip_path, gpu_region, output_path, ass_path, vf_extra, normalize,
+                enc, True, region_size=(reg_w, reg_h),
+            )
+            try:
+                _run_ffmpeg(gpu_cmd, ass_path)
+                return output_path
+            except RuntimeError as e:
+                print(f"      (GPU fit_blur render failed, falling back to CPU: {str(e).splitlines()[-1][:160]})")
 
-    cmd = [
-        ffmpeg(), "-y",
-        # No -hwaccel here: GPU decode feeding this split/overlay/blur graph can
-        # drift the video timing off the audio. CPU decode keeps A/V locked.
-        "-i", str(clip_path.resolve()),
-        "-filter_complex", filters,
-        "-map", vout, "-map", "0:a:0?",
-        *video_encoder_args(),
-        "-c:a", "aac", "-b:a", "128k",
-        *audio_filter_args(normalize),  # sync + loudness normalise (final encode)
-        "-fps_mode", "cfr",          # constant output frame rate
-        *final_movflags(),
-        "-shortest", "-shortest_buf_duration", "1",
-        str(output_path.resolve()),
-    ]
-    _run_ffmpeg(cmd, ass_path)
+    cpu_cmd = _fit_blur_cmd(clip_path, crop_region, output_path, ass_path, vf_extra, normalize, enc, False)
+    _run_ffmpeg(cpu_cmd, ass_path)
     return output_path
 
 
@@ -296,36 +366,72 @@ def _render_tracked(
         # face lands toward the center of the screen. Nothing is stretched.
         if top_safe:
             top = int(0.115 * 1920)            # content starts under the FYP tabs
-            fg = "scale=1080:-2:flags=lanczos" + (f",{vf_extra}" if vf_extra else "")
-            filters = (
-                f"[0:v]split=2[a][b];"
-                # Downscale hard + blur + upscale: an unrecognizable color wash.
-                f"[a]scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,"
-                f"scale=135:240,gblur=sigma=12,scale=1080:1920:flags=bilinear[bg];"
-                f"[b]{fg}[fg];"
-                f"[bg][fg]overlay=0:{top},setsar=1[v]"
-            )
-            if ass_path is not None:
-                filters += f";[v]{subtitles_filter(ass_path.name)}[v]"
-            cmd = [
-                ffmpeg(), "-y",
-                *pipe_in,                         # cropped frames on stdin
-                "-i", str(clip_path.resolve()),   # source of the audio
-                "-filter_complex", filters,
-                "-map", "[v]", "-map", "1:a:0?",
-                *video_encoder_args(),
-                # 4:2:0. Feeding NVENC a bgr24 pipe makes it default to gbrp
-                # (High 4:4:4), which browsers and many players CANNOT decode —
-                # the clip renders but won't play. Force standard yuv420p.
-                "-pix_fmt", "yuv420p",
-                "-c:a", "aac", "-b:a", "128k",
-                *audio_filter_args(normalize),
-                "-fps_mode", "cfr",
-                *final_movflags(),
-                "-shortest", "-shortest_buf_duration", "1",
-                str(output_path.resolve()),
-            ]
-            _run_ffmpeg_piped(cmd, ass_path, produce)
+            enc = video_encoder_args()
+
+            def _top_safe_cmd(use_gpu: bool) -> list[str]:
+                if use_gpu:
+                    fg_h = min(1920, max(2, int((1080 * crop_h / crop_w + 1.0) // 2) * 2))
+                    bg = gpu_blur_chain(1080, 1920, "nv12", (crop_w, crop_h))
+                    if vf_extra:
+                        fg = (
+                            f"scale=1080:{fg_h}:flags=lanczos,format=yuv420p,{vf_extra},"
+                            f"format=nv12,hwupload_cuda"
+                        )
+                    else:
+                        fg = f"hwupload_cuda,scale_cuda=1080:{fg_h}:interp_algo=lanczos:format=nv12:reset_sar=1"
+                    tail = ",hwdownload,format=nv12,format=yuv420p"
+                    if ass_path is not None:
+                        tail += f",{subtitles_filter(ass_path.name)}"
+                    pix = ["-pix_fmt", "yuv420p"]
+                    filters = (
+                        f"[0:v]format=nv12,split=2[a][b];"
+                        f"[a]{bg}[bg];"
+                        f"[b]{fg}[fg];"
+                        f"[bg][fg]overlay_cuda=0:{top}{tail}[v]"
+                    )
+                    dev = [*hw_device_cuda_args(), *gpu_ffmpeg_thread_args()]
+                else:
+                    fg = "scale=1080:-2:flags=lanczos" + (f",{vf_extra}" if vf_extra else "")
+                    filters = (
+                        f"[0:v]split=2[a][b];"
+                        # Downscale hard + blur + upscale: an unrecognizable color wash.
+                        f"[a]scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,"
+                        f"scale=135:240,gblur=sigma=12,scale=1080:1920:flags=bilinear[bg];"
+                        f"[b]{fg}[fg];"
+                        f"[bg][fg]overlay=0:{top},setsar=1[v]"
+                    )
+                    if ass_path is not None:
+                        filters += f";[v]{subtitles_filter(ass_path.name)}[v]"
+                    pix = ["-pix_fmt", "yuv420p"]
+                    dev = []
+                return [
+                    ffmpeg(), "-y",
+                    *dev,
+                    *pipe_in,                         # cropped frames on stdin
+                    "-i", str(clip_path.resolve()),   # source of the audio
+                    "-filter_complex", filters,
+                    "-map", "[v]", "-map", "1:a:0?",
+                    *enc,
+                    # 4:2:0. Feeding NVENC a bgr24 pipe makes it default to gbrp
+                    # (High 4:4:4), which browsers and many players CANNOT decode —
+                    # the clip renders but won't play. Force standard yuv420p.
+                    *pix,
+                    "-c:a", "aac", "-b:a", "128k",
+                    *audio_filter_args(normalize),
+                    "-fps_mode", "cfr",
+                    *final_movflags(),
+                    "-shortest", "-shortest_buf_duration", "1",
+                    str(output_path.resolve()),
+                ]
+
+            if cuda_filters_available():
+                try:
+                    _run_ffmpeg_piped(_top_safe_cmd(True), ass_path, produce)
+                    return output_path
+                except RuntimeError as e:
+                    print(f"      (GPU top_safe render failed, falling back to CPU: {str(e).splitlines()[-1][:160]})")
+                    cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
+            _run_ffmpeg_piped(_top_safe_cmd(False), ass_path, produce)
             return output_path
 
         # Uniform scale to 1080x1920 + color filter + captions + mux audio.
@@ -488,6 +594,60 @@ class _ZoomComposer:
 # ---- gameplay + facecam split mode --------------------------------------------
 
 
+def _split_filters(
+    src_w: int,
+    src_h: int,
+    cam_rect: tuple[int, int, int, int],
+    game_x: int,
+    game_w: int,
+    cam_position: str,
+    vf_extra: str,
+    ass_name: str | None,
+    use_gpu: bool,
+    hw_enc: bool,
+) -> str:
+    cam_x, cam_y, cam_w, cam_h = cam_rect
+    if not use_gpu:
+        stack = "[game][cam]" if cam_position == "bottom" else "[cam][game]"
+        filters = (
+            f"[0:v]crop={cam_w}:{cam_h}:{cam_x}:{cam_y},"
+            f"scale=1080:{CAM_H}:force_original_aspect_ratio=increase:flags=lanczos,"
+            f"crop=1080:{CAM_H},setsar=1[cam];"
+            f"[0:v]crop={game_w}:{src_h}:{game_x}:0,"
+            f"scale=1080:{GAME_H}:flags=lanczos,setsar=1[game];"
+            f"{stack}vstack=inputs=2[v]"
+        )
+        if vf_extra:
+            filters += f";[v]{vf_extra}[v]"
+        if ass_name:
+            filters += f";[v]{subtitles_filter(ass_name)}[v]"
+        return filters
+
+    cx, cy, cw, ch = cover_crop_rect(cam_w, cam_h, 1080, CAM_H)
+    cam_chain = (
+        f"[0:v]crop={cam_w}:{cam_h}:{cam_x}:{cam_y},crop={cw}:{ch}:{cx}:{cy},"
+        f"hwupload_cuda,scale_cuda=1080:{CAM_H}:interp_algo=lanczos:format=nv12:reset_sar=1[cam]"
+    )
+    game_chain = (
+        f"[0:v]crop={game_w}:{src_h}:{game_x}:0,"
+        f"hwupload_cuda,scale_cuda=1080:{GAME_H}:interp_algo=lanczos:format=nv12:reset_sar=1[game]"
+    )
+    if cam_position == "bottom":
+        stack = f"[game]pad_cuda=1080:1920:0:0:black[top];[top][cam]overlay_cuda=0:{GAME_H}"
+    else:
+        stack = f"[cam]pad_cuda=1080:1920:0:0:black[top];[top][game]overlay_cuda=0:{CAM_H}"
+
+    tail = ",hwdownload,format=nv12"
+    if vf_extra or not hw_enc:
+        tail += ",format=yuv420p"
+    filters = f"{cam_chain};{game_chain};{stack}{tail}[v]"
+    if vf_extra:
+        filters += f";[v]{vf_extra}[v]"
+    if ass_name:
+        filters += f";[v]{subtitles_filter(ass_name)}[v]"
+    return filters
+
+
 def _render_split(
     clip_path: Path,
     webcam_box: tuple[float, float, float, float],
@@ -513,22 +673,28 @@ def _render_split(
     game_w = min(game_w, src_w)
     game_x = (src_w - game_w) // 2
 
-    # Webcam band: crop the overlay region, fill the 1080x672 band
-    # (uniform scale up, then trim overflow — never stretch). The vstack
-    # order decides which band is on top — user-switchable per clip.
-    stack = "[game][cam]" if cam_position == "bottom" else "[cam][game]"
-    filters = (
-        f"[0:v]crop={cam_w}:{cam_h}:{cam_x}:{cam_y},"
-        f"scale=1080:{CAM_H}:force_original_aspect_ratio=increase:flags=lanczos,"
-        f"crop=1080:{CAM_H},setsar=1[cam];"
-        f"[0:v]crop={game_w}:{src_h}:{game_x}:0,"
-        f"scale=1080:{GAME_H}:flags=lanczos,setsar=1[game];"
-        f"{stack}vstack=inputs=2[v]"
-    )
-    if vf_extra:
-        filters += f";[v]{vf_extra}[v]"
+    enc = video_encoder_args()
+    hw_enc = is_nvenc_args(enc)
+
+    def _run_with_ass(placed: Path | None) -> Path:
+        ass_name = placed.name if placed is not None else None
+        if cuda_filters_available():
+            gpu_filters = _split_filters(
+                src_w, src_h, (cam_x, cam_y, cam_w, cam_h), game_x, game_w,
+                cam_position, vf_extra, ass_name, use_gpu=True, hw_enc=hw_enc,
+            )
+            try:
+                return _split_encode(clip_path, gpu_filters, output_path, placed, normalize, enc, use_gpu=True)
+            except RuntimeError as e:
+                print(f"      (GPU split render failed, falling back to CPU: {str(e).splitlines()[-1][:160]})")
+        cpu_filters = _split_filters(
+            src_w, src_h, (cam_x, cam_y, cam_w, cam_h), game_x, game_w,
+            cam_position, vf_extra, ass_name, use_gpu=False, hw_enc=hw_enc,
+        )
+        return _split_encode(clip_path, cpu_filters, output_path, placed, normalize, enc, use_gpu=False)
+
     if ass_path is None:
-        return _split_encode(clip_path, filters, output_path, None, normalize)
+        return _run_with_ass(None)
     from video.captions import place_middle_captions
 
     # Captions on the line between webcam and game; a copy, so the clip's own
@@ -538,19 +704,19 @@ def _render_split(
         placed.write_text(place_middle_captions(ass_path.read_text(encoding="utf-8"), 540,
                                                 GAME_H if cam_position == "bottom" else CAM_H),
                           encoding="utf-8")
-        filters += f";[v]{subtitles_filter(placed.name)}[v]"
-        return _split_encode(clip_path, filters, output_path, placed, normalize)
+        return _run_with_ass(placed)
 
 
 def _split_encode(clip_path: Path, filters: str, output_path: Path, ass_path: Path | None,
-                  normalize: bool) -> Path:
+                  normalize: bool, enc: list[str] | None = None, use_gpu: bool = False) -> Path:
     cmd = [
         ffmpeg(), "-y",
-        # CPU decode for the filter graph — keeps A/V locked (see _render_fit_blur).
+        *(hwaccel_cuda_decode_args() if use_gpu else []),
+        *(gpu_ffmpeg_thread_args() if use_gpu else []),
         "-i", str(clip_path.resolve()),
         "-filter_complex", filters,
         "-map", "[v]", "-map", "0:a:0?",
-        *video_encoder_args(),  # NVENC when available
+        *(enc if enc is not None else video_encoder_args()),  # NVENC when available
         "-c:a", "aac", "-b:a", "128k",
         *audio_filter_args(normalize),
         "-fps_mode", "cfr",
