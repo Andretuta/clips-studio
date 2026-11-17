@@ -137,7 +137,12 @@ def _stage(key: str, platform: str, tool: str, file: Path) -> dict:
     return {"name": file.name, "mimetype": mime, "s3key": remote_key}
 
 
-def upload(key: str, data: dict, file: Path, cancelled) -> str:
+def upload(key: str, data: dict, file: Path, cancelled, submitting=lambda: None) -> str:
+    from publish.transfer import bounded_upload
+    return bounded_upload(key, data, file, cancelled, submitting)
+
+
+def _upload(key: str, data: dict, file: Path, cancelled, submitting=lambda: None) -> str:
     """Return the YouTube video ID or the TikTok inbox submission ID."""
     platform = data["platform"]
     tool, version = TOOLS[platform]
@@ -149,6 +154,7 @@ def upload(key: str, data: dict, file: Path, cancelled) -> str:
                 "tags": data["tags"], "categoryId": "22", "privacyStatus": "private"}
     else:
         args = {"file_to_upload": media, "publish": False}
+    submitting()
     try:
         result = call(key, "POST", f"/tools/execute/{tool}", body={
             "user_id": data["user_id"], "connected_account_id": data["account_id"],
