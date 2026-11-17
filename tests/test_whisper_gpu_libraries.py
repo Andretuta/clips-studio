@@ -138,6 +138,19 @@ def test_a_gpu_that_cannot_load_cublas_mid_run_finishes_on_the_cpu(tmp_path, mon
     assert (tmp_path / "vid.json").exists()                      # cached like any transcript
 
 
+def test_a_gpu_model_that_worked_stays_loaded_for_the_next_job(tmp_path, monkeypatch):
+    """Reloading it cost 11 s of every 5-min block; one that failed is not kept."""
+    monkeypatch.setattr(transcriber, "_resident", {})
+    _transcribe(tmp_path / "a", monkeypatch, [_model("cuda")])
+    asked, texts = _transcribe(tmp_path / "b", monkeypatch, [])
+    assert asked == [] and texts == ["hello from the cuda"]
+
+    monkeypatch.setattr(transcriber, "_resident", {})
+    models = [_model("cuda", fail="cublas64_12.dll cannot be loaded"), _model("cpu")]
+    _transcribe(tmp_path / "c", monkeypatch, models)
+    assert transcriber._resident == {}
+
+
 def test_a_cpu_failure_or_an_unrelated_one_is_not_retried(tmp_path, monkeypatch):
     with pytest.raises(RuntimeError, match="decoder exploded"):
         _transcribe(tmp_path, monkeypatch, [_model("cuda", fail="decoder exploded")])

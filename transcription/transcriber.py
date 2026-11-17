@@ -133,6 +133,9 @@ def _load_model(model_size: str, device: str):
 
 LONG_BLOCK_SECONDS = 120.0
 
+# The GPU Whisper model between jobs: (model_size, device) -> model.
+_resident: dict = {}
+
 
 def _video_duration(video_path: Path) -> float | None:
     """Duration in seconds via ffprobe, or None if unavailable/unprobeable."""
@@ -263,8 +266,10 @@ def transcribe(
         _collapse_repetition_loops(segments)
         return segments
 
-    print(f"  Loading whisper model '{model_size}' (device={device})...")
-    model = _load_model(model_size, device)
+    model = _resident.pop((model_size, device), None)
+    if model is None:
+        print(f"  Loading whisper model '{model_size}' (device={device})...")
+        model = _load_model(model_size, device)
 
     try:
         segments, info = _run(model, video_path, language, hotwords)
@@ -277,6 +282,15 @@ def transcribe(
             raise
         print(f"\n  Whisper: the GPU failed ({str(e)[:120]}); transcribing again on the CPU")
         segments, info = _run(_load_model(model_size, "cpu"), video_path, language, hotwords)
+    else:
+        if _on_gpu(model):
+            # Kept for the next block: reloading cost 11 s of every 5-min block
+            # (measured 17/11, RTX 3060) and the card has room for it (~2 GiB).
+            # Only a GPU model that just worked: one that failed is dropped
+            # (popped above) and reloaded, and a CPU one would hold RAM, the
+            # scarce resource here. ponytail: one model; key by size if two alternate.
+            _resident.clear()
+            _resident[(model_size, device)] = model
 
     looped = _collapse_repetition_loops(segments)
     if looped:
