@@ -136,3 +136,21 @@ Commit: `clips-kitty` `5ba4541` (aguarda recarga do processo vivo em `127.0.0.1:
   - **Regime diferente:** o fixture usa janelas de cerca de 50 min de VOD. O bloco ao vivo tem 5 min, então a base de 180 s fica truncada nos primeiros 3 min de cada bloco. Levar a base de um bloco para o próximo fica para depois.
 
 **RAM.** O ensaio chegou a 99,5% de RAM (15,9 GiB na máquina) com `parallel_renders: 3`. Com Cola gravando e Electron aberto ao mesmo tempo, a recomendação é `parallel_renders: 2` no `config/settings.yaml` local (não versionado).
+
+### VRAM por etapa (Claude, 17/11, 04h09)
+
+RTX 3060, 12.288 MiB. Cada etapa rodou num processo próprio, com CUDA limpo, enquanto outro processo lia a memória usada da placa pelo NVML a cada 50 ms. A tabela mostra o pico de cada etapa acima do que o Windows já ocupa: ~1,5–2,0 GiB com a área de trabalho. Por processo, o `nvidia-smi` mostra N/A no WDDM. Material: 5 min do VOD `local_afe4d6ad5172.mp4` a partir de 300 s e um clipe da Twitch de 24 s. Scripts no scratchpad da sessão (`bench/vram.py`, `bench/residente.py`).
+
+| Etapa | VRAM acima da base | Tempo |
+|---|---|---|
+| Whisper large-v3-turbo fp16, bloco de 5 min | +2.531 MiB | 44,6 s (273 palavras) |
+| PANNs (sons do jogo) sozinho | +357 MiB | 18,9 s |
+| Whisper + PANNs em paralelo, como o motor faz | +2.485 MiB | 34,9 s |
+| 1 render (NVDEC + NVENC + libass) | +393 MiB | 33,9 s |
+| 3 renders em paralelo (`parallel_renders: 3`) | +1.177 MiB | 46 s |
+| Passo gamer de um corte (YOLO pose acha a webcam + cabeça + render, layout `half`) | +582 MiB | 72,9 s |
+| Residente: YOLO pose + PANNs carregados e parados | +244 MiB | — |
+
+- O Whisper é carregado a cada transcrição e solto no fim. O YOLO (`video/tracker.py`) e o PANNs ficam em cache no processo do motor. Por isso o motor parado segura ~0,25 GiB.
+- O pico real do motor é o Whisper, ~2,5 GiB. Se 3 renders caírem junto com uma transcrição, a soma fica perto de 4 GiB. O ensaio E2E de 16/11 bateu 4.666 MiB absolutos (com a área de trabalho). A placa fica com ~6 GiB livres, então a VRAM não é o gargalo. O limite é a RAM (99,5% com 3 renders, ver acima).
+- O TalkNet (`video/asd.py`) não roda: os pesos não estão instalados. O modelo onnx de turnos de voz também não está. O OCR (RapidOCR onnx) está disponível.
