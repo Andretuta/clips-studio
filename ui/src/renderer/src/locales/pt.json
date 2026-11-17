@@ -585,7 +585,7 @@
   "Middle": "Médio",
   "Words per caption": "Palavras por legenda",
   "UPPERCASE captions": "Legendas UPPERCASE",
-  "Highlight each word as it&apos;s said": "Realçar cada palavra como ele & apos;s disse",
+  "Highlight each word as it&apos;s said": "Destacar cada palavra quando é dita",
   "Highlight colour": "Cor do realce",
   "When two people talk in a clip, the main speaker keeps the text colour and the other person's captions take this one. A clip with one voice looks the same as always.": "Quando duas pessoas falam, a primeira mantém a cor principal e a segunda usa esta cor. Em cortes com uma voz, a cor fica igual.",
   "Second speaker in another colour": "Segundo alto-falante em outra cor",
@@ -2700,5 +2700,7 @@
   "horizontal longform": "vídeo longo horizontal",
   "vertical Short": "Short vertical",
   "Could not start: {0}": "Não foi possível iniciar. {0}",
-  "The language your computer uses": "Idioma do computador"
+  "The language your computer uses": "Idioma do computador",
+  "Words already said stay lit": "Palavras já ditas ficam acesas",
+  "The word being said pops": "A palavra falada cresce"
 }

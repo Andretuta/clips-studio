@@ -4,6 +4,7 @@ import { t } from '../lib/i18n'
 import { CortesGamerOverlay, CortesGamerSliders, CortesGamerToggle, DEFAULT_CORTES_GAMER_STYLE } from '../components/CortesGamerWatermark'
 import type { CortesGamerStyle } from '../lib/types'
 import AutonomyCard from '../components/AutonomyCard'
+import CaptionStyleCard from '../components/CaptionStyleCard'
 import {
   DESTINOS,
   FAIXA_CHIP,
@@ -292,6 +293,7 @@ export default function Mesa({ target, onTargetConsumed, onOpenInStudio }: Props
       {erro && <p className="mx-5 mt-3 px-3 py-2 rounded-lg bg-error/15 text-error text-sm">{erro}</p>}
       {envio && <p role="status" className="mx-5 mt-2 text-sm">{envio}</p>}
       <AutonomyCard />
+      <CaptionStyleCard />
       {atual && <p className="mx-5 mt-2 text-xs text-muted">
         {momento && typeof momento.score === 'number' && Number.isFinite(momento.score)
           ? `Momento-chave: ${momento.score.toFixed(2)} · ${(momento.motivos ?? []).join(' · ')}`

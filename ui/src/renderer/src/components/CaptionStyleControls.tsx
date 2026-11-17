@@ -12,6 +12,8 @@ export const DEFAULT_CAPTION_STYLE: Required<CaptionStyle> = {
   uppercase: true,
   highlight: false,
   highlight_color: '#FFE600',
+  karaoke: false,
+  pop: false,
   second_speaker: false,
   second_speaker_color: '#5CE1FF'
 }
@@ -215,6 +217,29 @@ export default function CaptionStyleControls({
           />
         )}
       </div>
+
+      {style.highlight && (
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              className="size-4 accent-[#38BDF8]"
+              checked={style.karaoke}
+              onChange={(e) => onChange('karaoke', e.target.checked)}
+            />
+            {tr("Words already said stay lit")}
+          </label>
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              className="size-4 accent-[#38BDF8]"
+              checked={style.pop}
+              onChange={(e) => onChange('pop', e.target.checked)}
+            />
+            {tr("The word being said pops")}
+          </label>
+        </div>
+      )}
 
       {!hideSecondSpeaker && (
         <div className="flex items-center gap-3">

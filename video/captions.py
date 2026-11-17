@@ -118,6 +118,69 @@ def place_middle_captions(ass: str, x: int, y: int) -> str:
     return ass.replace(prefix, prefix + rf"\an5\pos({x},{y})")
 
 
+def clean_style(raw) -> dict:
+    """A caption style sent by the app: known keys only, each checked, sizes
+    kept in range. ValueError names the first bad key."""
+    if not isinstance(raw, dict):
+        raise ValueError("caption style must be an object")
+    out = {}
+    for key, default in DEFAULT_STYLE.items():
+        if key not in raw:
+            continue
+        value = raw[key]
+        if isinstance(default, bool):
+            ok = isinstance(value, bool)
+        elif isinstance(default, int):
+            ok = isinstance(value, (int, float)) and not isinstance(value, bool)
+        elif key == "font":
+            ok = isinstance(value, str) and value in FONTS
+        elif key == "position":
+            ok = isinstance(value, str) and value in _POSITIONS
+        else:  # the colours
+            ok = isinstance(value, str) and re.fullmatch(r"#[0-9A-Fa-f]{6}", value) is not None
+        if not ok:
+            raise ValueError(f"caption style: bad {key}")
+        out[key] = value
+    if "font_size" in out:
+        out["font_size"] = max(40, min(200, int(out["font_size"])))
+    if "words_per_caption" in out:
+        out["words_per_caption"] = max(1, min(6, int(out["words_per_caption"])))
+    return out
+
+
+PREVIEW_TEXT = "Esqueci disso, calma."
+PREVIEW_SEAM = 728  # the Split layout's line between webcam and game
+
+
+def preview_png(style: dict | None) -> bytes:
+    """The caption exactly as it burns (libass), side by side: on a split
+    screen's line and on a screen with no split. 720x640 PNG."""
+    import subprocess
+    from tempfile import TemporaryDirectory
+
+    from core.binaries import ffmpeg
+    from video.filters import subtitles_filter
+
+    with TemporaryDirectory(prefix="caption-preview-") as folder:
+        work = Path(folder)
+        built = build_captions([], ClipCandidate(start=0, end=3, score=0), work / "full.ass", style=style,
+                               lines=[{"start": 0.0, "end": 3.0, "text": PREVIEW_TEXT}])
+        (work / "split.ass").write_text(
+            place_middle_captions(built.read_text(encoding="utf-8"), 540, PREVIEW_SEAM), encoding="utf-8")
+        graph = (f"color=c=0x2b2140:s=1080x{PREVIEW_SEAM}:r=10:d=2[cam];"
+                 f"color=c=0x34463c:s=1080x{1920 - PREVIEW_SEAM}:r=10:d=2[game];"
+                 f"[cam][game]vstack,{subtitles_filter('split.ass')}[a];"
+                 f"color=c=0x2f3542:s=1080x1920:r=10:d=2,{subtitles_filter('full.ass')}[b];"
+                 "[a][b]hstack,scale=720:640")
+        # 1.2 s in: the highlight is on a middle word, past its pop.
+        result = subprocess.run([ffmpeg(), "-v", "error", "-filter_complex", graph, "-ss", "1.2",
+                                 "-frames:v", "1", "-f", "image2pipe", "-vcodec", "png", "-"],
+                                capture_output=True, cwd=work, timeout=30)
+    if result.returncode != 0 or not result.stdout:
+        raise RuntimeError(f"caption preview failed: {result.stderr[-300:]!r}")
+    return result.stdout
+
+
 def _caption_font(opts: dict) -> str:
     return opts["font"] if opts.get("font") in FONTS else DEFAULT_STYLE["font"]
 

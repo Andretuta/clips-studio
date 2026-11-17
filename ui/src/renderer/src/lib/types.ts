@@ -284,6 +284,10 @@ export interface CaptionStyle {
   /** Light up each word as it is spoken (the short-form caption look). */
   highlight?: boolean
   highlight_color?: string
+  /** With highlight: the words already said stay lit. */
+  karaoke?: boolean
+  /** With highlight: the word being said grows and settles. */
+  pop?: boolean
   /** Another colour for whoever isn't the main speaker (#126). */
   second_speaker?: boolean
   second_speaker_color?: string

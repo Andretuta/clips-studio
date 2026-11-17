@@ -4,7 +4,7 @@
 
 API version **1** (`GET /health` → `api_version`). The engine listens on `http://127.0.0.1:8765`. How to call it, with examples and the gotchas, is in [`docs/API.md`](../API.md); what the labels promise is in [API](api.md).
 
-287 routes: **60 stable**, **49 experimental**, 178 internal.
+290 routes: **60 stable**, **49 experimental**, 181 internal.
 
 | Label | Promise |
 |---|---|
@@ -236,7 +236,7 @@ Everything else. Grouped by the first part of the path; the module is where it i
 | `/publish` | `POST /publish/{job_id}/cancel` | `server.youtube_api` |
 | `/queue` | `POST /queue/clear` | `server.api` |
 | `/remote-render` | `GET /remote-render`<br>`PUT /remote-render`<br>`POST /remote-render/jobs/{job_id}/retry`<br>`POST /remote-render/pairing-code`<br>`PUT /remote-render/this-pc`<br>`POST /remote-render/this-pc/unpair`<br>`POST /remote-render/videos/{video_id}/render-locally`<br>`DELETE /remote-render/workers/{worker_id}`<br>`POST /remote-render/workers/{worker_id}/hold` | `remote_render.service` |
-| `/settings` | `GET /settings`<br>`PATCH /settings` | `server.api` |
+| `/settings` | `GET /settings`<br>`PATCH /settings`<br>`GET /settings/caption-style`<br>`PUT /settings/caption-style`<br>`POST /settings/caption-style/preview` | `server.api` |
 | `/sources` | `GET /sources/frame`<br>`GET /sources/people`<br>`GET /sources/snap`<br>`GET /sources/suggest` | `server.api` |
 | `/storage` | `GET /storage`<br>`GET /storage/videos` | `server.api` |
 | `/text-updates` | `GET /text-updates/channels`<br>`DELETE /text-updates/credentials`<br>`PUT /text-updates/discord-bot`<br>`GET /text-updates/pending`<br>`PATCH /text-updates/settings`<br>`GET /text-updates/status`<br>`POST /text-updates/test` | `server.text_updates_api` |

@@ -3470,6 +3470,47 @@ def create_app(config: dict, settings_path: Path) -> FastAPI:
             config["content_language"] = body.content_language
         return {"ok": True, "note": "restart serve to apply pipeline-level changes"}
 
+    # ---- caption style for new clips: applies on save, no restart --------------
+    # Kept in app_state (a nested block in settings.yaml has no safe regex
+    # rewrite) and put into the live config the worker copies per job.
+    from video import captions as captions_mod
+
+    d = db()
+    try:
+        saved_style = d.get_flag("caption_style", "")
+    finally:
+        d.close()
+    if saved_style:
+        config["clips"]["caption_style"] = json.loads(saved_style)
+
+    def _caption_style_body(body) -> dict:
+        try:
+            return captions_mod.clean_style(body)
+        except ValueError as e:
+            raise HTTPException(400, str(e)) from e
+
+    @app.get("/settings/caption-style")
+    def get_caption_style():
+        return {**captions_mod.DEFAULT_STYLE, **(config["clips"].get("caption_style") or {})}
+
+    @app.put("/settings/caption-style")
+    def put_caption_style(body: dict):
+        style = _caption_style_body(body)
+        d = db()
+        try:
+            d.set_flag("caption_style", json.dumps(style))
+        finally:
+            d.close()
+        config["clips"]["caption_style"] = style
+        return get_caption_style()
+
+    @app.post("/settings/caption-style/preview")
+    def preview_caption_style(body: dict):
+        from fastapi.responses import Response
+
+        png = captions_mod.preview_png(_caption_style_body(body))
+        return Response(png, media_type="image/png", headers={"Cache-Control": "no-store"})
+
     return app
 
 
