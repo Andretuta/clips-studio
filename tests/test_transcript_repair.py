@@ -122,8 +122,8 @@ def test_whisper_run_avoids_greedy_early_stop_and_strict_vad(tmp_path):
 
 
 def test_whisper_run_splits_long_blocks_for_fast_deterministic_decode(monkeypatch, tmp_path):
-    """5-min local blocks (>=120s) use fast deterministic decoding (beam_size=1,
-    vad=0.5, temperature=0.0), while short clips and unknown durations keep 5/0.3."""
+    """5-min local blocks (>=120s) turn off the temperature fallback for a fast,
+    deterministic decode; beam 5 (2 on CPU) + VAD 0.3 everywhere."""
     import types
     from transcription import transcriber
 
@@ -142,9 +142,9 @@ def test_whisper_run_splits_long_blocks_for_fast_deterministic_decode(monkeypatc
     transcriber._run(FakeModel("cpu"), tmp_path / "block.mp4", "pt")
 
     assert len(calls) == 2
+    assert [kw["beam_size"] for kw in calls] == [5, 2]
     for kw in calls:
-        assert kw["beam_size"] == 1
-        assert kw["vad_parameters"] == {"threshold": 0.5}
+        assert kw["vad_parameters"] == {"threshold": 0.3}
         assert kw["temperature"] == 0.0
         assert kw["condition_on_previous_text"] is False
 

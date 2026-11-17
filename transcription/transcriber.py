@@ -161,13 +161,14 @@ def _run(model, video_path: Path, language: str | None, hotwords: str | None = N
     names to listen for (sports.hotwords), else Whisper as always."""
     duration = _video_duration(video_path)
     long_block = duration is not None and duration >= LONG_BLOCK_SECONDS
-    # Short clips (<120s or unknown) keep beam_size=5 (2 on CPU) + VAD 0.3 so
-    # greedy decoding doesn't stop early on brief pauses (issue: clip 158).
-    # Long live-stream blocks (>=120s) use beam_size=1 + VAD 0.5 + temp=0.0:
-    # benchmarked on 5-min GTA blocks (RTX 3060, large-v3-turbo) at 7.6s vs
-    # 56-170s default, +16-33% more words, and 100% deterministic across runs.
-    beam_size = 1 if long_block else (5 if _on_gpu(model) else 2)
-    vad_threshold = 0.5 if long_block else 0.3
+    # beam_size=5 (2 on CPU) + VAD 0.3 so greedy decoding doesn't stop early on
+    # brief pauses (issue: clip 158). Long live-stream blocks (>=120s) also turn
+    # off the temperature fallback: on a real 5-min GTA block (RTX 3060,
+    # large-v3-turbo) that is 13.8s and deterministic, against 56-170s with the
+    # fallback. Beam 1 + VAD 0.5 ran in 7.2s but caught 462 words and 123s of
+    # speech, against 586 words and 161s here.
+    beam_size = 5 if _on_gpu(model) else 2
+    vad_threshold = 0.3
     extra: dict = {}
     if long_block:
         extra["temperature"] = 0.0
