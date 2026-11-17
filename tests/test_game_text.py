@@ -171,3 +171,28 @@ def test_a_menu_is_marked_down_lightly_and_a_banner_only_informs(fused):
     assert "ON SCREEN: ACE" in ace.subscores["game_why"]
     before = next(c for s, c in base.items() if s <= 600 <= c.end)
     assert ace.score == before.score
+
+
+def test_the_ocr_runs_on_directml_when_this_onnxruntime_has_it(monkeypatch):
+    """0.2 s a frame against 0.93 s on the CPU; the plain build, or a card
+    that won't start DirectML, reads on the CPU as before."""
+    import sys
+    import types
+
+    from analysis import game_text
+
+    made = []
+
+    def RapidOCR(**kw):
+        if kw and fail:
+            raise RuntimeError("DirectML device lost")
+        made.append(kw)
+        return kw
+
+    monkeypatch.setitem(sys.modules, "rapidocr_onnxruntime", types.SimpleNamespace(RapidOCR=RapidOCR))
+    for providers, fail, want in [(["DmlExecutionProvider", "CPUExecutionProvider"], False, True),
+                                  (["CPUExecutionProvider"], False, False),
+                                  (["DmlExecutionProvider", "CPUExecutionProvider"], True, False)]:
+        monkeypatch.setitem(sys.modules, "onnxruntime",
+                            types.SimpleNamespace(get_available_providers=lambda p=providers: p))
+        assert bool(game_text._new_engine()) is want

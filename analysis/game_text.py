@@ -103,11 +103,27 @@ class Lexicon:
 def _ocr(img):
     global _engine
     if _engine is None:
-        from rapidocr_onnxruntime import RapidOCR
-
-        _engine = RapidOCR()
+        _engine = _new_engine()
     result, _elapsed = _engine(img, use_cls=False)
     return result or []
+
+
+def _new_engine():
+    """On the GPU when this onnxruntime is the DirectML build (any DirectX 12
+    card): 0.2 s a frame against 0.93 s on the CPU, the same text read
+    (20 frames of a 5-min GTA block, RTX 3060, 17/11). The plain build has
+    no DirectML and reads on the CPU, as before; so does a card that won't
+    start it."""
+    from rapidocr_onnxruntime import RapidOCR
+
+    try:
+        import onnxruntime
+
+        if "DmlExecutionProvider" in onnxruntime.get_available_providers():
+            return RapidOCR(det_use_dml=True, cls_use_dml=True, rec_use_dml=True)
+    except Exception as e:
+        print(f"  Screen text: DirectML unusable ({str(e)[:90]}); reading on the CPU")
+    return RapidOCR()
 
 
 def read_frame(img, events: Lexicon, menu: Lexicon, ocr=None) -> tuple[list[str], set]:
