@@ -100,3 +100,39 @@ Commit: `clips-kitty` `5ba4541` (aguarda recarga do processo vivo em `127.0.0.1:
   - **Tempos por etapa:** upload (`POST /videos/local`) **1,33 s**; `[1/4]` + carga fria de modelos/PANNs + Whisper `[2/4]` **47,17 s** (`~30 s` de carga fria de modelos; decodificação Whisper **16,90 s**, 91 trechos); `[3/4]` análise multimodal + seleção Luna + scoring + ranking **73,45 s** (sinais/OCR `30,00 s`, Luna chunk `12,75 s`, score 14 janelas + fusão `24,81 s`, ranking 4 finalistas `5,89 s`); `[4/4]` metadados Luna (`~8,9 s`) + tracking GPU e render de 4 clipes (`~112,6 s`) **121,55 s**. Total no worker: **249,09 s (~4,15 min)** (antes 9–10 min), produzindo 4 cortes com `momento_chave` (`0,69`–`0,86`).
   - **Recursos e limite:** pico de VRAM **4.666,0 MiB** (de 12 GiB na RTX 3060) e pico de RAM do sistema de **99,5%** durante os 3 renders paralelos + CUDA — recomenda-se acompanhar RAM ou considerar `parallel_renders: 2` se houver outras tarefas pesadas concorrentes.
 
+
+### Revisão do Claude sobre o cartão [Motor] (16/11, 22h20)
+
+**Whisper em blocos longos (clips-kitty `bbad90d`).** Mesmo bloco real de 5 min, RTX 3060, `temperature=0`, duas rodadas cada:
+
+| Configuração | Tempo | Trechos | Palavras | Fala coberta | Buracos > 15 s | Maior repetição |
+| --- | --- | --- | --- | --- | --- | --- |
+| beam 1, VAD 0,5 (Hydrogen) | 11,9 s / 7,2 s | 91 | 462 | 122,7 s | 3 | 2 |
+| **beam 5, VAD 0,3 (adotada)** | 13,7 s / 13,9 s | 53 | 586 | 160,8 s | 2 | 1 |
+| beam 5, VAD 0,5 | 9,7 s / 9,6 s | 68 | 435 | 136,4 s | 4 | 14 |
+
+- **O que causava a lentidão:** o fallback de temperatura (56 a 170 s), não o beam.
+- **A adotada:** pega 27% mais palavras e 31% mais fala, sem repetição e igual nas duas rodadas.
+- **Custo:** 6,6 s a mais num trabalho de cerca de 249 s por bloco.
+- **O que não mudou:** a regra dos clipes curtos. Só os blocos `>= 120 s` desligam o fallback.
+- **Testes:** `test_transcript_repair.py` e `test_whisper_gpu_libraries.py` passaram.
+
+**Detector de chat (clips-kitty `bbc31fd`).** A rodada do motor ajustou o detector olhando os dois conjuntos, e no conjunto de validação ele piorou. Comparação com o mesmo script (`scripts/eval_chat_moments.py`) e o mesmo fixture (15 VODs, 64 clipes):
+
+| Validação (7 VODs, 27 clipes) | F1 | Precisão | recall@5 | recall@10 | recall@15 | Erro mediano |
+| --- | --- | --- | --- | --- | --- | --- |
+| Detector antigo (`5ba4541~1`) | 0,148 | 0,092 | 0,074 | 0,185 | 0,333 | 12,4 s |
+| Rodada do motor (`5ba4541`) | 0,140 | 0,086 | 0,037 | 0,222 | 0,370 | 26,1 s |
+| **Corrigido (`bbc31fd`)** | **0,163** | **0,100** | **0,111** | **0,296** | **0,407** | 25,6 s |
+
+- **Como se escolheu:** grade de 16 combinações (BASELINE 45/180, folga 0/15 s, junção 10/15 s, razão de únicos 0/0,55), escolhida pelo conjunto de ajuste (F1 0,326, recall@10 0,378).
+- **A folga de 15 s antes da rajada** piorava a validação em todas as combinações e saiu.
+- **A junção de rajadas** voltou a 10 s.
+- **A razão de usuários únicos** não muda nada neste fixture: os autores vêm com hash e quase não se repetem. Fica pela proteção contra spam em chat ao vivo.
+- **Testes:** chat, hype, fusão, gaming e upload local: **186 aprovados**.
+- **Limitações:**
+  - **Erro de tempo:** continua o dobro do antigo (o evento sai cerca de 14 s antes do meio do clipe na validação). Investigar antes de dar peso alto ao chat na posição do corte.
+  - **Fixture curto:** com 27 clipes de validação, a diferença entre as linhas é pequena e pode ser ruído.
+  - **Regime diferente:** o fixture usa janelas de cerca de 50 min de VOD. O bloco ao vivo tem 5 min, então a base de 180 s fica truncada nos primeiros 3 min de cada bloco. Levar a base de um bloco para o próximo fica para depois.
+
+**RAM.** O ensaio chegou a 99,5% de RAM (15,9 GiB na máquina) com `parallel_renders: 3`. Com Cola gravando e Electron aberto ao mesmo tempo, a recomendação é `parallel_renders: 2` no `config/settings.yaml` local (não versionado).
