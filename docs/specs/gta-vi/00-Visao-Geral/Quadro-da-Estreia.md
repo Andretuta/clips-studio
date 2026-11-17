@@ -38,6 +38,7 @@ kanban-plugin: board
 
 ## Feito
 
+- [x] Ajustador da legenda na Mesa (fonte, tamanho, cores, posição, karaokê, pop) com prévia real do motor; vale ao salvar, sem reiniciar #P0 #claude @{2026-11-17} clips-kitty b3dc2b4 3dbe209 [spec](../03-Producao-de-clips/06-editor-e-render.md)
 - [x] Legenda menor (82 -> 62); na tela dividida fica na linha entre streamer e jogo, sem divisão fica embaixo, também na legenda traduzida em PT (vale após reiniciar o motor) #P0 #claude @{2026-11-16} clips-kitty 4fabbc0 [spec](../03-Producao-de-clips/06-editor-e-render.md)
 - [x] RAM do render: -shortest guardava 10 s de quadros crus; agora 1 s (1 render 2,9 -> 1,36 GiB; 3 em paralelo 6,8 -> 3,7 GiB) #P0 #claude @{2026-11-16} clips-kitty 9773616 [spec](../03-Producao-de-clips/06-editor-e-render.md)
 - [x] Mesa publica em público pelo Composio (YouTube público, categoria Jogos; TikTok direto quando a conta aceitar público, senão rascunho) #P0 #claude @{2026-11-16} clips-kitty ce7b3a1 [spec](../04-Mesa-e-publicacao/09-publicacao-e-contas.md)

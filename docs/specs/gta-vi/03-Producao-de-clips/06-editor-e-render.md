@@ -115,3 +115,30 @@ Pedido do usuário: legenda menor; com a tela dividida (streamer + jogo), exatam
 - O `settings.yaml` só é lido quando o motor sobe. Tamanho, posição e código novos valem depois do próximo reinício do motor, que fica com o operador.
 - Cortes já renderizados guardam o estilo antigo (82, `middle`) em `render_opts.caption_style`. Se forem re-traduzidos, mantêm o tamanho antigo, mas já vão para a divisão.
 - Webcam pequena sobre o jogo (PIP) não conta como tela dividida: a legenda fica embaixo.
+
+### Ajustador da legenda na Mesa (Claude, 17/11, 00h50)
+
+O usuário pediu um ajustador da fonte que passe a valer assim que ele salva, como a marca d'água CG.
+
+**Decisão (`b3dc2b4` + `3dbe209`).**
+- **Painel.** "Legenda dos próximos cortes" fica na Mesa, logo abaixo da autonomia. Ele reaproveita o `CaptionStyleControls` que a fila e o editor já usam: fonte, cor, tamanho, posição sem divisão, palavras por legenda, maiúsculas, destaque e cor do destaque. Os controles de karaokê ("palavras já ditas ficam acesas") e de "pop" ("a palavra falada cresce") entraram no mesmo componente. Os botões são Salvar e Desfazer.
+- **Prévia.** É o próprio motor queimando com libass, em `GET /settings/caption-style/preview?style=<json>`, em cerca de 0,24 s, e o painel a mostra como `<img>`. A imagem traz dois quadros: a legenda na linha de uma tela dividida e numa tela sem divisão.
+  - O exemplo antigo em CSS some nesse painel, porque o app não carrega o Bebas Neue e mostraria outra fonte.
+  - A primeira versão usava POST com `blob:`, que a CSP do app (`img-src 'self' data: http://127.0.0.1:8765`) bloqueava. Por isso a rota virou GET.
+- **Salvar.** `PUT /settings/caption-style` valida o estilo com `clean_style` (só chaves conhecidas, fonte da lista, cor `#RRGGBB`, posição válida, tamanho entre 40 e 200, palavras entre 1 e 6). O estilo vai para o `app_state` e troca `config["clips"]["caption_style"]`, a config viva que o worker copia com `deepcopy` no começo de cada tarefa. O próximo corte já sai com ele, sem reiniciar.
+- **Subida do motor.** O estilo salvo no `app_state` vale sobre o `settings.yaml`.
+
+**Teste.**
+- `tests/test_caption_style_settings.py` (7): salvar vale na config viva e depois de recriar o app; estilo inválido devolve 400 e nada muda; a prévia é um PNG.
+- `test_api_contract.py` verde, `gen_api_reference.py --check` em dia, `tsc` da web sem erro.
+- **No Electron real** (`npm run dev`, porta 5173, motor recarregado às 00h43):
+  - a prévia carregou com 720×640;
+  - o tamanho 58 mudou a prévia;
+  - "Salvar legenda" mostrou "Salvo. Os próximos cortes já saem com esta legenda.", e `GET /settings/caption-style` respondeu 58 na hora;
+  - o tamanho voltou para 62 pelo próprio painel.
+
+**Limitações.**
+- Vale para os cortes novos. Os cortes que já estão na Mesa guardam o estilo da época em `render_opts.caption_style`.
+- O executável do Tauri também foi recompilado (`cache/tauri-target/release/clipador-tauri.exe`, 17/11 00h42).
+  - A cópia antiga ficou como `clipador-tauri.anterior.exe`, porque a janela aberta pelo Codex (pid 19304, de outra conta, acesso negado) ainda a usa.
+  - Apagar a cópia antiga depois que essa janela fechar.
