@@ -154,3 +154,35 @@ RTX 3060, 12.288 MiB. Cada etapa rodou num processo próprio, com CUDA limpo, en
 - O Whisper é carregado a cada transcrição e solto no fim. O YOLO (`video/tracker.py`) e o PANNs ficam em cache no processo do motor. Por isso o motor parado segura ~0,25 GiB.
 - O pico real do motor é o Whisper, ~2,5 GiB. Se 3 renders caírem junto com uma transcrição, a soma fica perto de 4 GiB. O ensaio E2E de 16/11 bateu 4.666 MiB absolutos (com a área de trabalho). A placa fica com ~6 GiB livres, então a VRAM não é o gargalo. O limite é a RAM (99,5% com 3 renders, ver acima).
 - O TalkNet (`video/asd.py`) não roda: os pesos não estão instalados. O modelo onnx de turnos de voz também não está. O OCR (RapidOCR onnx) está disponível.
+
+### Desempenho com a VRAM livre (Claude, Codex e Antigravity, 17/11)
+
+O usuário pediu para usar os ~6 GiB livres da placa. Foram cinco cartões. Claude ficou com o Whisper e o OCR; o YOLO foi para o Codex e o render na GPU para o Antigravity (Gemini 4 Hydrogen). Os scripts de medição estão em `D:\clipador-gta6\cache\ensaio-vram\claude\`.
+
+**1. Whisper fica carregado entre blocos (`312bec4`).** `transcribe()` guarda o modelo da GPU depois de uma transcrição que deu certo, e o próximo bloco o reaproveita.
+- **Tempo:** a 1ª transcrição do `bloco5.mp4` leva o custo da carga. A 2ª e a 3ª levaram 9,9 s e 11,8 s, a mesma 273 palavras.
+- **Custo:** ~2,1 GiB fixos de VRAM.
+- **O que não fica guardado:** um modelo que falhou (é recarregado) e o modelo de CPU (a RAM é o recurso escasso).
+- **Teste:** `test_a_gpu_model_that_worked_stays_loaded_for_the_next_job`; 31 testes de Whisper, cancelamento e reparo verdes.
+
+**2. Whisper em lote: descartado para a estreia.** `BatchedInferencePipeline` (faster-whisper 1.2.1) no mesmo bloco, com beam 5, VAD 0,3, temperatura 0 e lote 8:
+
+| Variação | Tempo | Palavras (atual: 273) | Semelhança com o atual |
+|---|---|---|---|
+| Padrão | 6,1 s | 114 | 0,42 |
+| Com timestamps | 33,7 s | 300 | 0,51 |
+| Com timestamps, beam 1 | 5,0 s | 278 | 0,44 |
+| VAD 0,5 | 9,1 s | 292 | 0,58 |
+
+O texto muda demais, e não há gabarito para saber qual erra mais. O ganho seria ~5 s por bloco, contra o risco de refazer a calibração do clipe 158.
+
+**3. OCR na GPU pelo DirectML (`46f03fb`).**
+- **Código:** `analysis/game_text._new_engine()` usa `det/cls/rec_use_dml` quando o onnxruntime instalado tem `DmlExecutionProvider`. Com o build comum nada muda, e um DirectML que não inicia volta para a CPU.
+- **Medido:** nos mesmos 20 quadros do bloco, com o recorte e a largura do `game_text`, foram **0,93 s por quadro na CPU e 0,20 s no DirectML** (mediana de 3 rodadas), com o texto lido idêntico. No bloco, o OCR cai de ~30 s para ~6 s.
+- **Compatibilidade:** o VAD Silero do Whisper deu os mesmos trechos com onnxruntime 1.32 e onnxruntime-directml 1.24.4. As transcrições curtas variam entre execuções em qualquer versão, porque abaixo de 120 s o fallback de temperatura é aleatório. As suítes `test_game_text`, `test_voice_turns`, `test_basketball_screen` e `test_whisper_gpu_libraries` passam com as duas versões.
+- **Ativação (operador, com o motor parado):** as DLLs ficam presas enquanto o motor roda. Na pasta `clips-kitty`, com `UV_CACHE_DIR=D:\clipador-gta6\cache\uv`:
+  1. `uv pip uninstall --python .venv\Scripts\python.exe onnxruntime`
+  2. `uv pip install --python .venv\Scripts\python.exe onnxruntime-directml==1.24.4`
+- **Limitação:** o `requirements.txt` continua pedindo `onnxruntime` (CPU). Uma reinstalação pelo requirements volta o OCR para a CPU sem quebrar nada. A cópia de teste está em `D:\clipador-gta6\cache\ort-dml`.
+
+**4 e 5.** O YOLO em lote (Codex) e os filtros do render na GPU (Antigravity) estão na [spec 06](06-editor-e-render.md), quando concluídos.

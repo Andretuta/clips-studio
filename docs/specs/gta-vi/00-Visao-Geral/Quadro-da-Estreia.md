@@ -6,6 +6,7 @@ kanban-plugin: board
 
 ## Depende do usuário
 
+- [ ] Na recarga do motor, com ele parado: trocar onnxruntime por onnxruntime-directml==1.24.4 (2 comandos uv na spec) para o OCR rodar na GPU #P0 [spec](../03-Producao-de-clips/05-ia-e-transcricao.md)
 - [ ] Conectar YouTube e TikTok pelo Composio e aprovar um corte na Mesa: sai público. Conferir no canal se o YouTube manteve público e se o TikTok publicou ou caiu em rascunho #P0 [spec](../04-Mesa-e-publicacao/09-publicacao-e-contas.md)
 - [ ] Ligar a autorização de automação do plano ChatGPT se a Cola for processar sozinha #P1 [spec](../03-Producao-de-clips/05-ia-e-transcricao.md)
 - [ ] R01: rodar os 3 comandos `icacls` do estado operacional (dá controle total ao `andre`, corta a herança do D: e tira `Usuários autenticados` e `Usuários`) #P0 #R01 [estado](ESTADO-OPERACIONAL.md)
@@ -34,10 +35,16 @@ kanban-plugin: board
 
 ## Fazendo
 
+- [ ] Desempenho 4/5: YOLO em lote no rastreamento #P0 #codex [spec](../03-Producao-de-clips/05-ia-e-transcricao.md)
+- [ ] Desempenho 5/5: filtros do render na GPU (menos RAM e CPU por render) #P0 #antigravity [spec](../03-Producao-de-clips/06-editor-e-render.md)
+
 
 
 ## Feito
 
+- [x] Desempenho 1/5: Whisper fica carregado na VRAM entre blocos: 2ª transcrição do bloco ~10 s, +2,1 GiB fixos (vale após recarregar o motor) #P0 #claude @{2026-11-17} clips-kitty 312bec4 [spec](../03-Producao-de-clips/05-ia-e-transcricao.md)
+- [x] Desempenho 2/5: Whisper em lote medido e descartado para a estreia (texto 42–58% igual ao atual, ganho ~5 s) #P0 #claude @{2026-11-17} [spec](../03-Producao-de-clips/05-ia-e-transcricao.md)
+- [x] Desempenho 3/5: OCR no DirectML 0,93 → 0,20 s/quadro, mesmo texto; ativa com a troca do onnxruntime (cartão em Depende do usuário) #P0 #claude @{2026-11-17} clips-kitty 46f03fb [spec](../03-Producao-de-clips/05-ia-e-transcricao.md)
 - [x] Ajustador da legenda na Mesa (fonte, tamanho, cores, posição, karaokê, pop) com prévia real do motor; vale ao salvar, sem reiniciar #P0 #claude @{2026-11-17} clips-kitty b3dc2b4 3dbe209 [spec](../03-Producao-de-clips/06-editor-e-render.md)
 - [x] Legenda menor (82 -> 62); na tela dividida fica na linha entre streamer e jogo, sem divisão fica embaixo, também na legenda traduzida em PT (vale após reiniciar o motor) #P0 #claude @{2026-11-16} clips-kitty 4fabbc0 [spec](../03-Producao-de-clips/06-editor-e-render.md)
 - [x] RAM do render: -shortest guardava 10 s de quadros crus; agora 1 s (1 render 2,9 -> 1,36 GiB; 3 em paralelo 6,8 -> 3,7 GiB) #P0 #claude @{2026-11-16} clips-kitty 9773616 [spec](../03-Producao-de-clips/06-editor-e-render.md)
