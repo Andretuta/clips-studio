@@ -22,7 +22,6 @@ kanban-plugin: board
 - [ ] Exigir sessão nas mutações da API (fila, publicação) e nas leituras sensíveis #P1 #R02 (segurança adiada pelo usuário em 16/11: roda só na máquina dele) [spec](../01-Arquitetura/01-desktop-e-api.md)
 - [ ] Corrigir os seis grupos das 119 falhas da suíte ampla: resolver i18n nos testes Node primeiro, isolar .venv/config/intérprete e verificar legendas antes de mudar expectativas #P1 [relatório](../90-Auditorias/suite-completa-2026-11-16.md)
 
-- [ ] Medir Whisper + render com um bloco real de 5 min (tempo, RAM, VRAM) #P1 [spec](../03-Producao-de-clips/05-ia-e-transcricao.md)
 - [ ] WebSocket: validar Origin e sessão, limitar assinantes #P1 #R10 [auditoria](../90-Auditorias/rev-code-review.md)
 - [ ] Mesa: par MP4 + JSON com transição recuperável; paginar a listagem #P1 #R11 [spec](../04-Mesa-e-publicacao/07-mesa-e-controle.md)
 - [ ] Compilado: limite de fontes e duração, reserva de espaço #P1 #R12 [spec](../04-Mesa-e-publicacao/08-compilados-youtube.md)
@@ -35,10 +34,11 @@ kanban-plugin: board
 
 ## Fazendo
 
-- [ ] [Motor] Chat do bloco entra na pontuação; pontuação de momento-chave validada contra clipes reais; inclui R05 e R08 #P0 #antigravity-motor [spec](../03-Producao-de-clips/05-ia-e-transcricao.md)
 
 ## Feito
 
+- [x] [Motor] Chat do bloco entra na pontuação (`lag=3 s`), pontuação `momento_chave` validada contra 64 clipes reais de 15 VODs GTA V/RP, Whisper separado por duração (`>=120 s` → beam 1/VAD 0,5/T=0 em 7,6 s) e R05/R08 #P0 #antigravity-motor #R05 #R08 [spec](../03-Producao-de-clips/05-ia-e-transcricao.md) (`5ba4541`) @{2026-11-16}
+- [x] Medido bloco real de 5 min no motor isolado (`8766`): 249,1 s (4,15 min) ponta a ponta (47,2 s carga+Whisper / 73,5 s multimodal+Luna / 121,6 s metadados+render), pico VRAM 4.666 MiB e RAM 99,5% #P1 #antigravity-motor [spec](../03-Producao-de-clips/05-ia-e-transcricao.md) (`5ba4541`) @{2026-11-16}
 - [x] [Electron] OAuth no navegador, ensaio privado/rascunho, recibos e guarda R13, análise R03, revisão editorial e autopost opt-in; testes e roteiro #P0 #codex [spec](../04-Mesa-e-publicacao/09-publicacao-e-contas.md) (`7a1380e`, `0dc1a7a`, `9427328`; Cola `e1183d3`) @{2026-11-16}
 
 - [x] [Gravação] Lives inteiras: codecs medidos (`-c copy` 1080p60 a 3,23 GiB/h), chat ao vivo da Twitch (IRC TLS) por bloco, ensaio até a Mesa (9,1 min no motor) e R04/R06/R07/R08 na Cola; 100 testes da Cola verdes #P0 #antigravity-gravacao [spec](../02-Captura-e-fila/03-gravacao-e-entrega.md) (Cola `17fa9d6`, `62da4d5`) @{2026-11-16}

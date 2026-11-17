@@ -75,3 +75,28 @@ Commit: `clips-kitty` `35a226b`.
   - **Instabilidade:** em duas rodadas seguidas, a C deu 54 e 69 trechos no mesmo bloco, porque o *fallback* de temperatura introduz amostragem. A A deu o mesmo resultado nas duas.
   - **Comentário do código:** dizia que o beam 5 "tem a velocidade do beam 1" e foi corrigido com os números medidos. Se os blocos longos voltarem a ser fonte, separar a configuração por duração.
 
+### Chat do bloco local, `momento_chave` e Whisper por duração (16/11/2026, ~22h02)
+
+Commit: `clips-kitty` `5ba4541` (aguarda recarga do processo vivo em `127.0.0.1:8765`).
+
+- **Chat do bloco local (`server/api.py`, `core/pipeline.py`, `core/housekeeping.py`):**
+  - `POST /videos/local` (`LocalVideoIn`) passou a aceitar o campo opcional `chat`: lista ordenada de `{"t": float, "user": str, "text": str, "emotes": int?}`, persistida em `data/chats/{video_id}.json` (limpa em `DELETE /videos/{video_id}` e no bucket `"orphan_chats"` da limpeza periódica).
+  - Para vídeos `local:`/`local_*`, `_fetch_hype` carrega o chat local salvo em disco em vez de buscar chat remoto de VOD; sem `chat`, o comportamento é idêntico ao anterior.
+  - **Atraso (`chat_live_lag_seconds: 3` em `config/gaming.yaml`):** configurável e menor que o `6.0 s` do replay de VOD porque o `t` do gravador já chega no relógio local do espectador (atraso apenas de reação humana para digitar no chat, sem compensação extra de latência da transmissão).
+- **Pontuação `momento_chave` (`analysis/chat_moments.py`, `analysis/fusion.py`, `server/api.py`):**
+  - Detector passa a usar linha de base adaptativa ao volume do chat, razão de usuários únicos (`unique_ratio` para resistir a spam/copypasta), rajadas de emotes (`emotes`) e léxico PT/EN (`kkkk`, `clipa`, `?????`, `W`/`L`, `KEKW`, `LUL`, `OMEGALUL`, `Pog`, etc.), além da fusão com áudio e sinais do streamer.
+  - Cada corte expõe `momento_chave: {"score": 0..1, "motivos": [...]}` no resultado interno e no campo de nível superior de `/videos/{video_id}/clips` para consumo da regra de auto-postagem.
+  - **Avaliação reproduzível com dados reais (`scripts/eval_chat_moments.py` + `tests/fixtures/twitch_gta_chat_moments.json`, sem credenciais — 15 VODs reais de GTA V/RP e 64 clipes populares como verdade-base):**
+    - Ajuste (`tune`, 8 VODs, 37 clipes): `precision=0,2148`, `recall_all=0,6757`, `F1=0,3260`, `recall@5=0,1892`, `recall@10=0,3243`, `recall@15=0,5676`, erro absoluto mediano `14,25 s` (`offset_to_mid=-6,85 s`).
+    - Validação separada (`val`, 7 VODs, 27 clipes): `precision=0,0862`, `recall_all=0,3704`, `F1=0,1399`, `recall@5=0,0370`, `recall@10=0,2222`, `recall@15=0,3704`, erro absoluto mediano `26,10 s`.
+    - Consolidado (`all`, 15 VODs, 64 clipes): `precision=0,1554`, `recall_all=0,5469`, `F1=0,2420`, `recall@5=0,1250`, `recall@10=0,2812`, `recall@15=0,4844`, erro absoluto mediano `15,00 s`.
+- **Whisper separado por duração (`transcription/transcriber.py`, `LONG_BLOCK_SECONDS = 120.0`):**
+  - `_video_duration()` decide o perfil em `_run()`: mídia curta (`< 120 s` ou duração desconhecida) mantém `beam_size=5` na GPU (`2` na CPU) e VAD `0,3`; blocos longos (`>= 120 s`) usam `beam_size=1`, VAD `0,5` e `temperature=0.0` (sem fallback de amostragem, determinístico entre rodadas).
+  - **Medições reais na RTX 3060 (`large-v3-turbo`):**
+    - Clipes curtos (`ensaio-hydrogen`): `clip158` (`25,5 s`) preservado com `5,01 s`, 58 palavras até `25,2 s` (vs `0,87 s` / 9 palavras no beam 1); `clip159` (`28 s`): 8 trechos, 41 palavras até `27,4 s`; `silence_20s`: 0 trechos.
+    - Bloco real de 5 min (`bloco_5min.mp4`, `300 s`): `beam5_vad03_defaultT` = `169,98 s` / `56,37 s` (instável, 391/340 palavras); `beam5_vad03_T0` = `17,02 s` / `16,72 s` (586 palavras); `beam2_vad03_T0` = `14,92 s` / `17,75 s` (429 palavras); **`beam1_vad05_T0` (adotada para `>= 120 s`) = `7,57 s` / `7,73 s` idênticos nas duas rodadas (91 trechos, 454 palavras)**.
+- **Ensaio E2E isolado de bloco real de 5 min na porta `8766` (16/11, ~21h58–22h01 BRT):**
+  - Entrada: bloco H.264 de `300 s` + 173 mensagens de chat sintético PT/EN (3 rajadas), `gaming_scoring: true`, `chatgpt/gpt-6-luna`, `large-v3-turbo` CUDA, YOLOv8 CUDA, `parallel_renders: 3`.
+  - **Tempos por etapa:** upload (`POST /videos/local`) **1,33 s**; `[1/4]` + carga fria de modelos/PANNs + Whisper `[2/4]` **47,17 s** (`~30 s` de carga fria de modelos; decodificação Whisper **16,90 s**, 91 trechos); `[3/4]` análise multimodal + seleção Luna + scoring + ranking **73,45 s** (sinais/OCR `30,00 s`, Luna chunk `12,75 s`, score 14 janelas + fusão `24,81 s`, ranking 4 finalistas `5,89 s`); `[4/4]` metadados Luna (`~8,9 s`) + tracking GPU e render de 4 clipes (`~112,6 s`) **121,55 s**. Total no worker: **249,09 s (~4,15 min)** (antes 9–10 min), produzindo 4 cortes com `momento_chave` (`0,69`–`0,86`).
+  - **Recursos e limite:** pico de VRAM **4.666,0 MiB** (de 12 GiB na RTX 3060) e pico de RAM do sistema de **99,5%** durante os 3 renders paralelos + CUDA — recomenda-se acompanhar RAM ou considerar `parallel_renders: 2` se houver outras tarefas pesadas concorrentes.
+

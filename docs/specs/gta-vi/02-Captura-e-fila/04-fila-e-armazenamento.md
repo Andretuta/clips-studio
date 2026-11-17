@@ -43,3 +43,15 @@ Work stealing, processamento em cluster e adoção de nova tecnologia de banco.
 ## Notas
 
 A latência da API deve ser medida em separado da duração do trabalho. Relaciona-se aos achados R05, R08 e R12.
+
+### Correções mínimas R05 e R08 na entrada local e fila (16/11/2026, `5ba4541`)
+
+- **R05 (`server/api.py`, `core/queue.py`, `video/encoding.py`, `core/state.py`):**
+  - `POST /videos/local` (`add_local_video`) executa `shorts_made -> duplicate_of -> capacity` (`reserve_local` sob `queue.db_lock` e `_STATE_GUARD`, preservando a ordem duplicata-antes-de-capacidade do commit `c6ede52`) **antes** de chamar `ffprobe` (`timeout=30 s`) e `import_local_source` (`video/encoding.py` com prazo de `120 s` em cópia de stream e `600 s` em transcodificação).
+  - Reservas em voo (`_reserved_count`) são contabilizadas junto ao banco antes da inserção e liberadas em `finally:` ou falha, impedindo que rajadas concorrentes ultrapassem o limite ou gastem disco/GPU antes do `409`.
+  - `core/state.py` passou a serializar a inicialização WAL/migração com `_INIT_LOCK` e definir `timeout=30.0` + `PRAGMA busy_timeout=30000` para suportar requisições concorrentes sem `database is locked`.
+- **R08 (`core/queue.py`, `server/compilation_api.py`):**
+  - `active_count` / `ACTIVE_TYPES = ("process", "compilation", "render")` passaram a contabilizar compilados e edições no limite de capacidade do trabalhador; `server/compilation_api.py` passou a checar capacidade e enfileirar sob `queue.db_lock`.
+- **Testes:** `tests/test_local_upload.py` e `tests/test_compilation.py` validam ordem duplicata-antes-de-capacidade, recusa antes de `ffprobe`/cópia, timeout de sondagem/importação, admissão concorrente limitada e inclusão de `compilation`/`render` na contagem de vagas.
+- **Limitação remanescente:** orçamento explícito de bytes por tipo no volume e isolamento de disco por origem seguem na etapa de disco/R12.
+
