@@ -37,6 +37,7 @@ kanban-plugin: board
 
 ## Feito
 
+- [x] RAM do render: -shortest guardava 10 s de quadros crus; agora 1 s (1 render 2,9 -> 1,36 GiB; 3 em paralelo 6,8 -> 3,7 GiB) #P0 #claude @{2026-11-16} clips-kitty 9773616 [spec](../03-Producao-de-clips/06-editor-e-render.md)
 - [x] Mesa publica em público pelo Composio (YouTube público, categoria Jogos; TikTok direto quando a conta aceitar público, senão rascunho) #P0 #claude @{2026-11-16} clips-kitty ce7b3a1 [spec](../04-Mesa-e-publicacao/09-publicacao-e-contas.md)
 - [x] [Motor] Chat do bloco entra na pontuação (`lag=3 s`), pontuação `momento_chave` validada contra 64 clipes reais de 15 VODs GTA V/RP, Whisper separado por duração (`>=120 s` → beam 1/VAD 0,5/T=0 em 7,6 s) e R05/R08 #P0 #antigravity-motor #R05 #R08 [spec](../03-Producao-de-clips/05-ia-e-transcricao.md) (`5ba4541`) @{2026-11-16}
 - [x] Medido bloco real de 5 min no motor isolado (`8766`): 249,1 s (4,15 min) ponta a ponta (47,2 s carga+Whisper / 73,5 s multimodal+Luna / 121,6 s metadados+render), pico VRAM 4.666 MiB e RAM 99,5% #P1 #antigravity-motor [spec](../03-Producao-de-clips/05-ia-e-transcricao.md) (`5ba4541`) @{2026-11-16}
