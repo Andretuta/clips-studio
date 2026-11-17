@@ -236,3 +236,21 @@ A primeira medição do gamer, logo depois dos 3 renders, deu 64,3 s com tudo fr
 - ~925 testes de tracker e gamer verdes com o lote.
 
 **Vale depois de recarregar o motor.**
+
+## Cor do segundo falante (Claude, 17/11, 09h23)
+
+A legenda pinta de outra cor a fala de quem não é o streamer principal (`analysis/voice_turns.py`, opção `second_speaker` do estilo). Estava parada por dois motivos: os modelos não estavam em `clips-kitty/models/` e a opção estava desligada.
+
+**O que foi feito:**
+- `scripts/fetch_voice_model.py` baixou `wespeaker_resnet34_lm.onnx` (26,5 MB) e `pyannote_segmentation_3.onnx` (6,0 MB), com o SHA-256 conferido. A pasta `models/` fica fora do git.
+- A opção foi ligada pela API do motor (`PUT /settings/caption-style`, o mesmo caminho do cartão "Legenda dos próximos cortes" da Mesa): `second_speaker: true`, cor `#5CE1FF`. Vale no próximo corte, sem reiniciar. Desligar é na própria Mesa.
+- Os vídeos da Cola entram em `data/downloads`, que é a condição para o motor escutar as vozes (`voice_turns.in_library`).
+
+**Medido no onnxruntime-directml 1.24.4 (CPU, como o código pede), num bloco real de 5 min (live de NBA 2K):**
+- Perfil do vídeo: 6 vozes em 7,9 s, uma vez por vídeo.
+- Por clipe de 50 s: 0,9 a 2,9 s. Outra voz em 4 das 6 janelas.
+- Render do trecho de 100–150 s: as falas de outro jogador (3,7–25 s) saíram com as palavras ainda não ditas em azul-claro, e as do streamer em branco. A palavra falada continua verde nos dois casos. Quadros em `D:\clipador-gta6\cache\ensaio-vram\claude\voz\`.
+
+**Testes:** 147 verdes (`test_game_text`, `test_voice_turns`, `test_second_speaker_render`, `test_caption_speakers`, `test_speaker_detection`, `test_packaging`, `test_whisper_gpu_libraries`).
+
+**Limitação:** com o karaokê ligado, a diferença aparece só nas palavras que ainda não foram ditas.

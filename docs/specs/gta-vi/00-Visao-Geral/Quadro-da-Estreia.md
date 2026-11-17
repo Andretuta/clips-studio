@@ -10,7 +10,6 @@ kanban-plugin: board
 - [ ] Ligar a autorização de automação do plano ChatGPT se a Cola for processar sozinha #P1 [spec](../03-Producao-de-clips/05-ia-e-transcricao.md)
 - [ ] R01: rodar os 3 comandos `icacls` do estado operacional (dá controle total ao `andre`, corta a herança do D: e tira `Usuários autenticados` e `Usuários`) #P0 #R01 [estado](ESTADO-OPERACIONAL.md)
 - [ ] Opcional: apagar a cópia antiga do rustup em `C:\Users\andre\.rustup` + `.cargo` (1,6 GB) e o perfil WebView2 antigo do Tauri no C: (137 MB) #P2
-- [ ] Push para o GitHub: `gta6-melhorias` (9 commits) e o novo `codex-estreia` #P2
 
 
 ## A fazer · P0 (antes da estreia)
@@ -34,11 +33,14 @@ kanban-plugin: board
 
 ## Fazendo
 
+- [ ] Push para o GitHub do clips-kitty: `codex-estreia` (novo) e `gta6-melhorias` (9 commits); a Cola não tem remoto #P2 #antigravity
 
 
 
 ## Feito
 
+- [x] Cor do segundo falante: modelos de voz baixados, opção ligada, render real conferido #P1 #claude @{2026-11-17} [spec](../03-Producao-de-clips/06-editor-e-render.md)
+- [x] Reinstalação pelo uv mantém o onnxruntime-directml no Windows (requirements + override no pyproject) #P1 #claude @{2026-11-17} [spec](../03-Producao-de-clips/05-ia-e-transcricao.md)
 - [x] Motor recarregado às 09h10 com os 5 cartões de desempenho e onnxruntime-directml 1.24.4 (OCR na GPU) #P0 #claude @{2026-11-17} [spec](../03-Producao-de-clips/05-ia-e-transcricao.md)
 - [x] Desempenho 5/5: filtros do render em CUDA nos 11 presets + cropper, com fallback CPU; 1 render 33,9 → 15,3 s, 3 em paralelo 46 → 32,3 s, corte gamer 72,9 → 23 s; SSIM 0,945–0,995 #P0 #antigravity @{2026-11-17} clips-kitty dc9f9cb c8447bf [spec](../03-Producao-de-clips/06-editor-e-render.md)
 - [x] Desempenho 4/5: YOLO em lotes de 8 (YOLO por clipe 2,5–5x mais rápido, corte final ≤ 0,09 px); Codex recusou pelo critério estrito, usuário aprovou aplicar #P0 #codex @{2026-11-17} clips-kitty 903e8fc 67e6aaf [spec](../03-Producao-de-clips/06-editor-e-render.md)

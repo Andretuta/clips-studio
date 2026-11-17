@@ -1,6 +1,12 @@
 # Tooling config for the Python engine. There is no build system here on
 # purpose — Clips Kitty ships as a frozen application, not a pip package.
 
+[tool.uv]
+# Every request for the plain onnxruntime (faster-whisper, Piper, RapidOCR)
+# applies only off Windows, where requirements.txt installs the DirectML
+# build in its place. Read by `uv pip install -r requirements.txt` run here.
+override-dependencies = ["onnxruntime>=1.26,<2; sys_platform != 'win32'"]
+
 [tool.ruff]
 # The code was written around 100 columns and a handful of lines run to ~130.
 # 110 keeps the existing style honest without a reformat that would rewrite
