@@ -35,12 +35,12 @@ kanban-plugin: board
 
 ## Fazendo
 
-- [ ] [Gravação] Lives inteiras: codecs mais leves sem perder qualidade, gravador pronto para até 3 lives e latência até a Mesa, chat ao vivo da Twitch junto de cada bloco; inclui R04, R06 e R07 #P0 #antigravity-gravacao [spec](../02-Captura-e-fila/03-gravacao-e-entrega.md)
 - [ ] [Motor] Chat do bloco entra na pontuação; pontuação de momento-chave validada contra clipes reais; inclui R05 e R08 #P0 #antigravity-motor [spec](../03-Producao-de-clips/05-ia-e-transcricao.md)
 - [ ] [Electron] Pronto para teste: publicação com OAuth (YouTube/TikTok), R13, análise do R03, autonomia da IA para editar e roteiro de teste #P0 #codex [spec](../04-Mesa-e-publicacao/09-publicacao-e-contas.md)
 
 ## Feito
 
+- [x] [Gravação] Lives inteiras: codecs medidos (`-c copy` 1080p60 a 3,23 GiB/h), chat ao vivo da Twitch (IRC TLS) por bloco, ensaio até a Mesa (9,1 min no motor) e R04/R06/R07/R08 na Cola; 100 testes da Cola verdes #P0 #antigravity-gravacao [spec](../02-Captura-e-fila/03-gravacao-e-entrega.md) (Cola `17fa9d6`, `62da4d5`) @{2026-11-16}
 - [x] Motor reiniciado às 20h39 com `c6ede52` e `35a226b`, como `andre`, pelo laço do `iniciar.cmd` #P0 #claude [estado](ESTADO-OPERACIONAL.md) @{2026-11-16}
 - [x] Revisão da rodada Hydrogen: guarda de resposta perdida corrigida (adotava job alheio), custo do Whisper medido em bloco de 5 min e Cola recarregada #P0 #claude [spec](../05-Operacao/10-observabilidade-e-operacao.md) (Cola c6093ab) @{2026-11-16}
 - [x] Consumo Electron × Tauri medido na Mesa: memória privada 805 → 352 MiB, processos 15 → 9, runtime 259 → 9 MiB #P1 #claude [spec](../01-Arquitetura/01-desktop-e-api.md) (afbb0a1) @{2026-11-16}
