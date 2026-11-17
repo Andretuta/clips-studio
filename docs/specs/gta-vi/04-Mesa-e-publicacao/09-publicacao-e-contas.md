@@ -130,3 +130,19 @@ Sem login/upload real validado. Tauri continua sem abertura nativa OAuth nesta e
 Os testes UI inicialmente expuseram perfil/cache compartilhado no C: e corrida na mensagem transitória Ringing do harness antigo. Perfis temporários foram isolados no D:, idioma fixado, execução sequencial e relógio do teste controlado; a rodada final ficou verde. Nenhum pacote foi instalado. A referência API foi regenerada sem iniciar serviço. Não foram apagados `saida/`, `gravacoes/`, `testes-legenda/` nem saídas do operador.
 
 Commits da entrega (16/11/2026, 21h36 de Brasília): `clips-kitty 7a1380e` (transporte/recibos), `0dc1a7a` (OAuth, API da Mesa e revisão editorial), `9427328` (Electron, testes UI e R03); `cola e1183d3` (entrega/autonomia). Sem push. Nenhuma alteração nos arquivos de captura, análise, transcrição, core/pipeline.py ou server/api.py dos agentes Antigravity.
+
+### Revisão do Claude (16/11, 22h05)
+
+- **Defeito corrigido (Cola `55b756c`):** a automação da Mesa roda dentro do tique da entrega. A Cola executa entrega, gravador e garimpeiro em fila. Com a revisão pela IA ligada e o acervo de 107 cortes pendentes, cada tique podia fazer até 20 chamadas de até 240 s. Isso seguraria o gravador (envio de blocos, guarda de disco, início e fim de live) por muito tempo.
+- **Correção:** a automação para depois de 45 s por tique, cada chamada tem prazo de 120 s, e o que sobrar fica para o tique seguinte.
+- **Testes:**
+  - `test_automation_stops_at_the_tick_time_budget` falha sem o prazo e passa com ele;
+  - suíte da Cola: **103 aprovados**.
+- **Conferido sem mudança:**
+  - automação desligada por padrão, e sem `momento_chave.score` não há postagem automática;
+  - reserva em `desk_publications` antes de enviar, para não postar duas vezes;
+  - teto por hora;
+  - `safeHttps` só abre `https` sem usuário, senha ou porta;
+  - a sessão vem de `D:\clipador-gta6\data\plugins\session.secret`, e o arquivo existe (45 bytes).
+- **Limite da "autonomia aumentada":** a IA só corta até 2 s em cada borda, com base na transcrição, e reescreve título, descrição e hashtags. Ela não escolhe enquadramento, zoom, legenda nem uma janela de corte diferente. A escolha do momento continua com o Luna no motor. Ampliar isso fica para depois de medir os cortes reais.
+- **Integração pendente:** o `momento_chave` só chega à Mesa quando o motor o expuser no clipe de `/jobs/{id}`. A entrega da Cola já copia o campo (`_copy`). Falta o cartão "[Motor]".
