@@ -513,11 +513,11 @@ export default function Mesa({ target, onTargetConsumed, onOpenInStudio }: Props
           </div>
 
           <footer className="flex flex-wrap justify-center items-center gap-3 px-5 py-3.5 border-t border-raised bg-surface">
-            <select aria-label="Destino do ensaio" className="input !w-auto" value={destinoEnsaio} disabled={ocupado}
+            <select aria-label="Onde publicar" className="input !w-auto" value={destinoEnsaio} disabled={ocupado}
               onChange={(e) => setDestinoEnsaio(e.target.value as 'youtube' | 'tiktok')}>
-              <option value="youtube">YouTube privado</option><option value="tiktok">TikTok rascunho</option>
+              <option value="youtube">YouTube</option><option value="tiktok">TikTok</option>
             </select>
-            <button type="button" className="btn-ghost" disabled={ocupado} onClick={() => void ensaio()}>Aprovar e enviar ensaio</button>
+            <button type="button" className="btn-ghost" disabled={ocupado} onClick={() => void ensaio()}>Aprovar e publicar</button>
             <button
               type="button"
               disabled={ocupado}

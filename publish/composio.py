@@ -137,6 +137,20 @@ def _stage(key: str, platform: str, tool: str, file: Path) -> dict:
     return {"name": file.name, "mimetype": mime, "s3key": remote_key}
 
 
+def tiktok_public_allowed(key: str, data: dict) -> bool:
+    """TikTok só aceita público de app auditado; a conta diz quais níveis aceita agora."""
+    try:
+        result = call(key, "POST", "/tools/execute/TIKTOK_QUERY_CREATOR_INFO", body={
+            "user_id": data["user_id"], "connected_account_id": data["account_id"],
+            "version": TOOLS["tiktok"][1], "arguments": {}})
+    except PublishError:
+        return False
+    payload = result.get("data") if isinstance(result.get("data"), dict) else {}
+    nested = payload.get("data") if isinstance(payload.get("data"), dict) else {}
+    options = payload.get("privacy_level_options") or nested.get("privacy_level_options") or []
+    return result.get("successful") is True and "PUBLIC_TO_EVERYONE" in options
+
+
 def upload(key: str, data: dict, file: Path, cancelled, submitting=lambda: None) -> str:
     from publish.transfer import bounded_upload
     return bounded_upload(key, data, file, cancelled, submitting)
@@ -150,8 +164,13 @@ def _upload(key: str, data: dict, file: Path, cancelled, submitting=lambda: None
     if cancelled():
         raise PublishCancelled("Envio cancelado.")
     if platform == "youtube":
+        privacy = data.get("privacy") if data.get("privacy") in ("public", "unlisted", "private") else "public"
         args = {"videoFilePath": media, "title": data["title"], "description": data["description"],
-                "tags": data["tags"], "categoryId": "22", "privacyStatus": "private"}
+                "tags": data["tags"], "categoryId": "20", "privacyStatus": privacy}
+    elif data.get("tiktok_direct"):
+        caption = " ".join([data["title"], *data.get("tags", [])])[:2200]
+        args = {"file_to_upload": media, "publish": True, "privacy_level": "PUBLIC_TO_EVERYONE",
+                "caption": caption}
     else:
         args = {"file_to_upload": media, "publish": False}
     submitting()

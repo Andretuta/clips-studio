@@ -10,8 +10,8 @@ from server.composio_api import install
 from server.publisher import PublishWorker
 
 
-@pytest.mark.parametrize("platform", ["youtube", "tiktok"])
-def test_composio_connect_queue_and_worker(tmp_path, monkeypatch, platform):
+@pytest.mark.parametrize("platform,public_ok", [("youtube", False), ("tiktok", False), ("tiktok", True)])
+def test_composio_connect_queue_and_worker(tmp_path, monkeypatch, platform, public_ok):
     path = tmp_path / "state.db"
     db = StateDB(path)
     db.set_flag(composio.TIKTOK_CONFIG, "ac_test")
@@ -44,6 +44,9 @@ def test_composio_connect_queue_and_worker(tmp_path, monkeypatch, platform):
         if path == "/files/upload/request":
             return {"type": "new", "key": "stage/video", "new_presigned_url":
                     "https://temp.0123456789abcdef0123456789abcdef.r2.cloudflarestorage.com/video"}
+        if path == "/tools/execute/TIKTOK_QUERY_CREATOR_INFO":
+            options = ["PUBLIC_TO_EVERYONE", "SELF_ONLY"] if public_ok else ["SELF_ONLY"]
+            return {"successful": True, "data": {"privacy_level_options": options}}
         if path == f"/tools/execute/{tool}":
             data = {"id": "test1234_-A"} if platform == "youtube" else {"data": {"publish_id": "v_inbox~01"}}
             return {"successful": True, "data": data}
@@ -66,7 +69,8 @@ def test_composio_connect_queue_and_worker(tmp_path, monkeypatch, platform):
         assert client.post(send, json=request).status_code == 409
         worker._publish(db, db.claim_next_publish_job())
         [job] = client.get(f"/composio/clips/{clip_id}/jobs").json()
-        assert job["status"] == ("done" if platform == "youtube" else "awaiting_operator")
+        direct = platform == "youtube" or public_ok
+        assert job["status"] == ("done" if direct else "awaiting_operator")
         assert job["receipt"]["remote_id"] == ("test1234_-A" if platform == "youtube" else "v_inbox~01")
         assert client.post(send, json=request).status_code == 409
         assert bool(job["url"]) is (platform == "youtube")
@@ -76,8 +80,11 @@ def test_composio_connect_queue_and_worker(tmp_path, monkeypatch, platform):
         assert execute["version"] == version
         arguments = execute["arguments"]
         if platform == "youtube":
-            assert arguments["privacyStatus"] == "private"
+            assert arguments["privacyStatus"] == "public"
+            assert arguments["categoryId"] == "20"
             assert arguments["videoFilePath"]["s3key"] == "stage/video"
+        elif public_ok:
+            assert arguments["publish"] is True and arguments["privacy_level"] == "PUBLIC_TO_EVERYONE"
         else:
             assert arguments["publish"] is False
             assert arguments["file_to_upload"]["s3key"] == "stage/video"

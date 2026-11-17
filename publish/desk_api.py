@@ -28,7 +28,7 @@ class Policy(BaseModel):
     threshold: float = Field(default=.9, ge=0, le=1, allow_inf_nan=False)
     max_per_hour: int = Field(default=2, ge=1, le=20)
     target: Literal["youtube", "tiktok"] = "youtube"
-    youtube_privacy: Literal["private", "public"] = "private"
+    youtube_privacy: Literal["private", "public"] = "public"
 
 
 class TestSend(BaseModel):
@@ -132,23 +132,23 @@ def install(app, *, db, data_dir, publish_worker):
                 return {"status": "existing" if prior["job_id"] else "uncertain", "job_id": prior["job_id"], "reason": prior["reason"]}
             from publish import composio
             from server import youtube_service
-            if target == "youtube":
+            # Composio primeiro: app de login novo no Google/TikTok só posta privado até a auditoria.
+            account, _ = composio.connection(d, composio.api_key(data_dir), target)
+            if account:
+                request = {"provider": "composio", "platform": target, "account_id": account,
+                           "user_id": composio.user_id(d), "privacy": settings.youtube_privacy}
+            elif target == "youtube":
                 status = youtube_service.status_payload(d, config, data_dir)
                 if not status.get("enabled") or not status.get("connected"):
-                    raise HTTPException(409, "Conecte e habilite o YouTube nas configurações.")
+                    raise HTTPException(409, "Conecte o YouTube pelo Composio ou nas configurações.")
                 request = {"channel_id": youtube_service.default_channel_id(d),
-                           "privacy": settings.youtube_privacy if automatic else "private",
-                           "notify_subscribers": False}
+                           "privacy": settings.youtube_privacy, "notify_subscribers": False}
             else:
-                account, _ = composio.connection(d, composio.api_key(data_dir), "tiktok")
-                if not account:
-                    raise HTTPException(409, "Conecte o TikTok pelo Composio.")
-                request = {"provider": "composio", "platform": "tiktok", "account_id": account,
-                           "user_id": composio.user_id(d)}
+                raise HTTPException(409, "Conecte o TikTok pelo Composio.")
             if automatic and settings.edit_enabled:
                 review(path, side, d)
             reason = (f"momento_chave.score={side['momento_chave']['score']} >= {settings.threshold}; "
-                      + "; ".join(str(x)[:100] for x in (side["momento_chave"].get("motivos") or [])[:5])) if automatic else "Ensaio privado solicitado na Mesa"
+                      + "; ".join(str(x)[:100] for x in (side["momento_chave"].get("motivos") or [])[:5])) if automatic else "Aprovado e publicado pela Mesa"
             # Reserve before slow editing, approval and queue insertion. A crash
             # here requires review; it cannot create a second submission.
             d.conn.execute("BEGIN IMMEDIATE")

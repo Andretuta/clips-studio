@@ -44,7 +44,7 @@ export default function AutonomyCard(): JSX.Element {
         <option value="youtube">YouTube direto</option><option value="tiktok">TikTok · rascunho Composio</option>
       </select></label>
       {policy.target === 'youtube' && <label>Visibilidade <select className="input" value={policy.youtube_privacy} onChange={(e) => setPolicy({ ...policy, youtube_privacy: e.target.value as Autonomy['youtube_privacy'] })}>
-        <option value="private">Privado (ensaio)</option><option value="public">Público</option>
+        <option value="public">Público</option><option value="private">Privado</option>
       </select></label>}
       <button className="btn-ghost" type="submit" disabled={busy}>Salvar autonomia</button>
       <p className="w-full text-xs text-muted">Começa desligada. Sem momento-chave válido não há postagem automática. TikTok requer finalizar na caixa de entrada. A edição usa a IA configurada e precisa da autorização de automação do plano.</p>

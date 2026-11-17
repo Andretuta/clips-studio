@@ -64,7 +64,7 @@ def test_youtube_mesa_private_and_durable_duplicate_guard(rig):
     assert again["job_id"] == job_id and again["status"] == "existing"
     with StateDBContext(path) as d:
         request = json.loads(d.get_publish_job(job_id)["request"])
-        assert request["privacy"] == "private" and not request["notify_subscribers"]
+        assert request["privacy"] == "public" and not request["notify_subscribers"]
         assert request["channel_id"] == "channel-test"
         assert d.conn.execute("SELECT count(*) FROM publish_jobs").fetchone()[0] == 1
     assert (base / "aprovados" / "originais" / "corte.mp4").read_bytes() == b"video"
