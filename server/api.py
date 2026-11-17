@@ -3504,11 +3504,17 @@ def create_app(config: dict, settings_path: Path) -> FastAPI:
         config["clips"]["caption_style"] = style
         return get_caption_style()
 
-    @app.post("/settings/caption-style/preview")
-    def preview_caption_style(body: dict):
+    @app.get("/settings/caption-style/preview")
+    def preview_caption_style(style: str = "{}"):
+        """A GET with the style in the query, so the app shows it as a plain
+        <img> from the engine: its CSP allows images from here, not blobs."""
         from fastapi.responses import Response
 
-        png = captions_mod.preview_png(_caption_style_body(body))
+        try:
+            raw = json.loads(style)
+        except ValueError as e:
+            raise HTTPException(400, "style must be JSON") from e
+        png = captions_mod.preview_png(_caption_style_body(raw))
         return Response(png, media_type="image/png", headers={"Cache-Control": "no-store"})
 
     return app

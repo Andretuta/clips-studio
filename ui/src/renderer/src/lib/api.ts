@@ -1023,16 +1023,8 @@ export const api = {
   saveCaptionStyle: (style: CaptionStyle) =>
     request<Required<CaptionStyle>>('/settings/caption-style', { method: 'PUT', body: JSON.stringify(style) }),
   /** The caption burned by the engine itself (libass): on a split's line and with no split. */
-  captionPreview: async (style: CaptionStyle, signal?: AbortSignal): Promise<Blob> => {
-    const res = await fetch(`${API_BASE}/settings/caption-style/preview`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(style),
-      signal
-    })
-    if (!res.ok) throw new Error(responseErrorText(await res.text().catch(() => ''), res.status))
-    return res.blob()
-  }
+  captionPreviewUrl: (style: CaptionStyle) =>
+    `${API_BASE}/settings/caption-style/preview?style=${encodeURIComponent(JSON.stringify(style))}`
 }
 
 /** Localize the API detail while leaving provider codes and model names intact. */

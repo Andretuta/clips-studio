@@ -63,6 +63,7 @@ def test_the_preview_is_the_engines_own_burn(tmp_path):
     if not shutil.which(ffmpeg()) and not Path(ffmpeg()).exists():
         pytest.skip("FFmpeg not installed")
     app, _config = _app(tmp_path)
-    res = _client(app).post("/settings/caption-style/preview", json={"font_size": 62, "highlight": True})
+    res = _client(app).get("/settings/caption-style/preview",
+                           params={"style": '{"font_size": 62, "highlight": true}'})
     assert res.status_code == 200 and res.headers["content-type"] == "image/png"
     assert res.content[:8] == b"\x89PNG\r\n\x1a\n"

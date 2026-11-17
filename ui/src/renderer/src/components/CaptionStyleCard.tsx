@@ -9,7 +9,7 @@ import CaptionStyleControls, { DEFAULT_CAPTION_STYLE } from './CaptionStyleContr
 export default function CaptionStyleCard(): JSX.Element {
   const [style, setStyle] = useState<Required<CaptionStyle> | null>(null)
   const [saved, setSaved] = useState('')
-  const [preview, setPreview] = useState('')
+  const [shown, setShown] = useState<Required<CaptionStyle> | null>(null)
   const [notice, setNotice] = useState('')
   const [busy, setBusy] = useState(false)
 
@@ -21,15 +21,9 @@ export default function CaptionStyleCard(): JSX.Element {
 
   useEffect(() => {
     if (!style) return
-    const request = new AbortController()
-    let url = ''
     // Waits for the slider to settle: one render per pause, not per pixel.
-    const timer = setTimeout(() => {
-      api.captionPreview(style, request.signal)
-        .then((blob) => { url = URL.createObjectURL(blob); setPreview(url) })
-        .catch((e) => { if (!request.signal.aborted) setNotice(errorText(e)) })
-    }, 250)
-    return () => { clearTimeout(timer); request.abort(); if (url) URL.revokeObjectURL(url) }
+    const timer = setTimeout(() => setShown(style), 250)
+    return () => clearTimeout(timer)
   }, [style])
 
   const save = async (): Promise<void> => {
@@ -59,6 +53,7 @@ export default function CaptionStyleCard(): JSX.Element {
               style={style}
               onChange={(key, value) => { setNotice(''); setStyle({ ...style, [key]: value }) }}
               hideSecondSpeaker
+              hideExample
             />
             <div className="flex items-center gap-3">
               <button type="submit" className="btn-accent" disabled={busy || !changed}>Salvar legenda</button>
@@ -69,8 +64,10 @@ export default function CaptionStyleCard(): JSX.Element {
             </div>
           </div>
           <figure className="grid gap-1">
-            {preview
-              ? <img src={preview} alt="Prévia da legenda gravada pelo motor" className="w-[360px] max-w-full rounded-lg ring-1 ring-raised" />
+            {shown
+              ? <img src={api.captionPreviewUrl(shown)} alt="Prévia da legenda gravada pelo motor"
+                  onError={() => setNotice('Prévia indisponível: recarregue o motor.')}
+                  className="w-[360px] max-w-full rounded-lg ring-1 ring-raised" />
               : <div className="w-[360px] aspect-[9/8] rounded-lg bg-raised" />}
             <figcaption className="grid grid-cols-2 text-xs text-muted text-center">
               <span>Tela dividida: na linha</span>

@@ -93,7 +93,8 @@ export default function CaptionStyleControls({
   style,
   onChange,
   hideWordsPerCaption = false,
-  hideSecondSpeaker = false
+  hideSecondSpeaker = false,
+  hideExample = false
 }: {
   idPrefix: string
   style: Required<CaptionStyle>
@@ -104,6 +105,8 @@ export default function CaptionStyleControls({
   hideWordsPerCaption?: boolean
   /** Translated subtitles are burned in one colour, whoever is talking. */
   hideSecondSpeaker?: boolean
+  /** The Mesa shows the engine's own burn instead of this CSS sketch. */
+  hideExample?: boolean
 }): JSX.Element {
   return (
     <>
@@ -269,10 +272,12 @@ export default function CaptionStyleControls({
         </div>
       )}
 
-      <div>
-        <p className="label mb-1">{tr("Example")}</p>
-        <CaptionExample style={style} />
-      </div>
+      {!hideExample && (
+        <div>
+          <p className="label mb-1">{tr("Example")}</p>
+          <CaptionExample style={style} />
+        </div>
+      )}
     </>
   )
 }
