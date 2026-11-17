@@ -7,7 +7,8 @@ import type { Clip } from '../lib/types'
 const labels = { youtube: 'YouTube', tiktok: 'TikTok' }
 const statuses = {
   queued: tr("Na fila"), running: tr("Enviando"), done: tr("Envio aceito"), failed: tr("O envio falhou"),
-  cancelled: tr("Envio cancelado"), interrupted: tr("Envio interrompido")
+  cancelled: tr("Envio cancelado"), interrupted: tr("Envio interrompido"),
+  uncertain: 'Resultado incerto · confira o canal', awaiting_operator: 'Aceito · aguardando finalizar no TikTok'
 }
 
 export default function ComposioPanel({ clip, onlyYouTube, onOpenAccounts }: {
@@ -105,6 +106,7 @@ export default function ComposioPanel({ clip, onlyYouTube, onOpenAccounts }: {
       {jobs?.map((job) => (
         <div key={job.id} aria-live="polite" className="text-sm text-muted">
           {labels[job.platform]} · {statuses[job.status]}{job.error && ` · ${job.error}`}
+          {job.receipt?.remote_id && <span> · ID: {job.receipt.remote_id}</span>}
           {job.url && <button type="button" className="ml-2 text-accent underline"
             onClick={() => void window.studio.openExternal(job.url)}>{tr("Abrir no YouTube Studio")}</button>}
         </div>

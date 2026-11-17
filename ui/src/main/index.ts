@@ -28,9 +28,18 @@ import { basename, join } from 'node:path'
 import { isInstallingUpdate, setupUpdater } from './updater'
 import { isMicrosoftStore } from './distribution'
 import { dropStalePartials } from './stalePartials'
+import { safeHttps } from './externalUrl'
 import pt from '../renderer/src/locales/pt.json'
 
 const API_PORT = 8765
+// This installation keeps Chromium profiles, caches and crash dumps on D:.
+const desktopData = process.env.CLIPADOR_ELECTRON_DIR || 'D:\\clipador-gta6\\cache\\electron-profile'
+for (const name of ['userData', 'sessionData', 'crashDumps', 'logs'] as const) {
+  const folder = join(desktopData, name)
+  mkdirSync(folder, { recursive: true })
+  app.setPath(name, folder)
+}
+app.commandLine.appendSwitch('disk-cache-dir', join(desktopData, 'disk-cache'))
 const portuguese: Record<string, string> = pt
 let interfaceLanguage = 'pt'
 
@@ -495,7 +504,7 @@ function createWindow(): void {
 
   // External links open in the system browser, never inside the app.
   win.webContents.setWindowOpenHandler(({ url }) => {
-    shell.openExternal(url)
+    if (safeHttps(url)) void shell.openExternal(url)
     return { action: 'deny' }
   })
 
@@ -663,13 +672,13 @@ ipcMain.handle('open-donate-window', (event) => {
   // Keep the popup pinned to PayPal: external links (terms, help, …) go to
   // the system browser rather than navigating the popup somewhere else.
   win.webContents.setWindowOpenHandler(({ url }) => {
-    shell.openExternal(url)
+    if (safeHttps(url)) void shell.openExternal(url)
     return { action: 'deny' }
   })
   win.webContents.on('will-navigate', (e, url) => {
     if (!/^https:\/\/([\w-]+\.)*paypal\.(com|me)\//.test(url)) {
       e.preventDefault()
-      shell.openExternal(url)
+      if (safeHttps(url)) void shell.openExternal(url)
     }
   })
   // The page title always shows where the user really is.
@@ -772,10 +781,10 @@ const EXTERNAL_ALLOWED = [
   /^https:\/\/(www\.)?reddit\.com\//
 ]
 
-ipcMain.handle('open-external', (_event, url: unknown) => {
-  if (typeof url !== 'string') return false
+ipcMain.handle('open-external', (event, url: unknown) => {
+  if (!isStudioFrame(event) || !safeHttps(url)) return false
   if (!EXTERNAL_ALLOWED.some((re) => re.test(url))) {
-    console.warn(`refused to open external url: ${url}`)
+    console.warn('Endereço externo recusado')
     return false
   }
   void shell.openExternal(url)

@@ -8,6 +8,7 @@
   "main": "./out/main/index.js",
   "private": true,
   "scripts": {
+    "test": "node --test --test-concurrency=1 scripts/test-*.cjs",
     "dev": "node scripts/dev.cjs",
     "dev:web": "vite",
     "build": "electron-vite build",

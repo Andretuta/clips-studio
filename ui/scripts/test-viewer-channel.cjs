@@ -18,7 +18,7 @@ if (!process.versions.electron) {
       }}]
     })
     fs.writeFileSync(path.join(dir, 'fixture.html'), `<!doctype html><div id="root"></div><script>
-      localStorage.clear();window.studio={pluginSession:async()=> 'fixture-session'};
+      localStorage.clear();localStorage.setItem('app-language','en');window.studio={pluginSession:async()=> 'fixture-session'};
       window.calls=[];window.monitoring=false;window.channel=null;
       window.fetch=async(url,init={})=>{
         const route=new URL(url).pathname;window.calls.push({route,method:init.method||'GET',body:init.body?JSON.parse(init.body):null});
@@ -46,6 +46,7 @@ if (!process.versions.electron) {
 } else {
   const { app, BrowserWindow } = require('electron')
   const [dir, report] = process.argv.slice(-2)
+  require('./electron-fixture-profile.cjs')(app, dir)
   app.whenReady().then(async () => {
     const win = new BrowserWindow({ show: false, webPreferences: { offscreen: true, sandbox: true, contextIsolation: true } })
     const errors = []

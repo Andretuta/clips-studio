@@ -15,6 +15,12 @@ if (!process.versions.electron) {
       plugins:[{name:'events',setup(build){build.onLoad({filter:/useEvents\.ts$/},()=>({contents:'export function useEvents(fn){window.emit=fn}',loader:'ts'}))}}]
     })
     fs.writeFileSync(path.join(dir,'fixture.html'), `<!doctype html><style>${css}</style><div id="root"></div><script>
+      localStorage.setItem('app-language','en');
+      const realTimeout=window.setTimeout,realClear=window.clearTimeout;let fixtureId=-1;
+      window.fixtureTimeouts=new Map();window.setTimeout=(fn,ms,...args)=>{
+        if(ms!==2000)return realTimeout(fn,ms,...args);const id=fixtureId--;window.fixtureTimeouts.set(id,()=>fn(...args));return id;
+      };window.clearTimeout=id=>{if(!window.fixtureTimeouts.delete(id))realClear(id)};
+      window.advanceFixtureTimeouts=()=>{const timers=[...window.fixtureTimeouts.values()];window.fixtureTimeouts.clear();timers.forEach(fn=>fn())};
       window.writes=[];window.pending=[{item_id:42,title:'Viewer clip',line:'Saved approval wording.',platforms:['instagram'],first_slot:'',thumbnail_url:'',video_id:'tw_clip_fixture',answer:'',answered_where:'',show_dmca:true}];
       window.accounts=[{id:'${require('node:crypto').randomUUID()}',platform:'instagram',username:'fixture_brand'}];
       window.studio={pluginSession:async()=>'',notify:async()=>true};window.fetch=async(url,init={})=>{const route=new URL(url).pathname;if(init.method&&init.method!=='GET')window.writes.push(route);let body=route.endsWith('/pending')?window.pending:route.endsWith('/status')?{enabled:true,show_dmca:true}:route.endsWith('/connections')?{connected:['instagram'],accounts:window.accounts}: {publish_state:route.endsWith('/skip')?'off':'publishing'};return {ok:true,status:200,json:async()=>body};};
@@ -28,6 +34,7 @@ if (!process.versions.electron) {
 } else {
   const {app,BrowserWindow}=require('electron')
   const [dir,report]=process.argv.slice(-2)
+  require('./electron-fixture-profile.cjs')(app, dir)
   app.whenReady().then(async()=>{
     const win=new BrowserWindow({show:false,webPreferences:{offscreen:true,sandbox:true,contextIsolation:true}})
     const js=code=>win.webContents.executeJavaScript(code)
@@ -41,7 +48,7 @@ if (!process.versions.electron) {
       await click('Damage Control');await delay(100)
       if(!await js('Boolean(document.querySelector("dialog[open]")) && document.body.innerText.includes("Contact your attorney")'))throw Error('Attorney popup absent')
       if(!await js('document.body.innerText.includes("Ringing")'))throw Error('Missing ringing')
-      await delay(2100)
+      await js('window.advanceFixtureTimeouts()');await delay(100)
       if(!await js('document.body.innerText.includes("Delete all VODs and clips from the stream.") && document.body.innerText.includes("because you don’t like it")'))throw Error('Missing regret/DMCA satire')
       if(await js('window.writes.length'))throw Error('Joke sent a request')
       if(process.env.TEXT_UPDATES_PREVIEW) fs.writeFileSync(process.env.TEXT_UPDATES_PREVIEW,(await win.webContents.capturePage()).toPNG())

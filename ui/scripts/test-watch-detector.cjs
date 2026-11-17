@@ -28,7 +28,7 @@ if (!process.versions.electron) {
       }}]
     })
     fs.writeFileSync(path.join(dir, 'fixture.html'), `<!doctype html><div id="root"></div><script>
-      localStorage.clear();localStorage.setItem('generate-gaming','true');
+      localStorage.clear();localStorage.setItem('app-language','en');localStorage.setItem('generate-gaming','true');
       window.studio={pluginSession:async()=> 'fixture-session'};
       window.available=[{id:'fixture-dev/gta',name:'GTA fixture',version:'1.0.0',kind:'pipeline',category:'gaming',enabled:true,secrets_set:[],details:{execution:'local',execution_text:'Local',network:[],data_warnings:[],permissions:[],secrets:[]}}];
       window.fetch=async(url,init={})=>{
@@ -55,6 +55,7 @@ if (!process.versions.electron) {
 } else {
   const { app, BrowserWindow } = require('electron')
   const [dir, report] = process.argv.slice(-2)
+  require('./electron-fixture-profile.cjs')(app, dir)
   app.whenReady().then(async () => {
     const win = new BrowserWindow({ show: false, webPreferences: { offscreen: true, sandbox: true, contextIsolation: true } })
     const errors = []

@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { t } from '../lib/i18n'
 import { CortesGamerOverlay, CortesGamerSliders, CortesGamerToggle, DEFAULT_CORTES_GAMER_STYLE } from '../components/CortesGamerWatermark'
 import type { CortesGamerStyle } from '../lib/types'
+import AutonomyCard from '../components/AutonomyCard'
 import {
   DESTINOS,
   FAIXA_CHIP,
@@ -90,6 +91,9 @@ function Kbd({ k, escuro }: { k: string; escuro?: boolean }): JSX.Element {
 export default function Mesa({ target, onTargetConsumed, onOpenInStudio }: Props): JSX.Element {
   const [estado, setEstado] = useState<MesaState | null>(null)
   const [erro, setErro] = useState('')
+  const [envio, setEnvio] = useState('')
+  const [destinoEnsaio, setDestinoEnsaio] = useState<'youtube' | 'tiktok'>('youtube')
+  const [momento, setMomento] = useState<{ score: number; motivos?: string[] } | null>(null)
   const [nome, setNome] = useState<string | null>(null)
   const [rascunho, setRascunho] = useState<Rascunho | null>(null)
   const [sujo, setSujo] = useState(false)
@@ -114,6 +118,12 @@ export default function Mesa({ target, onTargetConsumed, onOpenInStudio }: Props
   const cortes = estado?.enabled ? estado.cortes : []
   const idx = Math.max(0, cortes.findIndex((c) => c.nome === nome))
   const atual: Corte | undefined = cortes[idx]
+  useEffect(() => {
+    let stopped = false
+    setMomento(null)
+    if (atual) mesa.publicationDetails(atual.nome).then((d) => { if (!stopped) setMomento(d.momento_chave ?? null) }).catch(() => {})
+    return () => { stopped = true }
+  }, [atual?.nome])
   const textoPost = rascunho
     ? [rascunho.titulo.trim(), rascunho.descricao.trim(), rascunho.hashtags.join(' ')]
         .filter(Boolean)
@@ -183,6 +193,21 @@ export default function Mesa({ target, onTargetConsumed, onOpenInStudio }: Props
 
   const abrirEditor = (): void => {
     if (atual?.no_editor && atual.video_id) onOpenInStudio(atual.video_id, atual.clip_id ?? undefined)
+  }
+
+  const ensaio = async (): Promise<void> => {
+    if (!atual || !rascunho || ocupado) return
+    setOcupado(true)
+    setErro('')
+    const v = video.current
+    if (v) { v.pause(); v.removeAttribute('src'); v.load() }
+    try {
+      await mesa.editar(atual.nome, rascunho)
+      const result = await mesa.privateTest(atual.nome, destinoEnsaio)
+      setEnvio(`Envio ${result.job_id ?? ''}: ${result.status}. ${result.reason}. Confira a plataforma e o histórico em Canais de postagem.`)
+      carregar()
+    } catch (e) { setErro((e as Error).message); if (v) v.src = mesa.videoUrl(atual.nome) }
+    finally { setOcupado(false) }
   }
 
   const copiarPost = async (): Promise<void> => {
@@ -265,6 +290,13 @@ export default function Mesa({ target, onTargetConsumed, onOpenInStudio }: Props
       </header>
 
       {erro && <p className="mx-5 mt-3 px-3 py-2 rounded-lg bg-error/15 text-error text-sm">{erro}</p>}
+      {envio && <p role="status" className="mx-5 mt-2 text-sm">{envio}</p>}
+      <AutonomyCard />
+      {atual && <p className="mx-5 mt-2 text-xs text-muted">
+        {momento && typeof momento.score === 'number' && Number.isFinite(momento.score)
+          ? `Momento-chave: ${momento.score.toFixed(2)} · ${(momento.motivos ?? []).join(' · ')}`
+          : 'Momento-chave sem pontuação: postagem automática bloqueada para este corte.'}
+      </p>}
 
       {!atual ? (
         <div className="flex-1 grid place-items-center text-muted text-lg">{t('Clean desk: no cut waiting.')}</div>
@@ -481,6 +513,11 @@ export default function Mesa({ target, onTargetConsumed, onOpenInStudio }: Props
           </div>
 
           <footer className="flex flex-wrap justify-center items-center gap-3 px-5 py-3.5 border-t border-raised bg-surface">
+            <select aria-label="Destino do ensaio" className="input !w-auto" value={destinoEnsaio} disabled={ocupado}
+              onChange={(e) => setDestinoEnsaio(e.target.value as 'youtube' | 'tiktok')}>
+              <option value="youtube">YouTube privado</option><option value="tiktok">TikTok rascunho</option>
+            </select>
+            <button type="button" className="btn-ghost" disabled={ocupado} onClick={() => void ensaio()}>Aprovar e enviar ensaio</button>
             <button
               type="button"
               disabled={ocupado}

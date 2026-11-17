@@ -683,6 +683,7 @@ export const api = {
     request<{
       state: string
       channel?: YouTubeChannel | null
+      authorization_url?: string
       error?: string
       status?: YouTubeStatus
     }>('/youtube/connect'),

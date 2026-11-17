@@ -57,6 +57,16 @@ Exposição do motor na internet, reescrita integral do motor em Rust e instala�
 
 ## Notas
 
+### Electron e R03 — análise do Codex em 16/11/2026
+
+Runtime medido localmente em modo Node, sem abrir o app: **Electron 31.7.7, Chromium 126.0.6478.234, Node 20.18.0**. Esse Node é embutido no Electron e não é o Node usado pelo npm/TypeScript dos testes. O OAuth depende do navegador externo e do Python Google/Composio; Electron 31 não impede esse fluxo na prática. Não foi necessário atualizar o runtime para conectar. A idade do Chromium/Node embutidos é um problema de manutenção/correções, separado do funcionamento do OAuth. A política do Electron é suportar as três versões maiores mais recentes; não foi consultada a lista de releases/avisos vigente nesta sessão offline. Atualização de versão continua exigindo ensaio de preload, IPC, empacotamento e instalação, sem prometer que atualizar o Node do sistema atualiza o Chromium do app. [Política de versões](https://www.electronjs.org/docs/latest/tutorial/electron-timelines) · [Segurança](https://www.electronjs.org/docs/latest/tutorial/security).
+
+Numa máquina pessoal sem outros usuários, o cenário de outra conta Windows é menos provável. O risco restante é conteúdo/frame não confiável atingir um IPC ou abrir um protocolo do sistema, um programa já rodando como o usuário alterar código/configuração, ou uma página maliciosa alcançar uma rota local sem sessão. `nodeIntegration=false` e `contextIsolation=true` ajudam, mas não tornam todo IPC seguro. DPAPI protege o arquivo copiado para outra conta; não protege de software executado como o operador. R01 e R02 continuam achados próprios, adiados pelo usuário.
+
+OAuth acrescenta credenciais com permissão sobre canais reais e URLs com state/código: sua exposição passa a ter impacto de postagem, além do arquivo local. O consentimento deve permanecer no navegador do sistema, sem carregar Google/TikTok no renderer ou copiar cookies do navegador para o app. O IPC de abertura mantém a lista de destinos autorizados, agora verifica remetente e rejeita URL com credenciais, porta não padrão ou protocolo diferente de HTTPS. Popups da janela principal e da doação, e desvios da doação, também só abrem HTTPS. A recusa não registra a URL, evitando logar state/código. Isso reduz os caminhos identificados; não encerra a revisão de todos os IPCs, navegação/frame nem atualização de dependências do R03.
+
+Perfis, sessionData, logs, cache Chromium e crash dumps do app foram direcionados a `D:/clipador-gta6/cache/electron-profile` (sobreposição opcional `CLIPADOR_ELECTRON_DIR`). Fixtures Electron usam perfis temporários distintos no D:, idioma explícito e execução sequencial. O teste de texto usa relógio controlado para a fase transitória de dois segundos, evitando falha por lentidão do PC. Não houve instalação de pacote nesta entrega. Resultado dos testes/typecheck/build e roteiro OAuth na [spec 09](../04-Mesa-e-publicacao/09-publicacao-e-contas.md).
+
 A solução deve manter prévias no mudo e interfaces em português do Brasil. A verificação via WebView2 saiu com código `0` e registrou o aviso `1412` ao fechar. A captura de tela automatizada expirou. Relaciona-se aos achados R01, R02 e R03.
 
 ## Evidência do executável de 16/11

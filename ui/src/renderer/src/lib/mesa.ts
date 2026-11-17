@@ -130,6 +130,13 @@ const send = (method: string, body?: unknown): RequestInit =>
   body === undefined ? { method } : { method, body: JSON.stringify(body) }
 
 export const mesa = {
+  publicationDetails: (nome: string) => call<{ momento_chave?: { score: number; motivos?: string[] } | null }>(`/publication/mesa/${encodeURIComponent(nome)}/details`, {}, true),
+  history: () => call<PublicationHistory[]>('/publication/history', {}, true),
+  reconcile: (id: number, outcome: 'found' | 'absent', note: string) => call<unknown>(`/composio/jobs/${id}/reconcile`, send('POST', { outcome, note }), true),
+  autonomy: () => call<Autonomy>('/publication/autonomy', {}, true),
+  saveAutonomy: (policy: Autonomy) => call<Autonomy>('/publication/autonomy', send('PUT', policy), true),
+  privateTest: (nome: string, target: 'youtube' | 'tiktok') =>
+    call<{ status: string; job_id?: number; reason: string }>(`/publication/mesa/${encodeURIComponent(nome)}/private-test`, send('POST', { target }), true),
   cortes: () => call<MesaState>('/mesa/cortes'),
   controle: () => call<ControleState>('/mesa/controle'),
   videoUrl: (nome: string) => `${API_BASE}${corte(nome)}/video`,
@@ -138,4 +145,22 @@ export const mesa = {
   editar: (nome: string, e: Edicao) => call<Corte>(corte(nome), send('PATCH', e), true),
   aprovar: (nome: string, e: Edicao) => call<{ nome: string }>(`${corte(nome)}/aprovar`, send('POST', e), true),
   descartar: (nome: string) => call<{ nome: string }>(`${corte(nome)}/descartar`, send('POST'), true)
+}
+
+export interface Autonomy {
+  edit_enabled: boolean
+  post_enabled: boolean
+  threshold: number
+  max_per_hour: number
+  target: 'youtube' | 'tiktok'
+  youtube_privacy: 'private' | 'public'
+}
+
+export interface PublicationHistory {
+  id: number
+  status: string
+  platform: string
+  youtube_id: string
+  error: string
+  receipt?: { remote_id?: string; state?: string }
 }

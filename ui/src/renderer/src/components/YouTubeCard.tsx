@@ -110,13 +110,20 @@ export default function YouTubeCard(): JSX.Element {
       setNotice(String(e).replace(/^Error:\s*/, ''))
       return
     }
+    let opened = ''
     poll.current = setInterval(async () => {
       try {
         const r = await api.pollYoutubeConnect()
+        if (r.authorization_url && r.authorization_url !== opened) {
+          if (!await window.studio.openExternal(r.authorization_url)) {
+            setNotice('Não foi possível abrir o navegador. Tente conectar novamente pelo Electron.')
+          }
+          opened = r.authorization_url
+        }
         if (r.state === 'waiting') return
         if (poll.current) clearInterval(poll.current)
         setConnecting(false)
-        if (r.state === 'error') {
+        if (r.state === 'error' || r.error) {
           setNotice(r.error || t('Connecting failed.'))
         } else {
           setNotice(t('Connected.'))

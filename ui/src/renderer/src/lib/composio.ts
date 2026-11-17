@@ -9,7 +9,8 @@ export interface ComposioStatus {
 export interface ComposioJob {
   id: number
   platform: ComposioPlatform
-  status: 'queued' | 'running' | 'done' | 'failed' | 'cancelled' | 'interrupted'
+  status: 'queued' | 'running' | 'done' | 'failed' | 'cancelled' | 'interrupted' | 'uncertain' | 'awaiting_operator'
+  receipt?: { remote_id?: string; state?: string; note?: string }
   error: string
   url: string
 }
