@@ -38,10 +38,18 @@ Mostrar lotes e estado dos canais no Controle. Tornar a entrega e as decisões r
 
 ## Fora do escopo
 
-Apagar cortes históricos em lote e publicar automaticamente ao aprovar.
+Apagar cortes históricos em lote. Aprovação comum continua sem publicar; a nova ação de ensaio e a autonomia opt-in estão descritas abaixo.
 
 ## Notas
 
 O Controle é a porta de entrada da operação de estreia. Relaciona-se aos achados R04, R10 e R11.
+
+## Electron, publicação e autonomia — 16/11/2026, Codex
+
+A Mesa recebeu **Aprovar e enviar ensaio** (YouTube privado ou TikTok rascunho), painel de autonomia desligada por padrão, histórico com IDs/estados e score/motivos de momento-chave. Sem score válido, informa bloqueio de autopost. Destinos marcados no formulário não substituem conexão OAuth. O botão Aprovar existente não envia sozinho.
+
+As novas ações de publicação usam sessão. A cópia aprovada ganha entrada própria em `data/clips/mesa` e não depende da fonte que a Cola apaga depois da entrega. Originais são conservados; a reserva por nome/destino evita dois envios por clique repetido e bloqueia resultado incerto. Queda na transição de arquivos continua exigindo inspeção: esta entrega não encerra o R11 de todas as decisões da Mesa.
+
+Testes de sessão, persistência após reabrir banco, cópia independente, limite por hora, pontuação ausente e duplicata em `test_electron_publication.py`; cliente da Mesa e abertura OAuth nos testes Electron. Resultados e passos de operação na [spec 09](09-publicacao-e-contas.md). Sem aprovação/publicação de mídia real nesta rodada.
 
 **Duração do bloco fixa na interface (16/11/2026, revisão do Claude).** `ui/src/renderer/src/lib/mesa.ts` define `BLOCO_S = 960` (blocos antigos de 16 min). A Cola passou a gerar blocos de 4 min + 1 min de sobreposição (300 s). Efeitos: no Controle, a largura de cada bloco na linha do tempo (`Controle.tsx`, eixo e `width`) fica 3,2× maior; na Mesa, a faixa "de onde veio na live" espreme os cortes no primeiro terço e o horário final mostra início + 16 min (`Mesa.tsx`, `somaHora`). Os 105 cortes antigos são de blocos de 16 min, então um valor fixo não serve aos dois. **Resolvido no mesmo dia.** O gravador põe `bloco_s` (bloco + sobreposição, em segundos) no job e a entrega copia o campo para o JSON do corte (Cola `60a3131`). A API da Mesa devolve `bloco_s` na posição da live e `dur_s` em cada bloco do Controle, com 960 para cortes antigos sem o campo (`353ae66`). A constante `BLOCO_S` saiu de `mesa.ts`. O Controle também cai em 960 quando fala com um motor anterior à mudança. Testes em `test_mesa_api.py`, `test_gravador.py` e `test_entrega.py`. O motor que está no ar precisa reiniciar para servir os campos novos.

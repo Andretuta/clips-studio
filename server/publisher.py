@@ -448,6 +448,7 @@ class PublishWorker(threading.Thread):
 
     def _publish_composio(self, db: StateDB, job_id: int, clip, request: dict) -> None:
         from publish import composio
+        from publish import receipts
         from publish.errors import PublishCancelled, PublishError
 
         def cancelled() -> bool:
@@ -463,7 +464,14 @@ class PublishWorker(threading.Thread):
             if not account or account != request["account_id"]:
                 raise PublishError("A conexão do canal mudou. Revise o destino e tente de novo.")
             self._emit(job_id, clip["id"], phase="upload", fraction=0.05, message="Enviando pelo Composio")
-            identifier = composio.upload(key, request, file, cancelled)
+            identifier = composio.upload(key, request, file, cancelled,
+                submitting=lambda: receipts.save(db, job_id, platform, "submitting"))
+        except receipts.UncertainDelivery as error:
+            receipts.save(db, job_id, platform, "uncertain", note=error.message)
+            db.finish_publish_job(job_id, "uncertain", error=error.message)
+            self._emit(job_id, clip["id"], phase="uncertain", fraction=0,
+                       message=error.message, terminal="uncertain")
+            return
         except PublishCancelled:
             db.finish_publish_job(job_id, "cancelled", error="Envio cancelado.")
             self._emit(job_id, clip["id"], phase="cancelled", fraction=0, message="Envio cancelado.",
@@ -472,7 +480,9 @@ class PublishWorker(threading.Thread):
         finally:
             self._cancelled.discard(job_id)
         youtube_id = identifier if platform == "youtube" else ""
-        db.finish_publish_job(job_id, "done", youtube_id=youtube_id)
+        state = "done" if platform == "youtube" else "awaiting_operator"
+        receipts.save(db, job_id, platform, "accepted" if platform == "youtube" else state, identifier)
+        db.finish_publish_job(job_id, state, youtube_id=youtube_id)
         self._emit(job_id, clip["id"], phase="done", fraction=1, message="Envio aceito pelo Composio",
                    terminal="done")
 

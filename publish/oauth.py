@@ -13,8 +13,15 @@ encrypted store rather than in a config file.
 """
 
 import threading
+import webbrowser
+import logging
+from urllib.parse import urlsplit
 
 from publish.errors import PublishError
+
+# Google's WSGI handler logs the callback request line, including code/state.
+# Neither those URLs nor credentials belong in the engine's INFO log.
+logging.getLogger("google_auth_oauthlib.flow").addFilter(lambda _record: False)
 
 # Long enough for someone to find the right Google account and read the
 # unverified-app warning; short enough that an abandoned consent does not leak
@@ -57,10 +64,26 @@ class ConnectFlow(threading.Thread):
         self.state = "waiting"  # waiting | done | error
         self.error = ""
         self.credentials = None
+        self.authorization_url = ""
 
     def run(self) -> None:
         try:
             from google_auth_oauthlib.flow import InstalledAppFlow
+
+            owner = self
+
+            class Browser(webbrowser.BaseBrowser):
+                def open(self, url, new=0, autoraise=True):
+                    parsed = urlsplit(url)
+                    if parsed.scheme != "https" or parsed.netloc != "accounts.google.com":
+                        raise ValueError("Endereço de autorização inválido")
+                    owner.authorization_url = url
+                    return True
+
+            # The Electron main process opens this URL as the interactive user.
+            # Opening a browser from the engine may use the wrong Windows account.
+            browser = f"clipador-oauth-{id(self)}"
+            webbrowser.register(browser, None, Browser())
 
             try:
                 flow = InstalledAppFlow.from_client_config(
@@ -74,6 +97,8 @@ class ConnectFlow(threading.Thread):
                 host="127.0.0.1",
                 port=0,
                 open_browser=True,
+                browser=browser,
+                authorization_prompt_message=None,
                 timeout_seconds=CONSENT_TIMEOUT_SECONDS,
                 # offline + consent is what actually returns a refresh token.
                 # Without them a reconnect can come back with an access token
@@ -122,7 +147,7 @@ def _explain(exc: Exception) -> str:
         )
     if "address already in use" in lowered:
         return "Could not open a local port for the sign-in. Try again."
-    return f"Connecting failed: {text[:200]}"
+    return "Não foi possível conectar. Confira o cliente OAuth e tente novamente."
 
 
 def revoke(token: str) -> bool:

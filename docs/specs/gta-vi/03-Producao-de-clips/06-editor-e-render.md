@@ -43,3 +43,13 @@ Detecção automática de cada elemento da interface de GTA VI e garantia de imp
 ## Notas
 
 Inclui saída vertical para Shorts/TikTok e preservação de aspect ratio para material horizontal.
+
+## Autonomia editorial opt-in — 16/11/2026, Codex
+
+No código atual, `analysis/highlights.py` e seus prompts já selecionam janelas, início/fim, hook, título e hashtags a partir da transcrição e sinais. Fusão/regras ajustam candidatos; Whisper e o construtor de legendas cuidam das palavras/tempos. Enquadramento depende de layout, detecção e render, sem novo comando livre do Luna para zoom. Na Mesa, texto, destinos, marca e aprovação eram manuais; duração/layout eram revistos no editor quando a fonte ainda existia.
+
+`llm/editorial.py` adiciona revisão **desligada por padrão** da cópia pronta: título até 100 caracteres, descrição até 3.000, até 12 hashtags e aparo de no máximo 2 s por borda. Valida formato/números, recusa NaN e mantém tag do jogo. Transcrição temporizada limita aparo ao silêncio com 0,1 s de margem; sem evidência, não muda bordas. Mantém ao menos 5 s, ou todo corte que já era menor. Não oferece ferramentas nem URLs ao modelo.
+
+`video_editor/desk.py` usa FFmpeg com prazo para o aparo, mantém áudio e conserva original. Aparar vídeo já legendado conserva a sincronia das legendas incorporadas. Marca é aplicada na aprovação se ainda não estava incorporada. Blur sem webcam e polish desligado não mudaram. É respeitada a autorização de automação do plano no banco; falha da IA ou decisão inválida impede seguir para postagem.
+
+Testes de limites, fala, ausência de transcrição e tag em `test_electron_publication.py`; entrega/transcrição em `cola/tests/test_entrega.py`. Números finais e roteiro na [spec 09](../04-Mesa-e-publicacao/09-publicacao-e-contas.md). Não houve avaliação artística com Luna nem medição de render em gameplay real. A revisão é posterior ao pipeline e não exigiu alterar `core/pipeline.py`; emissão de `momento_chave` continua com o agente do motor.

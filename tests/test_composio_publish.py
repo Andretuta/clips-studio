@@ -50,6 +50,7 @@ def test_composio_connect_queue_and_worker(tmp_path, monkeypatch, platform):
         pytest.fail(f"Unexpected endpoint {path}")
 
     monkeypatch.setattr(composio, "call", call)
+    monkeypatch.setattr(composio, "upload", composio._upload)
     put = Mock(return_value=Mock(status_code=200))
     monkeypatch.setattr(composio.requests, "put", put)
     request = {"platform": platform}
@@ -65,10 +66,12 @@ def test_composio_connect_queue_and_worker(tmp_path, monkeypatch, platform):
         assert client.post(send, json=request).status_code == 409
         worker._publish(db, db.claim_next_publish_job())
         [job] = client.get(f"/composio/clips/{clip_id}/jobs").json()
-        assert job["status"] == "done"
+        assert job["status"] == ("done" if platform == "youtube" else "awaiting_operator")
+        assert job["receipt"]["remote_id"] == ("test1234_-A" if platform == "youtube" else "v_inbox~01")
+        assert client.post(send, json=request).status_code == 409
         assert bool(job["url"]) is (platform == "youtube")
         put.assert_called_once()
-        execute = requests_to_provider[-1][2]
+        execute = next(body for method, endpoint, body in requests_to_provider if endpoint == f"/tools/execute/{tool}")
         assert execute["connected_account_id"] == account
         assert execute["version"] == version
         arguments = execute["arguments"]

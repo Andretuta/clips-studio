@@ -5,11 +5,12 @@ import re
 from contextlib import closing
 from typing import Literal
 
-from fastapi import HTTPException
+from fastapi import Depends, HTTPException
 from pydantic import BaseModel, Field, SecretStr
 
 from core import secrets
 from publish import composio
+from publish import receipts
 from publish.errors import PublishError
 
 Platform = Literal["youtube", "tiktok"]
@@ -29,15 +30,23 @@ class SendIn(ConnectIn):
     description: str = Field(default="", max_length=5000)
 
 
-def _job(row) -> dict:
+class ReconcileIn(BaseModel):
+    outcome: Literal["found", "absent"]
+    note: str = Field(min_length=10, max_length=400)
+
+
+def _job(row, db=None) -> dict:
     platform = json.loads(row["request"])["platform"]
     return {
         "id": row["id"], "platform": platform, "status": row["status"], "error": row["error"],
         "url": f"https://studio.youtube.com/video/{row['youtube_id']}/edit" if row["youtube_id"] else "",
+        "receipt": receipts.get(db, row["id"]) if db else {},
     }
 
 
 def install(app, *, db, data_dir, publish_worker) -> None:
+    from publish.desk_api import install as install_desk, session_guard
+    install_desk(app, db=db, data_dir=data_dir, publish_worker=publish_worker)
     @app.get("/composio/status")
     def status():
         key = composio.api_key(data_dir)
@@ -108,6 +117,10 @@ def install(app, *, db, data_dir, publish_worker) -> None:
             d.conn.execute("BEGIN IMMEDIATE")
             if d.active_publish_job_for_clip(clip_id):
                 raise HTTPException(409, "Já existe um envio ativo para este MP4.")
+            try:
+                receipts.require_reconciled(d, clip_id, body.platform)
+            except PublishError as error:
+                raise HTTPException(409, error.message) from None
             request = {
                 "provider": "composio", "platform": body.platform, "account_id": account,
                 "user_id": user, "title": title[:100], "description": body.description, "tags": [],
@@ -127,6 +140,25 @@ def install(app, *, db, data_dir, publish_worker) -> None:
             )
             latest = {}
             for row in rows:
-                item = _job(row)
+                item = _job(row, d)
                 latest.setdefault(item["platform"], item)
             return list(latest.values())
+
+    @app.post("/composio/jobs/{job_id}/reconcile", dependencies=[Depends(session_guard(data_dir))])
+    def reconcile(job_id: int, body: ReconcileIn):
+        with closing(db()) as d:
+            row = d.get_publish_job(job_id)
+            if row is None or json.loads(row["request"]).get("provider") != "composio":
+                raise HTTPException(404, "Envio não encontrado.")
+            if row["status"] in ("queued", "running"):
+                raise HTTPException(409, "Aguarde o envio encerrar antes de conferir.")
+            receipt = receipts.get(d, job_id)
+            if body.outcome == "absent" and (receipt.get("remote_id") or row["youtube_id"]):
+                raise HTTPException(409, "Há um ID remoto aceito; acompanhe esse envio em vez de reenviar.")
+            platform = json.loads(row["request"])["platform"]
+            state = "confirmed_absent" if body.outcome == "absent" else "awaiting_operator"
+            receipts.save(d, job_id, platform, state, note=body.note)
+            d.finish_publish_job(job_id, "failed" if body.outcome == "absent" else state,
+                                 error="Conferência manual: " + body.note,
+                                 youtube_id=row["youtube_id"])
+            return _job(d.get_publish_job(job_id), d)

@@ -1,6 +1,6 @@
 # Contas e publicação no YouTube e TikTok
 
-Estado `ready-for-agent`. Prioridade P0 para ensaio e P1 para automação.
+Estado `implementado-com-dubles`: Electron, OAuth e autonomia preparados; ensaio real de conta/upload pendente do operador. Prioridade P0 para ensaio e P1 para evolução.
 
 ## Problema
 
@@ -47,3 +47,84 @@ Postagens públicas no ensaio, acesso automático a canais adicionais e uso de s
 ## Notas
 
 A aprovação do canal e o estado final devem vir do provedor. Relaciona-se aos achados R02, R13 e R17.
+
+## Entrega Electron do Codex — 16/11/2026
+
+Código preparado para ensaio após o **operador** recarregar motor/Cola. Nesta sessão não houve internet, consentimento real, upload nem reinício de serviços. Resultados finais dos testes e commits constam no registro ao fim desta nota.
+
+### Caminhos existentes e escolha
+
+| Caminho | OAuth e armazenamento | Ensaio |
+| --- | --- | --- |
+| YouTube direto | Cliente Desktop próprio; navegador do sistema aberto pelo IPC Electron; retorno loopback com state/PKCE pela biblioteca Google. Cliente e tokens por canal no cofre DPAPI do Windows. | Mesa → Aprovar e enviar ensaio → YouTube privado: força `privacy=private`, sem agendamento nem notificação de inscritos. |
+| YouTube Composio | Chave local criptografada; OAuth guardado pelo provedor; ID da conta guardado no motor. | Painel Composio do editor, `privacyStatus=private`. |
+| TikTok Composio | App TikTok e Auth Config próprio; navegador do sistema; tokens ficam no Composio e IDs da conta/envio no motor. | Mesa ou painel Composio: `publish=false`, caixa de entrada/rascunho, finalização pelo operador no TikTok. |
+| Upload-Post e WoopSocial | Conectores existentes; exigem chave, conta e plano do fornecedor. | Não alterados nem escolhidos para a nova autonomia. |
+
+O caminho TikTok implementado é **Composio**, sem novo cliente TikTok direto. `video.upload` entrega à caixa de entrada, não significa Direct Post público. Apps sem auditoria não devem ser tratados como autorizados a postar publicamente: Direct Post tem restrições de visibilidade/auditoria; rascunho também depende da capacidade liberada ao app e das contas de teste. Este código sempre usa rascunho no TikTok. Confira as permissões do app no painel; não houve consulta externa nesta rodada.
+
+### YouTube: cadastro fora do código
+
+1. Na [Google Cloud Console](https://console.cloud.google.com/), crie/escolha o projeto. Em APIs e serviços → Biblioteca, habilite **YouTube Data API v3**.
+2. Em Google Auth Platform, preencha nome, suporte e público. Para o ensaio em **Testing**, inclua sua conta em **Test users**. A autorização em Testing pode expirar em sete dias. Produção/verificação são etapas posteriores conforme as exigências do Google; produção não substitui auditoria da API.
+3. Escopos padrão: `https://www.googleapis.com/auth/youtube.upload` e `https://www.googleapis.com/auth/youtube.readonly`. Deixe playlists desligadas no ensaio: elas pedem adicionalmente `https://www.googleapis.com/auth/youtube`.
+4. Crie OAuth Client de tipo **Desktop app**, não Web application. Copie client ID e client secret do mesmo cliente.
+5. O retorno é **`http://127.0.0.1:<porta-efêmera>/`**, escolhido pela biblioteca. Não é a porta 8765, não requer retorno público nem cadastro de porta fixa no cliente Desktop. Navegador e motor precisam estar no mesmo PC. Consentimento expira em 300 s sem retorno.
+6. No Electron, Configurações → **Publicar no YouTube** → habilitar → cole ID/secret nos campos → **Salvar credenciais OAuth** → **Conectar seu canal**. Escolha o canal no navegador e confira seu nome/canal padrão ao voltar.
+7. Credenciais ficam atualmente em `D:/clipador-gta6/data/credentials`, criptografadas por DPAPI e ligadas à conta Windows do motor. Não colar em `.env`, `settings.yaml`, notas ou git. Não é necessário alterar arquivo versionado. Execute motor e app como a conta Windows do operador.
+8. Se houver aviso de app não verificado ou limitação a privado, mantenha o ensaio privado e siga as instruções do painel Google. O cadastro e a liberação da conta não são comprovados pelos testes com dublês.
+
+### TikTok/Composio: cadastro fora do código
+
+1. Em [TikTok for Developers](https://developers.tiktok.com/), configure seu app (site, termos, privacidade e contas de teste/sandbox). Solicite **Content Posting API / Upload** e escopo **`video.upload`**, além da identidade exigida pelo conector, como `user.info.basic`. O rascunho deste fluxo não exige `video.publish`.
+2. No projeto Composio, crie **Auth Config do toolkit TikTok** com o client key/secret desse app. Copie **integralmente a Redirect URI exibida nesse Auth Config** para o cadastro de redirecionamento do TikTok. O retorno é hospedado pelo Composio, não `127.0.0.1:8765`. A URI específica depende do Auth Config: não foi inventada nesta sessão offline.
+3. No Electron, Configurações → **Canais de postagem → Composio**, cole API key do projeto no campo secreto e identificador **`ac_…`** no campo **Auth Config do TikTok**. Salve. Client key/secret TikTok são cadastrados no provedor e não no repositório.
+4. Clique **Conectar TikTok**: abre `https://app.composio.dev/link/…` ou `https://connect.composio.dev/link/…` no navegador do sistema. Autorize a conta pretendida. Ao voltar, a janela atualiza ao ganhar foco; há também **Atualizar status**. Conectada significa `ACTIVE` no toolkit correto.
+5. Envie mídia autorizada como rascunho e confira notificação/caixa de entrada no aplicativo TikTok. `publish_id` confirma aceitação, não publicação pública. Limites e aprovações do app/provedor ainda podem impedir o ensaio.
+
+[Guia Composio TikTok](https://docs.composio.dev/kb/guide/toolkits-tiktok) · [Upload TikTok](https://developers.tiktok.com/doc/content-posting-api-reference-upload-video): referências para o operador, sem verificação online nesta entrega.
+
+### R13: recibos, prazo e reconciliação
+
+- SQLite `publish_receipts` guarda plataforma, ID remoto, estado e nota por tarefa. YouTube Composio fica aceito/concluído; TikTok fica **`awaiting_operator`** com `publish_id`. Resposta perdida após submissão vira **`uncertain`**. Reinício mantém a recuperação existente em **`interrupted`**, sem reenvio automático.
+- Composio roda hash, staging, transferência e execução da ferramenta em processo filho com **prazo total de parede de 300 s**. O pai encerra o filho e libera o worker no prazo; após submissão, o resultado é incerto. Falha apenas no staging não declara postagem aceita. Teste do prazo usa dublê de processo e relógio curto, não upload real. O YouTube direto mantém o protocolo retomável existente; não recebeu prazo global novo de parede nesta entrega.
+- Novo envio Composio para o corte/plataforma é bloqueado se já existe envio aceito, ativo, incerto ou interrompido. A reconciliação é **manual no painel/caixa da plataforma**, pois esta versão não presume uma ferramenta remota de status. Em Mesa → Autonomia e últimos envios, descreva a conferência e use **Conferi: chegou / não chegou**. API com sessão: `POST /composio/jobs/{id}/reconcile`, `outcome: found|absent`, nota de ao menos dez caracteres. Com ID remoto aceito, não é permitido declarar ausência para reenviar.
+- A Mesa reserva nome/destino no banco: dois cliques devolvem o mesmo job. Queda entre reserva e vínculo final exige inspeção do histórico/banco; não há liberação automática. Reconciliação não dispara novo envio nem apaga histórico. O fluxo é conservador para evitar duplicatas.
+
+### Autonomia opcional
+
+Mesa → **Autonomia da IA e postagem automática**: edição e autoaprovação começam **desligadas**, salvas no banco. Padrão: limiar **0,90**, teto **2 reservas/hora**, YouTube direto **privado**. Público exige escolha explícita. TikTok continua rascunho. Não altera o settings local nem os canais da Cola.
+
+A Cola entrega o par MP4/JSON e conserva `momento_chave` e transcrição temporizada disponível antes de liberar a fonte. Com a opção ligada, chama `/publication/mesa/{nome}/auto` com a sessão lida de `D:/clipador-gta6/data/plugins/session.secret`. O motor confere o sidecar persistido: sem score numérico finito em 0…1, ou abaixo do limiar, não autoaprova nem posta. A nota antiga 0…100 não vira confiança automaticamente. Score/limiar/motivos são registrados no sidecar e banco. Mudança de política permite reavaliar cortes que ficaram apenas em revisão.
+
+A IA configurada em `llm.backend` revisa texto e pode remover até 2 s de cada borda, mantendo ao menos 5 s (ou toda a duração quando o corte já era menor). Transcrição temporizada limita o aparo ao silêncio com margem de 0,1 s; sem evidência, bordas intactas. Mantém tag do jogo, áudio, legendas e enquadramento; não amplia trecho nem escolhe zoom. Exige a autorização de automação do plano no banco. Editar não autoriza postar.
+
+A aprovação aplica a marca quando solicitada, conserva original e copia a versão aprovada para `data/clips/mesa`, com entrada própria na biblioteca. Publicação e tradução não dependem da fonte que a Cola libera depois. Há custo extra de disco para aprovado/original/biblioteca; nada é apagado em lote nesta entrega.
+
+Rotas novas, com sessão: `GET/PUT /publication/autonomy`, `GET /publication/history`, `GET /publication/mesa/{nome}/details`, `POST /publication/mesa/{nome}/private-test` e `/auto`. O botão **Aprovar e enviar ensaio** envia explicitamente; **Aprovar** continua apenas aprovando. O histórico distingue envio aceito de resultado incerto e mostra IDs; a Mesa mostra score e motivos ou bloqueio por ausência do campo.
+
+### Roteiro no Electron para 17/11
+
+1. Como operador, recarregue motor e Cola pelos lançadores para carregar os commits. Abra **`D:\clipador-gta6\cola\abrir-app.cmd`**, sem `--web`: motor externo, sessão existente e caches no D:. O agente não reiniciou processos vivos.
+2. Abra a Mesa, revise áudio, legenda, marca CG e texto. A prévia abre no mudo: ligue áudio para revisar. Deixe autonomia desligada.
+3. Conecte YouTube pelos passos acima e confirme canal padrão. Na Mesa, escolha um corte autorizado, **YouTube privado → Aprovar e enviar ensaio**. Veja **Autonomia… → Últimos envios**, confira ID e visibilidade **Privado** no YouTube Studio. Para TikTok, ensaie outro corte como rascunho e confira sua caixa/notificação.
+4. Resultado incerto: confira a plataforma e registre reconciliação antes de repetir. A ausência de resposta não comprova ausência do vídeo.
+5. Escolha pessoalmente um canal autorizado e preencha `[gravador].canais` no `cola/config.toml` (a lista estava vazia e não foi preenchida pelo Codex). Recarregue a Cola pelo lançador. No Controle, confira canal, idade de segmento/bloco e chegada do corte à Mesa; confira analisador de chat e motivos/pontuação **Momento-chave**. Cortes antigos sem campo permanecem bloqueados para autopost.
+6. Depois do ensaio, autorize automação do plano em Configurações → IA e ligue só a revisão editorial para um corte novo. Confira o resultado. Para testar autopost, escolha limiar 0,90, teto **1/h** e **Privado**. Confirme motivo, um único job e bloqueio do segundo corte na hora.
+
+### Limitações
+
+Sem login/upload real validado. Tauri continua sem abertura nativa OAuth nesta entrega. Captura/chat/transcrição e a emissão de `momento_chave` no resultado do corte pertencem aos cartões Antigravity: seus arquivos não foram editados por este agente. Sem esse contrato, a nova automação permanece bloqueada para postagem. R01/R02 e revisão de todos os IPCs continuam adiados. A suíte ampla de milhares de testes não foi repetida: os seis grupos históricos permanecem separados dos testes dirigidos desta entrega.
+
+### Registro de testes — 16/11/2026, até 21h34 de Brasília
+
+| Verificação | Resultado |
+| --- | --- |
+| `pytest -p no:cacheprovider -q -o addopts= tests/test_electron_publication.py tests/test_composio_publish.py tests/test_api_contract.py::test_the_reference_is_up_to_date` | **23 aprovados**, 12 avisos de depreciação FastAPI, 58,21 s. Inclui OAuth/account DPAPI com dublês, logs sem callback, YouTube privado, rascunho TikTok, recibo após reabrir banco, falta de score, teto/hora, duplicata, reconciliação e prazo com processo dublê. Relatório local `D:/clipador-gta6/tmp/electron-publicacao-final.xml`. |
+| Render real no mesmo conjunto | Vídeo sintético de 10 s aparado para aproximadamente 8 s; faixa de áudio e original preservados. |
+| Rodada ampliada: publicação, Mesa, contrato e painel (`291` casos naquele início) | **288 passaram, 1 ignorado, 2 falharam**: prazo do teste consumido pelo startup de spawn no Windows e referência API desatualizada pelas novas rotas. Corrigidos o harness (processo dublê) e o documento gerado; ambos passaram na rodada final de 23 acima. Não foi feita nova execução integral desses 291 após as correções. A coleta atual tem 292, pela inclusão do render real. |
+| Cola, `python -m pytest -p no:cacheprovider -q` | **100 aprovados**, 430,30 s, no checkout compartilhado com as mudanças Antigravity presentes. Rechecagem final de `test_entrega.py`: **25 aprovados**, 125,70 s. |
+| `npm test`, em `ui/` | **7 arquivos de teste aprovados, zero falhas**, 28,735 s: contas, OAuth real no Electron com HTTP/abertura do navegador dublês, cliente de publicação/URLs, recuperação, aprovação/texto, canal/chat e detector. |
+| `npm run typecheck`; `npm run build` | Ambos com saída **0**. Build de main, preload e renderer concluído. |
+
+Os testes UI inicialmente expuseram perfil/cache compartilhado no C: e corrida na mensagem transitória Ringing do harness antigo. Perfis temporários foram isolados no D:, idioma fixado, execução sequencial e relógio do teste controlado; a rodada final ficou verde. Nenhum pacote foi instalado. A referência API foi regenerada sem iniciar serviço. Não foram apagados `saida/`, `gravacoes/`, `testes-legenda/` nem saídas do operador.

@@ -273,7 +273,7 @@ def install(app, *, config, db, data_dir, worker, publish_worker) -> None:
         if thread is None:
             return {"state": "idle"}
         if thread.state == "waiting":
-            return {"state": "waiting"}
+            return {"state": "waiting", "authorization_url": getattr(thread, "authorization_url", "")}
         if thread.state == "error":
             return {"state": "error", "error": redact(thread.error)[:300]}
 
