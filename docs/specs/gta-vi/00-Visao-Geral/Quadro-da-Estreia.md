@@ -6,7 +6,7 @@ kanban-plugin: board
 
 ## Depende do usuário
 
-- [ ] Conectar YouTube e/ou TikTok (Composio ou OAuth direto) e fazer um envio privado de ensaio #P1 [spec](../04-Mesa-e-publicacao/09-publicacao-e-contas.md)
+- [ ] Conectar YouTube e TikTok pelo Composio e aprovar um corte na Mesa: sai público. Conferir no canal se o YouTube manteve público e se o TikTok publicou ou caiu em rascunho #P0 [spec](../04-Mesa-e-publicacao/09-publicacao-e-contas.md)
 - [ ] Ligar a autorização de automação do plano ChatGPT se a Cola for processar sozinha #P1 [spec](../03-Producao-de-clips/05-ia-e-transcricao.md)
 - [ ] R01: rodar os 3 comandos `icacls` do estado operacional (dá controle total ao `andre`, corta a herança do D: e tira `Usuários autenticados` e `Usuários`) #P0 #R01 [estado](ESTADO-OPERACIONAL.md)
 - [ ] Opcional: apagar a cópia antiga do rustup em `C:\Users\andre\.rustup` + `.cargo` (1,6 GB) e o perfil WebView2 antigo do Tauri no C: (137 MB) #P2
@@ -37,6 +37,7 @@ kanban-plugin: board
 
 ## Feito
 
+- [x] Mesa publica em público pelo Composio (YouTube público, categoria Jogos; TikTok direto quando a conta aceitar público, senão rascunho) #P0 #claude @{2026-11-16} clips-kitty ce7b3a1 [spec](../04-Mesa-e-publicacao/09-publicacao-e-contas.md)
 - [x] [Motor] Chat do bloco entra na pontuação (`lag=3 s`), pontuação `momento_chave` validada contra 64 clipes reais de 15 VODs GTA V/RP, Whisper separado por duração (`>=120 s` → beam 1/VAD 0,5/T=0 em 7,6 s) e R05/R08 #P0 #antigravity-motor #R05 #R08 [spec](../03-Producao-de-clips/05-ia-e-transcricao.md) (`5ba4541`) @{2026-11-16}
 - [x] Medido bloco real de 5 min no motor isolado (`8766`): 249,1 s (4,15 min) ponta a ponta (47,2 s carga+Whisper / 73,5 s multimodal+Luna / 121,6 s metadados+render), pico VRAM 4.666 MiB e RAM 99,5% #P1 #antigravity-motor [spec](../03-Producao-de-clips/05-ia-e-transcricao.md) (`5ba4541`) @{2026-11-16}
 - [x] [Electron] OAuth no navegador, ensaio privado/rascunho, recibos e guarda R13, análise R03, revisão editorial e autopost opt-in; testes e roteiro #P0 #codex [spec](../04-Mesa-e-publicacao/09-publicacao-e-contas.md) (`7a1380e`, `0dc1a7a`, `9427328`; Cola `e1183d3`) @{2026-11-16}

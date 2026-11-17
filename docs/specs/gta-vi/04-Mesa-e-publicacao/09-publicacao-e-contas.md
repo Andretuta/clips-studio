@@ -146,3 +146,25 @@ Commits da entrega (16/11/2026, 21h36 de Brasília): `clips-kitty 7a1380e` (tran
   - a sessão vem de `D:\clipador-gta6\data\plugins\session.secret`, e o arquivo existe (45 bytes).
 - **Limite da "autonomia aumentada":** a IA só corta até 2 s em cada borda, com base na transcrição, e reescreve título, descrição e hashtags. Ela não escolhe enquadramento, zoom, legenda nem uma janela de corte diferente. A escolha do momento continua com o Luna no motor. Ampliar isso fica para depois de medir os cortes reais.
 - **Integração pendente:** o `momento_chave` só chega à Mesa quando o motor o expuser no clipe de `/jobs/{id}`. A entrega da Cola já copia o campo (`_copy`). Falta o cartão "[Motor]".
+
+### Publicar em público pela Mesa (16/11, 22h)
+
+- **Pedido do usuário:** o corte aprovado sai público, sem ensaio privado. Ele escolheu o Composio como caminho.
+- **Por que não o login direto:**
+  - **YouTube:** todo projeto do Google Cloud criado depois de 28/07/2020 e não auditado tem os envios pelo `videos.insert` travados em privado, sem recurso. A auditoria leva semanas.
+  - **TikTok:** app não auditado só posta `SELF_ONLY`.
+  - Um cliente OAuth criado agora não publica em público antes da estreia.
+- **Mudança (clips-kitty `ce7b3a1`):**
+  - A Mesa usa a conexão do Composio primeiro e só cai no OAuth direto do YouTube se não houver conexão.
+  - **YouTube:**
+    - `privacyStatus` vem da política, que agora é público por padrão;
+    - categoria Jogos (`20`) no lugar de Pessoas e blogs (`22`).
+  - **TikTok:**
+    - antes do envio, o motor consulta `TIKTOK_QUERY_CREATOR_INFO`;
+    - se a conta aceita `PUBLIC_TO_EVERYONE`, publica direto (`publish=true`) e o envio fica `done`;
+    - senão continua como rascunho (`awaiting_operator`) para finalizar no celular.
+  - O botão virou "Aprovar e publicar", e o seletor ficou só "YouTube" e "TikTok".
+- **Testes:**
+  - `tests/test_composio_publish.py` (YouTube público; TikTok com e sem público liberado) e `tests/test_electron_publication.py`: **23 aprovados**;
+  - typecheck do `ui/` passou.
+- **Limitação a confirmar no primeiro envio real:** não se sabe se o app de login que o Composio usa para o YouTube é auditado. Se não for, o YouTube trava o vídeo em privado, e o publicador já detecta isso como `locked_private`. O mesmo vale para o TikTok e o `PUBLIC_TO_EVERYONE`. Se o primeiro envio vier travado, o caminho é o Upload-Post ou o WoopSocial, já integrados no código.
