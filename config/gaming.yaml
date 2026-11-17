@@ -10,6 +10,11 @@
 # Chat reacts after the moment: the stream's delay plus the time to type. A
 # spike is dated this many seconds earlier.
 chat_lag_seconds: 6
+# Live recorded blocks (POST /videos/local chat): t = msg_rx - block_start_rx on
+# the same recording machine that watches the live stream with the same delay
+# as viewers. Broadcast/player latency cancels out, leaving only human reaction
+# + typing time (~3 s instead of VOD replay's 6 s).
+chat_live_lag_seconds: 3
 
 # What chat says tells what kind of moment it was, in any language chat
 # types in.
@@ -24,27 +29,29 @@ chat_lag_seconds: 6
 chat_classes:
   hype:
     label: hype
-    words: [POG, POGGERS, PogU, PogChamp, Pog, POGGIES, PagMan, PagChomp, POGSLIDE, LETSGO,
-            LETSGOOO, INSANE, insane, HOW, HOLY, CLUTCH, clutch, W, WW, GIGACHAD, EZ, Clap,
-            GG, gg, Kreygasm, SeemsGood, CurseLit, PopNemo, WOW, wow, OMG, omg, "no way",
-            "let's go", "lets go", "what a", "holy shit", "oh my god", "すご", "すげ", "神",
-            "대박", "牛逼", "太强", "brutal", "increible", "incrível", "🔥", "😱", "🤯", "🐐", "👏",
-            "💪", "🏆"]
+    words: [POG, POGGERS, PogU, PogChamp, Pog, POGGIES, PagMan, PagChomp, POGSLIDE, OMEGAPOG,
+            LETSGO, LETSGOOO, INSANE, insane, HOW, HOLY, CLUTCH, clutch, W, WW, WWW, WWWW,
+            GIGACHAD, EZ, Clap, GG, gg, Kreygasm, SeemsGood, CurseLit, PopNemo, WOW, wow, OMG, omg,
+            CINEMA, ABSURDO, INSANO, AMASSOU, MITOU, MITO, LENDA, BRABO, CARALHO, KRL, EITA, SLK,
+            OLOKO, "no way", "let's go", "lets go", "what a", "holy shit", "oh my god", "meu deus",
+            "que isso", "muito bom", "すご", "すげ", "神", "대박", "牛逼", "太强", "brutal",
+            "increible", "incrível", "🔥", "😱", "🤯", "🐐", "👏", "💪", "🏆"]
     suffixes: [Pog, POG, Hype, HYPE, Clap, GG, Win, WIN, W, Cheer, Fire, Goat, GOAT, Wow, WOW]
-    patterns: ["^6{3,}$", "^(gg)+$"]
+    patterns: ["^6{3,}$", "^(gg)+$", "^w{2,}$", "^eita+$", "^pogg?e?r?s*$"]
   funny:
     label: laughing
     words: [LUL, LULW, KEKW, OMEGALUL, ICANT, KEK, LOL, lol, LMAO, lmao, LMFAO, lmfao, xD, XD,
-            pepeLaugh, HAHAHA, hahaha, 4Head, Jebaited, EleGiggle, mdr, MDR, ptdr, "😂", "🤣",
-            "💀", "草"]
+            pepeLaugh, HAHAHA, hahaha, RSRS, RSRSRS, 4Head, Jebaited, EleGiggle, mdr, MDR, ptdr,
+            "😂", "🤣", "💀", "草"]
     suffixes: [LUL, LOL, KEKW, KEK, Laugh, LAUGH, Lmao, LMAO, Lol, Haha, HAHA]
-    patterns: ["^[wｗ]{2,}$", "ㅋ{2,}", "^(ja){2,}j?a?$", "^(ha){2,}h?$", "^k{4,}$", "^x+d+$",
-               "哈哈", "^(lo)+l$", "^(ah){2,}$", "хаха", "^(he){3,}$"]
+    patterns: ["^[wｗ]{2,}$", "ㅋ{2,}", "^(ja){2,}j?a?$", "^(ha){2,}h?$", "^k{4,}j*$", "^(rs){2,}r?$",
+               "^x+d+$", "哈哈", "^(lo)+l$", "^(ah){2,}$", "хаха", "^(he){3,}$"]
   surprise:
     label: surprised
-    words: [HUH, WHAT, wtf, WTF, "?!", "!?", "！？", "？！", "は？",
+    words: [HUH, WHAT, wtf, WTF, NOSSA, MDS, VISH, OXI, "?!", "!?", "???", "！？", "？！", "は？",
             "やば", "やばい", "マジ", "헐", "뭐야", "什么", "😮", "😯", "🫢"]
     suffixes: [Huh, HUH, What, WHAT, Shock, Omg, OMG]
+    patterns: ['\?{3,}', '!\?{2,}', '\?!{2,}', "^no+ssa+$"]
     message_patterns: ["^[?？!！]{2,}$", "^[あえぁぇ]+[!！?？ー～]*$", "^hu+h+[?!]*$", "^wha+t+[?!]*$"]
   scare:
     label: scared
@@ -54,14 +61,15 @@ chat_classes:
     patterns: ["^a{4,}h*$"]
   fail:
     label: a fail
-    words: [F, L, LL, Sadge, BibleThump, NotLikeThis, BigSad, FeelsBadMan, RIP, rip, NOOO, THREW,
-            threw, copium, Copium, "；；", "T_T", "😭", "💔"]
+    words: [F, L, LL, LLL, Sadge, BibleThump, NotLikeThis, BigSad, FeelsBadMan, RIP, rip, NOOO, THREW,
+            threw, copium, Copium, MORREU, PERDEU, "；；", "T_T", "😭", "💔"]
     suffixes: [Sad, SAD, Cry, CRY, Rip, RIP, F, L, Dead]
-    patterns: ["ㅠ{2,}", "ㅜ{2,}", "^no{3,}$"]
+    patterns: ["ㅠ{2,}", "ㅜ{2,}", "^no{3,}$", "^l{2,}$", "^f{2,}$"]
   clip:
     label: asking to clip it
     words: [CLIP, clip, clipped, clipit, "+2", "clip it", "clip that", "someone clip", "clipping",
-            "クリップ", "클립"]
+            clipa, CLIPA, clipar, clipou, CLIPOU, clipado, clipem, "clipa isso", "clipa ai",
+            "clipa aí", "クリップ", "클립"]
 
 # Messages that are only these (hellos, good lucks, goodbyes) aren't reactions
 # to anything: a stream's start, a raid arriving, or its end is full of them.

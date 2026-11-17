@@ -120,3 +120,37 @@ def test_whisper_run_avoids_greedy_early_stop_and_strict_vad(tmp_path):
         assert kw["condition_on_previous_text"] is False
         assert kw["word_timestamps"] is True
 
+
+def test_whisper_run_splits_long_blocks_for_fast_deterministic_decode(monkeypatch, tmp_path):
+    """5-min local blocks (>=120s) use fast deterministic decoding (beam_size=1,
+    vad=0.5, temperature=0.0), while short clips and unknown durations keep 5/0.3."""
+    import types
+    from transcription import transcriber
+
+    calls = []
+
+    class FakeModel:
+        def __init__(self, device):
+            self.model = types.SimpleNamespace(device=device)
+
+        def transcribe(self, path, **kwargs):
+            calls.append(kwargs)
+            return [], types.SimpleNamespace(duration=300.0, language="pt")
+
+    monkeypatch.setattr(transcriber, "_video_duration", lambda _p: 300.0)
+    transcriber._run(FakeModel("cuda"), tmp_path / "block.mp4", "pt")
+    transcriber._run(FakeModel("cpu"), tmp_path / "block.mp4", "pt")
+
+    assert len(calls) == 2
+    for kw in calls:
+        assert kw["beam_size"] == 1
+        assert kw["vad_parameters"] == {"threshold": 0.5}
+        assert kw["temperature"] == 0.0
+        assert kw["condition_on_previous_text"] is False
+
+    calls.clear()
+    monkeypatch.setattr(transcriber, "_video_duration", lambda _p: 90.0)
+    transcriber._run(FakeModel("cuda"), tmp_path / "short.mp4", None)
+    assert calls[0]["beam_size"] == 5
+    assert calls[0]["vad_parameters"] == {"threshold": 0.3}
+    assert "temperature" not in calls[0]

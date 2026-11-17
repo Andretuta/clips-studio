@@ -156,21 +156,22 @@ def install(app, *, config, db, data_dir, worker) -> None:
         if not title or len(set(body.sources)) < 2:
             raise HTTPException(400, "Informe um título e escolha pelo menos dois cortes diferentes.")
         d = db()
-        try:
-            if queue.capacity(d) <= 0:
-                raise HTTPException(409, "A fila está cheia. Aguarde uma vaga para exportar.")
-            for index, source in enumerate(body.sources, 1):
-                if source_path(source, d, config, data_dir) is None:
-                    raise HTTPException(404, f"O corte {index} da sequência não está mais disponível.")
-            video_id = f"compilation_{uuid4().hex}"
-            payload = {"sources": body.sources, "title": title}
-            if body.cortes_gamer_watermark:
-                payload["cortes_gamer_watermark"] = True
-                if body.cortes_gamer_style is not None:
-                    payload["cortes_gamer_style"] = body.cortes_gamer_style.model_dump()
-            job_id = d.add_job("compilation", json.dumps(payload), video_id=video_id, title=title)
-        finally:
-            d.close()
+        with queue.db_lock(d):
+            try:
+                if queue.capacity(d) <= 0:
+                    raise HTTPException(409, "A fila está cheia. Aguarde uma vaga para exportar.")
+                for index, source in enumerate(body.sources, 1):
+                    if source_path(source, d, config, data_dir) is None:
+                        raise HTTPException(404, f"O corte {index} da sequência não está mais disponível.")
+                video_id = f"compilation_{uuid4().hex}"
+                payload = {"sources": body.sources, "title": title}
+                if body.cortes_gamer_watermark:
+                    payload["cortes_gamer_watermark"] = True
+                    if body.cortes_gamer_style is not None:
+                        payload["cortes_gamer_style"] = body.cortes_gamer_style.model_dump()
+                job_id = d.add_job("compilation", json.dumps(payload), video_id=video_id, title=title)
+            finally:
+                d.close()
         worker.notify()
         broadcaster.publish({"type": "queue"})
         return {"job_id": job_id, "video_id": video_id}

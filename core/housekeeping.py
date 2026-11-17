@@ -42,6 +42,7 @@ def survey(db, data_dir: Path) -> dict:
         "partial_downloads": [],
         "orphan_downloads": [],
         "orphan_transcripts": [],
+        "orphan_chats": [],
         "render_leftovers": [],
         "orphan_clips": [],
         "previews": [],
@@ -70,6 +71,12 @@ def survey(db, data_dir: Path) -> dict:
     if voice_profiles.is_dir():
         groups["orphan_transcripts"] += [
             f for f in voice_profiles.glob("*.json") if f.stem not in known_videos
+        ]
+
+    chats = data_dir / "chats"
+    if chats.is_dir():
+        groups["orphan_chats"] = [
+            f for f in chats.glob("*.json") if f.stem not in known_videos
         ]
 
     clips = data_dir / "clips"

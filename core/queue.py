@@ -28,7 +28,100 @@ Invariants worth keeping:
 """
 
 import json
+import threading
+import uuid
+from pathlib import Path
 from statistics import median
+
+# Job types that occupy the single GPU worker thread (R08).
+ACTIVE_TYPES = ("process", "compilation", "render")
+
+_STATE_GUARD = threading.RLock()
+_DB_LOCKS: dict[str, threading.RLock] = {}
+_RESERVED_SLOTS: dict[str, dict[str, str]] = {}
+_INFLIGHT_VIDEOS: dict[str, dict[str, threading.Event]] = {}
+
+
+def _db_key(db_or_path) -> str:
+    if isinstance(db_or_path, (str, Path)):
+        raw = str(db_or_path)
+        return raw if raw == ":memory:" else str(Path(raw).resolve())
+    path = getattr(db_or_path, "path", None)
+    if path is not None:
+        raw = str(path)
+        return raw if raw == ":memory:" else str(Path(raw).resolve())
+    return f"conn:{id(getattr(db_or_path, 'conn', db_or_path))}"
+
+
+def db_lock(db_or_path) -> threading.RLock:
+    """Process-local lock keyed by DB path for atomic admission & reservation."""
+    key = _db_key(db_or_path)
+    with _STATE_GUARD:
+        lock = _DB_LOCKS.get(key)
+        if lock is None:
+            lock = threading.RLock()
+            _DB_LOCKS[key] = lock
+        return lock
+
+
+def _reserved_count(db_or_path) -> int:
+    key = _db_key(db_or_path)
+    with _STATE_GUARD:
+        return len(_RESERVED_SLOTS.get(key, {}))
+
+
+def reserve_local(db, video_id: str, *, check_done: bool = True) -> tuple[str, int, str | None]:
+    """Atomically check done -> duplicate -> capacity for a local upload before probing/importing.
+
+    Serializes concurrent requests targeting the same video_id so the second
+    caller sees the first's queued job instead of running a duplicate import,
+    while sharing MAX_ACTIVE across different videos via reserved slots.
+
+    Returns (outcome, existing_job_id, reservation_token):
+      - ("done", 0, None)
+      - ("existing", job_id, None)
+      - ("full", 0, None)
+      - ("reserved", 0, token)
+    """
+    key = _db_key(db)
+    while True:
+        wait_event = None
+        with db_lock(db):
+            if check_done and db.shorts_made(video_id):
+                return "done", 0, None
+            existing = duplicate_of(db, video_id)
+            if existing is not None:
+                return "existing", existing, None
+            with _STATE_GUARD:
+                inflight = _INFLIGHT_VIDEOS.setdefault(key, {})
+                wait_event = inflight.get(video_id)
+                if wait_event is None:
+                    if capacity(db) <= 0:
+                        return "full", 0, None
+                    token = uuid.uuid4().hex
+                    _RESERVED_SLOTS.setdefault(key, {})[token] = video_id
+                    inflight[video_id] = threading.Event()
+                    return "reserved", 0, token
+        wait_event.wait(timeout=30.0)
+
+
+def release_local(db_or_path, token: str | None, video_id: str) -> None:
+    """Release an in-flight local upload reservation (idempotent)."""
+    key = _db_key(db_or_path)
+    ev = None
+    with _STATE_GUARD:
+        slots = _RESERVED_SLOTS.get(key)
+        if slots and token is not None:
+            slots.pop(token, None)
+            if not slots:
+                _RESERVED_SLOTS.pop(key, None)
+        inflight = _INFLIGHT_VIDEOS.get(key)
+        if inflight:
+            ev = inflight.pop(video_id, None)
+            if not inflight:
+                _INFLIGHT_VIDEOS.pop(key, None)
+    if ev is not None:
+        ev.set()
 
 PAUSED_KEY = "queue_paused"
 
@@ -116,10 +209,14 @@ def enqueue_once(db, video_id: str, payload: dict, title: str = "") -> tuple[str
 
 
 def active_count(db) -> int:
-    """Videos waiting or running. Finished ones are history, not work."""
-    return db.conn.execute(
-        "SELECT COUNT(*) FROM jobs WHERE status IN ('queued','running') AND type = 'process'"
+    """Jobs waiting or running that occupy the worker (process, compilation, render),
+    plus any in-flight local upload reservations."""
+    marks = ",".join("?" * len(ACTIVE_TYPES))
+    in_db = db.conn.execute(
+        f"SELECT COUNT(*) FROM jobs WHERE status IN ('queued','running') AND type IN ({marks})",
+        ACTIVE_TYPES,
     ).fetchone()[0]
+    return in_db + _reserved_count(db)
 
 
 def capacity(db) -> int:

@@ -131,28 +131,56 @@ def _load_model(model_size: str, device: str):
     return load(model_size, device="cpu", compute_type="auto")
 
 
+LONG_BLOCK_SECONDS = 120.0
+
+
+def _video_duration(video_path: Path) -> float | None:
+    """Duration in seconds via ffprobe, or None if unavailable/unprobeable."""
+    try:
+        p = Path(video_path)
+        if not p.is_file():
+            return None
+        import subprocess
+        from core.binaries import ffprobe
+
+        res = subprocess.run(
+            [ffprobe(), "-v", "error", "-show_entries", "format=duration",
+             "-of", "csv=p=0", str(p)],
+            capture_output=True, text=True, timeout=15,
+        )
+        if res.returncode != 0 or not res.stdout.strip():
+            return None
+        val = float(res.stdout.strip())
+        return val if val > 0 else None
+    except Exception:
+        return None
+
+
 def _run(model, video_path: Path, language: str | None, hotwords: str | None = None):
     """(segments, info) for one pass of Whisper over the video. hotwords:
     names to listen for (sports.hotwords), else Whisper as always."""
+    duration = _video_duration(video_path)
+    long_block = duration is not None and duration >= LONG_BLOCK_SECONDS
+    # Short clips (<120s or unknown) keep beam_size=5 (2 on CPU) + VAD 0.3 so
+    # greedy decoding doesn't stop early on brief pauses (issue: clip 158).
+    # Long live-stream blocks (>=120s) use beam_size=1 + VAD 0.5 + temp=0.0:
+    # benchmarked on 5-min GTA blocks (RTX 3060, large-v3-turbo) at 7.6s vs
+    # 56-170s default, +16-33% more words, and 100% deterministic across runs.
+    beam_size = 1 if long_block else (5 if _on_gpu(model) else 2)
+    vad_threshold = 0.5 if long_block else 0.3
+    extra: dict = {}
+    if long_block:
+        extra["temperature"] = 0.0
+    if hotwords:
+        extra["hotwords"] = hotwords
     raw_segments, info = model.transcribe(
         str(video_path),
         # None = auto-detect; a forced code fixes bilingual streams where
         # the opening audio (e.g. English game sound) misleads detection.
         language=language,
         vad_filter=True,
-        # Default Silero threshold (0.5) drops quieter/shouted bursts and clips
-        # word onsets; 0.3 keeps real speech while still skipping pure silence.
-        vad_parameters={"threshold": 0.3},
-        # Greedy decoding (beam_size=1) can pick <|endoftext|> right after an
-        # early pause inside a VAD-concatenated 30s window, causing
-        # faster-whisper's single_timestamp_ending to skip the rest of the window
-        # (reproduced on clip 158: stopped at 4.4s of 25.5s; beam 5 + VAD 0.3
-        # reaches 25.2s). Cost, measured 16/11 on the RTX 3060 with turbo: a
-        # 5-min block takes 14.1s instead of 7.2s, with 397 words vs 462. Fine
-        # for short Twitch clips (the launch source); re-measure before relying
-        # on it for long blocks. CPU keeps beam_size=2.
-        # ponytail: one setting for clips and blocks; split by duration if blocks matter.
-        beam_size=5 if _on_gpu(model) else 2,
+        vad_parameters={"threshold": vad_threshold},
+        beam_size=beam_size,
         # Don't feed the previous window's text back in: on long streams with
         # music/noise this is what causes repeated-sentence hallucination
         # loops, and dropping it is a little faster too.
@@ -160,7 +188,7 @@ def _run(model, video_path: Path, language: str | None, hotwords: str | None = N
         word_timestamps=True,  # word-level timing powers the synced captions
         # Unlike an initial prompt, which the line above drops after the
         # first 30 s, hotwords go with every window.
-        **({"hotwords": hotwords} if hotwords else {}),
+        **extra,
     )
 
     segments = []

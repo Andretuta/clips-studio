@@ -407,6 +407,20 @@ def process_video(url: str, config: dict, db: StateDB, force: bool = False) -> l
     def _fetch_hype() -> None:
         if whole:
             return
+        if url.startswith("local:") or video.video_id.startswith("local_"):
+            try:
+                from analysis.hype import _chatters_to_curve
+
+                messages = _local_chat(data_dir, video.video_id)
+                if messages:
+                    curve = _chatters_to_curve(messages, video.duration)
+                    if curve is not None:
+                        hype_out["curve"] = curve
+                    if gaming_scoring or sport_name:
+                        hype_out["messages"] = messages
+            except Exception as e:
+                print(f"      (local chat load failed: {e})")
+            return
         try:
             from analysis.hype import audience_signals
 
@@ -1103,6 +1117,47 @@ def _try_gaming_render(intermediate: Path, render_path: Path, opts: dict, config
         return None
 
 
+def _local_chat(data_dir: Path, video_id: str) -> list[tuple[float, str, str, int]]:
+    """Saved chat for a local block (`data_dir / chats / {video_id}.json`), or []."""
+    path = Path(data_dir) / "chats" / f"{video_id}.json"
+    if not path.is_file():
+        return []
+    try:
+        raw = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return []
+    if not isinstance(raw, list):
+        return []
+    out: list[tuple[float, str, str, int]] = []
+    for m in raw:
+        if not isinstance(m, dict) or "t" not in m:
+            continue
+        try:
+            t = float(m["t"])
+        except (TypeError, ValueError):
+            continue
+        user = str(m.get("user") or "")
+        text = str(m.get("text") or "")
+        try:
+            emotes = int(m.get("emotes") or 0)
+        except (TypeError, ValueError):
+            emotes = 0
+        out.append((t, user, text, max(0, emotes)))
+    out.sort(key=lambda item: item[0])
+    return out
+
+
+def _chat_lag(config: dict, knowledge: dict, video_id: str) -> float:
+    """Reaction lag subtracted from chat timestamps (live local blocks vs VOD replay)."""
+    is_local = str(video_id or "").startswith("local_")
+    key = "chat_live_lag_seconds" if is_local else "chat_lag_seconds"
+    default = 3.0 if is_local else 6.0
+    scoring = config.get("scoring") or {}
+    if key in scoring and scoring[key] is not None:
+        return float(scoring[key])
+    return float(knowledge.get(key, default))
+
+
 def _gaming_scoring_inputs(config: dict, video, db: StateDB, games: list, hype_out: dict,
                            heard: dict | None = None):
     """(the gaming profile, what chat's reactions mark, what the game's sound
@@ -1124,8 +1179,9 @@ def _gaming_scoring_inputs(config: dict, video, db: StateDB, games: list, hype_o
             from analysis.chat_moments import chat_signal
 
             k = gaming.knowledge()
+            lag = _chat_lag(config, k, getattr(video, "video_id", ""))
             chat = chat_signal(hype_out["messages"], video.duration, k.get("chat_classes") or {},
-                               float(k.get("chat_lag_seconds", 6)), k.get("chat_ignore") or [])
+                               lag, k.get("chat_ignore") or [])
         except Exception as e:
             print(f"      (chat moments unavailable: {e})")
     sounds = None
@@ -1222,8 +1278,9 @@ def _sport_inputs(config: dict, video, hype_out: dict, heard: dict | None, prepa
             from analysis.chat_moments import chat_signal
 
             k = gaming.knowledge()
+            lag = _chat_lag(config, k, getattr(video, "video_id", ""))
             chat = chat_signal(hype_out["messages"], video.duration, k.get("chat_classes") or {},
-                               float(k.get("chat_lag_seconds", 6)), k.get("chat_ignore") or [])
+                               lag, k.get("chat_ignore") or [])
         except Exception as e:
             print(f"      (chat moments unavailable: {e})")
     sounds = None

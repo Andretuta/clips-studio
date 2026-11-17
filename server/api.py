@@ -232,6 +232,13 @@ class CreatorBrandingIn(BaseModel):
     branding_id: int | None = None   # default branding profile, or null to clear
 
 
+class ChatMessageIn(BaseModel):
+    t: float
+    user: str
+    text: str
+    emotes: int = 0
+
+
 class LocalVideoIn(BaseModel):
     path: str                  # video file on this computer (mp4/mov/mkv/…)
     title: str = ""            # defaults to the file name
@@ -250,6 +257,7 @@ class LocalVideoIn(BaseModel):
     # original link). Optional: never invented. Kept with the video so the
     # clips' publishing footers can point back to it.
     source_url: str = ""
+    chat: list[ChatMessageIn] | None = None
     # The rest of the per-video options, so an uploaded file can be set up
     # exactly like a pasted link — the list builder offers the same switches
     # for both, and a switch that silently did nothing on your own upload
@@ -1037,44 +1045,35 @@ def create_app(config: dict, settings_path: Path) -> FastAPI:
         # them isn't a re-run either (#98).
         from sources.dispatch import identify
 
-        vid = ""
-        if not body.force and not body.longform:
-            _, vid = identify(body.url)
-            if vid:
-                d0 = db()
-                try:
-                    made = d0.shorts_made(vid)
-                finally:
-                    d0.close()
-                if made:
-                    return {"job_id": None, "already_processed": True, "video_id": vid}
-        elif not body.longform:
-            _, vid = identify(body.url)
-
+        _, vid = identify(body.url)
+        vid = vid or ""
         payload = _process_options(body, {"url": body.url, "force": body.force}, data_dir=data_dir)
-        d = db()
-        try:
-            # Same video already waiting or running: with a queue the likely
-            # mistake is pasting a link twice into a batch, and processing it
-            # twice costs an hour and produces duplicate clips. Checked before
-            # capacity so a retry whose first response was lost recovers its
-            # queued_job_id even when that job took the last slot.
-            existing = queue.duplicate_of(d, vid) if vid else None
-            if existing is not None:
-                return {"job_id": None, "already_queued": True, "video_id": vid,
-                        "queued_job_id": existing}
-            if queue.capacity(d) <= 0:
-                raise HTTPException(
-                    409,
-                    f"the queue is full ({queue.MAX_ACTIVE} videos) — let one finish or remove one first",
-                )
-            # `identify` returns None for anything without an extractable
-            # video id (a channel page, a live URL, a typo). The column is NOT
-            # NULL, so passing None through turns a perfectly ordinary link
-            # into a 500 — the pipeline is what should report a bad URL.
-            job_id = d.add_job("process", json.dumps(payload), video_id=vid or "")
-        finally:
-            d.close()
+        with queue.db_lock(db_path):
+            d = db()
+            try:
+                if vid and not body.force and not body.longform and d.shorts_made(vid):
+                    return {"job_id": None, "already_processed": True, "video_id": vid}
+                # Same video already waiting or running: with a queue the likely
+                # mistake is pasting a link twice into a batch, and processing it
+                # twice costs an hour and produces duplicate clips. Checked before
+                # capacity so a retry whose first response was lost recovers its
+                # queued_job_id even when that job took the last slot.
+                existing = queue.duplicate_of(d, vid) if vid else None
+                if existing is not None:
+                    return {"job_id": None, "already_queued": True, "video_id": vid,
+                            "queued_job_id": existing}
+                if queue.capacity(d) <= 0:
+                    raise HTTPException(
+                        409,
+                        f"the queue is full ({queue.MAX_ACTIVE} videos) — let one finish or remove one first",
+                    )
+                # `identify` returns None for anything without an extractable
+                # video id (a channel page, a live URL, a typo). The column is NOT
+                # NULL, so passing None through turns a perfectly ordinary link
+                # into a 500 — the pipeline is what should report a bad URL.
+                job_id = d.add_job("process", json.dumps(payload), video_id=vid)
+            finally:
+                d.close()
         worker.notify()
         broadcaster.publish({"type": "queue"})
         return {"job_id": job_id}
@@ -1112,29 +1111,6 @@ def create_app(config: dict, settings_path: Path) -> FastAPI:
             raise HTTPException(400, f"not a video file this app can open: {body.path}")
         src, _suffix, src_stat = picked
 
-        # Must contain a video stream (catches audio files / random files).
-        probe = sp.run(
-            [ffprobe(), "-v", "error", "-select_streams", "v:0",
-             "-show_entries", "stream=codec_name", "-of", "csv=p=0", str(src)],
-            capture_output=True, text=True,
-        )
-        if probe.returncode != 0 or not probe.stdout.strip():
-            raise HTTPException(400, "that file doesn't look like a video")
-
-        # Length, while we already have the file open. Local files are the one
-        # path where the queue can know a video's duration before it runs, and
-        # duration is what its time estimate scales by.
-        seconds = 0.0
-        try:
-            dur = sp.run(
-                [ffprobe(), "-v", "error", "-show_entries", "format=duration",
-                 "-of", "csv=p=0", str(src)],
-                capture_output=True, text=True,
-            )
-            seconds = float(dur.stdout.strip() or 0)
-        except (ValueError, OSError):
-            pass  # only costs a less precise estimate
-
         # usedforsecurity=False because this is a naming scheme, not a defence:
         # it turns a path into a stable short id so re-importing the same file
         # reuses its downloads/ entry. Nothing trusts it, and collisions cost a
@@ -1148,62 +1124,127 @@ def create_app(config: dict, settings_path: Path) -> FastAPI:
             f"{src}|{src_stat.st_size}|{int(src_stat.st_mtime)}".encode(),
             usedforsecurity=False,
         ).hexdigest()[:12]
-        dest = data_dir / "downloads" / f"{vid}.mp4"
-        dest.parent.mkdir(parents=True, exist_ok=True)
+        # Validate options before reserving capacity or touching the file.
+        # force is part of the job, as for a pasted link: without it "Make clips
+        # again" on an uploaded file finished at once, with nothing made.
+        payload = _process_options(body, {"url": f"local:{vid}", "force": body.force}, data_dir=data_dir)
 
-        # H.264, H.265, AV1 and VP9 are stream-copied into the pipeline's mp4
-        # layout, which takes seconds; the job converts the slow three to
-        # H.264 where the window can show it. Anything else (ProRes, old AVI
-        # codecs) is converted here. Never left half-written: see
-        # import_local_source, and #122 for what a half-written copy cost.
-        from video.encoding import import_local_source
-
-        if not import_local_source(src, dest, probe.stdout.strip()):
-            raise HTTPException(
-                400,
-                "couldn't convert this file — export it as MP4 (H.264) and try again",
-            )
-
-        title = body.title.strip() or src.stem
-        platform = body.platform if body.platform in ("youtube", "twitch", "kick") else "youtube"
-        d = db()
+        # R05: Check shorts_made -> duplicate_of -> capacity BEFORE probing or
+        # copying bytes, holding a reservation slot across parallel requests.
+        d0 = db()
         try:
-            # The same file added again: say so, as for a pasted link, so the
-            # app can offer "Make clips again". Queued anyway, it finished in
-            # two seconds with nothing made and no word why (#98).
-            if not body.force and not body.longform and d.shorts_made(vid):
-                return {"job_id": None, "already_processed": True, "video_id": vid}
-            # Same local block already waiting or running: return its job id
-            # instead of queueing a second run (e.g. Cola retry after timeout).
-            existing = queue.duplicate_of(d, vid)
-            if existing is not None:
-                return {"job_id": None, "already_queued": True, "video_id": vid,
-                        "queued_job_id": existing}
-            if queue.capacity(d) <= 0:
-                raise HTTPException(
-                    409,
-                    f"the queue is full ({queue.MAX_ACTIVE} videos) — let one finish or remove one first",
-                )
-            d.upsert_video(
-                vid, title=title, channel_name=body.channel.strip(), duration=seconds
+            outcome, existing_id, token = queue.reserve_local(
+                d0, vid, check_done=not body.force and not body.longform
             )
-            # The file's original link, only when the user gave one (a downloaded
-            # live's page). Never required, never guessed.
-            from sources.dispatch import platform_of_link
-
-            original = body.source_url.strip()
-            if original and platform_of_link(original):
-                d.set_video_source(vid, original, platform_of_link(original))
-            if body.channel.strip():
-                from creator.identity import tag_video
-
-                tag_video(d, vid, body.channel.strip(), platform=platform)
-            # force is part of the job, as for a pasted link: without it "Make clips
-            # again" on an uploaded file finished at once, with nothing made.
-            payload = _process_options(body, {"url": f"local:{vid}", "force": body.force}, data_dir=data_dir)
-            job_id = d.add_job("process", json.dumps(payload), video_id=vid, title=title)
         finally:
-            d.close()
+            d0.close()
+
+        if outcome == "done":
+            return {"job_id": None, "already_processed": True, "video_id": vid}
+        if outcome == "existing":
+            dest = data_dir / "downloads" / f"{vid}.mp4"
+            if body.force:
+                from video.encoding import import_local_source, readable_video
+
+                if not dest.exists() or not readable_video(dest):
+                    try:
+                        probe = sp.run(
+                            [ffprobe(), "-v", "error", "-select_streams", "v:0",
+                             "-show_entries", "stream=codec_name", "-of", "csv=p=0", str(src)],
+                            capture_output=True, text=True, timeout=30,
+                        )
+                    except (sp.TimeoutExpired, OSError):
+                        probe = None
+                    if probe is not None and probe.returncode == 0 and probe.stdout.strip():
+                        dest.parent.mkdir(parents=True, exist_ok=True)
+                        import_local_source(src, dest, probe.stdout.strip())
+            if body.chat is not None:
+                _save_local_chat(data_dir, vid, body.chat)
+            return {"job_id": None, "already_queued": True, "video_id": vid,
+                    "queued_job_id": existing_id}
+        if outcome == "full":
+            raise HTTPException(
+                409,
+                f"the queue is full ({queue.MAX_ACTIVE} videos) — let one finish or remove one first",
+            )
+
+        try:
+            # Must contain a video stream (catches audio files / random files).
+            try:
+                probe = sp.run(
+                    [ffprobe(), "-v", "error", "-select_streams", "v:0",
+                     "-show_entries", "stream=codec_name", "-of", "csv=p=0", str(src)],
+                    capture_output=True, text=True, timeout=30,
+                )
+            except sp.TimeoutExpired as e:
+                raise HTTPException(400, "timed out inspecting that file") from e
+            if probe.returncode != 0 or not probe.stdout.strip():
+                raise HTTPException(400, "that file doesn't look like a video")
+
+            # Length, while we already have the file open. Local files are the one
+            # path where the queue can know a video's duration before it runs, and
+            # duration is what its time estimate scales by.
+            seconds = 0.0
+            try:
+                dur = sp.run(
+                    [ffprobe(), "-v", "error", "-show_entries", "format=duration",
+                     "-of", "csv=p=0", str(src)],
+                    capture_output=True, text=True, timeout=30,
+                )
+                seconds = float(dur.stdout.strip() or 0)
+            except (ValueError, OSError, sp.TimeoutExpired):
+                pass  # only costs a less precise estimate
+
+            dest = data_dir / "downloads" / f"{vid}.mp4"
+            dest.parent.mkdir(parents=True, exist_ok=True)
+
+            # H.264, H.265, AV1 and VP9 are stream-copied into the pipeline's mp4
+            # layout, which takes seconds; the job converts the slow three to
+            # H.264 where the window can show it. Anything else (ProRes, old AVI
+            # codecs) is converted here. Never left half-written: see
+            # import_local_source, and #122 for what a half-written copy cost.
+            from video.encoding import import_local_source
+
+            if not import_local_source(src, dest, probe.stdout.strip()):
+                raise HTTPException(
+                    400,
+                    "couldn't convert this file — export it as MP4 (H.264) and try again",
+                )
+
+            if body.chat is not None:
+                _save_local_chat(data_dir, vid, body.chat)
+
+            title = body.title.strip() or src.stem
+            platform = body.platform if body.platform in ("youtube", "twitch", "kick") else "youtube"
+            with queue.db_lock(db_path):
+                d = db()
+                try:
+                    if not body.force and not body.longform and d.shorts_made(vid):
+                        return {"job_id": None, "already_processed": True, "video_id": vid}
+                    existing = queue.duplicate_of(d, vid)
+                    if existing is not None:
+                        return {"job_id": None, "already_queued": True, "video_id": vid,
+                                "queued_job_id": existing}
+                    d.upsert_video(
+                        vid, title=title, channel_name=body.channel.strip(), duration=seconds
+                    )
+                    # The file's original link, only when the user gave one (a downloaded
+                    # live's page). Never required, never guessed.
+                    from sources.dispatch import platform_of_link
+
+                    original = body.source_url.strip()
+                    if original and platform_of_link(original):
+                        d.set_video_source(vid, original, platform_of_link(original))
+                    if body.channel.strip():
+                        from creator.identity import tag_video
+
+                        tag_video(d, vid, body.channel.strip(), platform=platform)
+                    job_id = d.add_job("process", json.dumps(payload), video_id=vid, title=title)
+                    queue.release_local(db_path, token, vid)
+                finally:
+                    d.close()
+        finally:
+            queue.release_local(db_path, token, vid)
         worker.notify()
         broadcaster.publish({"type": "queue"})
         return {"job_id": job_id, "video_id": vid}
@@ -1365,53 +1406,54 @@ def create_app(config: dict, settings_path: Path) -> FastAPI:
 
         created: list[dict] = []
         skipped: list[dict] = []
-        d = db()
-        try:
-            for item in body.items:
-                url = item.url.strip()
-                if not url:
-                    continue
-                # Pasting a block of text is how this box gets used, so a
-                # stray line that isn't a link at all is an ordinary mistake —
-                # catch it here rather than an hour later in the pipeline.
-                # Only obvious non-links are refused: channel and live pages
-                # have no video id either, and the single-URL path has always
-                # accepted them, so URL-shaped input still goes through.
-                if not (url.startswith("http://") or url.startswith("https://")
-                        or url.startswith("local:")):
-                    skipped.append({"url": url, "reason": "unrecognized"})
-                    continue
-                try:
-                    _, vid = identify(url)
-                except Exception as e:
-                    skipped.append({"url": url, "reason": "unrecognized", "detail": str(e)[:200]})
-                    continue
-                if vid and not item.force:
-                    # As POST /jobs: Longform output of a processed video is
-                    # the normal case, and Shorts of a Longform-only one too.
-                    if not item.longform and d.shorts_made(vid):
-                        skipped.append({"url": url, "reason": "already_processed", "video_id": vid})
+        with queue.db_lock(db_path):
+            d = db()
+            try:
+                for item in body.items:
+                    url = item.url.strip()
+                    if not url:
                         continue
-                    if queue.duplicate_of(d, vid) is not None:
-                        skipped.append({"url": url, "reason": "already_queued", "video_id": vid})
+                    # Pasting a block of text is how this box gets used, so a
+                    # stray line that isn't a link at all is an ordinary mistake —
+                    # catch it here rather than an hour later in the pipeline.
+                    # Only obvious non-links are refused: channel and live pages
+                    # have no video id either, and the single-URL path has always
+                    # accepted them, so URL-shaped input still goes through.
+                    if not (url.startswith("http://") or url.startswith("https://")
+                            or url.startswith("local:")):
+                        skipped.append({"url": url, "reason": "unrecognized"})
                         continue
-                # Enforced here as well as in the UI: the cap is a real limit,
-                # not a disabled button. Reported per item so the videos that
-                # do fit are still queued.
-                if queue.capacity(d) <= 0:
-                    skipped.append({"url": url, "reason": "queue_full"})
-                    continue
-                # Same builder as POST /jobs and PATCH, so this row's options
-                # get the identical clamps and filter validation.
-                try:
-                    payload = _process_options(item, {"url": url, "force": item.force}, data_dir=data_dir)
-                except HTTPException as e:
-                    skipped.append({"url": url, "reason": "bad_option", "detail": str(e.detail)[:200]})
-                    continue
-                job_id = d.add_job("process", json.dumps(payload), video_id=vid or "")
-                created.append({"url": url, "job_id": job_id, "video_id": vid or ""})
-        finally:
-            d.close()
+                    try:
+                        _, vid = identify(url)
+                    except Exception as e:
+                        skipped.append({"url": url, "reason": "unrecognized", "detail": str(e)[:200]})
+                        continue
+                    if vid and not item.force:
+                        # As POST /jobs: Longform output of a processed video is
+                        # the normal case, and Shorts of a Longform-only one too.
+                        if not item.longform and d.shorts_made(vid):
+                            skipped.append({"url": url, "reason": "already_processed", "video_id": vid})
+                            continue
+                        if queue.duplicate_of(d, vid) is not None:
+                            skipped.append({"url": url, "reason": "already_queued", "video_id": vid})
+                            continue
+                    # Enforced here as well as in the UI: the cap is a real limit,
+                    # not a disabled button. Reported per item so the videos that
+                    # do fit are still queued.
+                    if queue.capacity(d) <= 0:
+                        skipped.append({"url": url, "reason": "queue_full"})
+                        continue
+                    # Same builder as POST /jobs and PATCH, so this row's options
+                    # get the identical clamps and filter validation.
+                    try:
+                        payload = _process_options(item, {"url": url, "force": item.force}, data_dir=data_dir)
+                    except HTTPException as e:
+                        skipped.append({"url": url, "reason": "bad_option", "detail": str(e.detail)[:200]})
+                        continue
+                    job_id = d.add_job("process", json.dumps(payload), video_id=vid or "")
+                    created.append({"url": url, "job_id": job_id, "video_id": vid or ""})
+            finally:
+                d.close()
         if created:
             worker.notify()  # no-op while stopped; wakes it if already running
         broadcaster.publish({"type": "queue"})
@@ -1622,6 +1664,12 @@ def create_app(config: dict, settings_path: Path) -> FastAPI:
         voice_profiles = data_dir / "voice_profiles"
         if voice_profiles.is_dir():
             for f in voice_profiles.iterdir():
+                if f.is_file() and f.name == f"{video_id}.json":
+                    _unlink_best_effort(f, data_dir)
+
+        chats = data_dir / "chats"
+        if chats.is_dir():
+            for f in chats.iterdir():
                 if f.is_file() and f.name == f"{video_id}.json":
                     _unlink_best_effort(f, data_dir)
 
@@ -3468,11 +3516,36 @@ def _suggestion_state(row, value) -> str:
     return json.dumps({**scores, "plugin_edits": entries})
 
 
+def _save_local_chat(data_dir: Path, vid: str, chat: list[ChatMessageIn]) -> None:
+    """Persist live block chat messages atomically under data_dir/chats/{vid}.json."""
+    chats_dir = data_dir / "chats"
+    chats_dir.mkdir(parents=True, exist_ok=True)
+    target = chats_dir / f"{vid}.json"
+    rows = [
+        {
+            "t": round(float(m.t), 3),
+            "user": m.user,
+            "text": m.text,
+            "emotes": max(0, int(m.emotes)),
+        }
+        for m in chat
+    ]
+    rows.sort(key=lambda item: item["t"])
+    tmp = chats_dir / f"{vid}.{os.getpid()}.{threading.get_ident()}.tmp"
+    try:
+        tmp.write_text(json.dumps(rows, ensure_ascii=False), encoding="utf-8")
+        tmp.replace(target)
+    finally:
+        discard(tmp)
+
+
 def _clip_json(row) -> dict:
     d = dict(row)
     d["hashtags"] = json.loads(d["hashtags"]) if d.get("hashtags") else []
     d["scores"] = json.loads(d["scores"]) if d.get("scores") else {}
     d["render_opts"] = json.loads(d["render_opts"]) if d.get("render_opts") else {}
+    if isinstance(d["scores"], dict) and "momento_chave" in d["scores"]:
+        d["momento_chave"] = d["scores"]["momento_chave"]
     return d
 
 

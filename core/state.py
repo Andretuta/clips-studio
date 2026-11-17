@@ -8,9 +8,12 @@ nothing is ever reprocessed or double-uploaded.
 
 import json
 import sqlite3
+import threading
 from contextlib import contextmanager
 from datetime import date, datetime
 from pathlib import Path
+
+_INIT_LOCK = threading.Lock()
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS text_updates (
@@ -543,14 +546,19 @@ def _now() -> str:
 
 class StateDB:
     def __init__(self, db_path: Path):
+        self.path = Path(db_path)
         db_path.parent.mkdir(parents=True, exist_ok=True)
-        self.conn = sqlite3.connect(db_path)
+        self.conn = sqlite3.connect(db_path, timeout=30.0)
         self.conn.row_factory = sqlite3.Row
-        self.conn.execute("PRAGMA journal_mode=WAL")
-        self.conn.execute("PRAGMA foreign_keys=ON")
-        self.conn.executescript(SCHEMA)
-        self._migrate()
-        self.conn.commit()
+        self.conn.execute("PRAGMA busy_timeout=30000")
+        with _INIT_LOCK:
+            mode = self.conn.execute("PRAGMA journal_mode").fetchone()
+            if not mode or str(mode[0]).lower() != "wal":
+                self.conn.execute("PRAGMA journal_mode=WAL")
+            self.conn.execute("PRAGMA foreign_keys=ON")
+            self.conn.executescript(SCHEMA)
+            self._migrate()
+            self.conn.commit()
 
     def _migrate(self) -> None:
         """Add columns introduced after a DB was first created."""

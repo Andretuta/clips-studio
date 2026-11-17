@@ -202,3 +202,144 @@ def test_reposting_same_local_file_recovers_queued_job_even_when_queue_full(api,
     assert retry_url.status_code == 200
     assert retry_url.json()["already_queued"] is True and isinstance(retry_url.json()["queued_job_id"], int)
 
+
+def test_local_video_with_chat_saves_loads_uses_live_lag_exposes_momento_chave_and_cleans_up(
+    api, tmp_path, monkeypatch
+):
+    from types import SimpleNamespace
+    from core import housekeeping, pipeline
+
+    client, data_dir = api
+    src = _video(tmp_path, "1280x720")
+    chat_payload = [
+        {"t": 18.0, "user": "alice", "text": "kkkk clipa isso", "emotes": 2},
+        {"t": 12.0, "user": "bob", "text": "KEKW", "emotes": 1},
+    ]
+    res = client.post("/videos/local", json={
+        "path": src,
+        "gaming_scoring": True,
+        "chat": chat_payload,
+    })
+    assert res.status_code == 200, res.text
+    vid = res.json()["video_id"]
+    chat_file = data_dir / "chats" / f"{vid}.json"
+    assert chat_file.is_file()
+    saved = json.loads(chat_file.read_text(encoding="utf-8"))
+    assert [m["t"] for m in saved] == [12.0, 18.0]  # sorted by t
+    assert saved[1]["emotes"] == 2
+
+    # Pipeline helper reads local chat directly (sorted 4-tuples) and picks live lag (~3s vs VOD 6s).
+    loaded = pipeline._local_chat(data_dir, vid)
+    assert loaded == [(12.0, "bob", "KEKW", 1), (18.0, "alice", "kkkk clipa isso", 2)]
+
+    seen_lags = []
+    monkeypatch.setattr("analysis.chat_moments.chat_signal", lambda msgs, dur, classes, lag, ignore: (
+        seen_lags.append(lag) or SimpleNamespace(curve=None, events=[])
+    ))
+    k = pipeline.gaming if False else __import__("analysis.gaming", fromlist=["knowledge"]).knowledge()
+    hype_msgs = [(10.0 + i * 0.2, f"u{i}", "kkkk", 1) for i in range(15)]
+    db = StateDB(data_dir / "state.db")
+    try:
+        cfg = {"clips": {"gaming_scoring": True}, "scoring": {}}
+        pipeline._gaming_scoring_inputs(cfg, SimpleNamespace(video_id=vid, title="GTA RP", duration=60.0),
+                                        db, [], {"messages": hype_msgs})
+        pipeline._gaming_scoring_inputs(cfg, SimpleNamespace(video_id="tw_999", title="GTA RP", duration=60.0),
+                                        db, [], {"messages": hype_msgs})
+        assert seen_lags == [float(k["chat_live_lag_seconds"]), float(k["chat_lag_seconds"])]
+        assert seen_lags[0] < seen_lags[1]
+
+        # Clip response lifts momento_chave to top-level.
+        mk = {"score": 0.82, "motivos": ["chat 5.1x", "kkkk"]}
+        db.add_clip(vid, 1.0, 15.0, 82.0, "Clip", scores=json.dumps({"game": 70.0, "momento_chave": mk}))
+    finally:
+        db.conn.close()
+
+    clips_res = client.get(f"/videos/{vid}/clips")
+    assert clips_res.status_code == 200
+    assert clips_res.json()[0]["momento_chave"] == mk
+
+    # DELETE /videos/{vid} deletes its chat file too.
+    del_res = client.delete(f"/videos/{vid}")
+    assert del_res.status_code == 200
+    assert not chat_file.exists()
+
+    # Orphan chat files are reported by housekeeping.
+    orphan = data_dir / "chats" / "local_orphan999.json"
+    orphan.parent.mkdir(parents=True, exist_ok=True)
+    orphan.write_text("[]", encoding="utf-8")
+    db = StateDB(data_dir / "state.db")
+    try:
+        survey = housekeeping.survey(db, data_dir)
+        assert survey["reclaimable"]["orphan_chats"]["files"] == 1
+        assert survey["_groups"]["orphan_chats"] == [orphan]
+    finally:
+        db.conn.close()
+
+
+def test_local_video_without_chat_works_unchanged(api, tmp_path):
+    from core import pipeline
+
+    client, data_dir = api
+    res = client.post("/videos/local", json={"path": _video(tmp_path, "640x360")})
+    assert res.status_code == 200, res.text
+    vid = res.json()["video_id"]
+    assert pipeline._local_chat(data_dir, vid) == []
+    assert not (data_dir / "chats" / f"{vid}.json").exists()
+
+
+def test_r05_local_rejects_full_or_duplicate_before_probing_or_importing(api, tmp_path, monkeypatch):
+    from core import queue
+
+    client, _ = api
+    existing_src = _video(tmp_path, "640x360")
+    first = client.post("/videos/local", json={"path": existing_src})
+    assert first.status_code == 200
+
+    for i in range(queue.MAX_ACTIVE - 1):
+        r = client.post("/jobs", json={"url": f"https://www.youtube.com/watch?v=capFill{i:03d}"})
+        assert r.status_code == 200
+
+    # Create a brand new valid-extension file (doesn't even need valid video bytes because
+    # capacity check happens BEFORE ffprobe/import).
+    fake_block = tmp_path / "overflow_block.mp4"
+    fake_block.write_bytes(b"not probed when rejected early")
+
+    calls = []
+    monkeypatch.setattr(subprocess, "run", lambda *a, **k: calls.append(a))
+
+    # Duplicate retry returns 200 already_queued with zero ffprobe/import calls.
+    dup = client.post("/videos/local", json={"path": existing_src})
+    assert dup.status_code == 200 and dup.json()["already_queued"] is True
+    assert calls == []
+
+    # Queue-full rejects with 409 with zero ffprobe/import calls.
+    full = client.post("/videos/local", json={"path": str(fake_block)})
+    assert full.status_code == 409
+    assert calls == []
+
+
+def test_r05_concurrent_local_uploads_respect_max_active(api, tmp_path):
+    from concurrent.futures import ThreadPoolExecutor
+    from core import queue
+
+    client, data_dir = api
+    src_base = _video(tmp_path, "640x360")
+    raw = open(src_base, "rb").read()
+    paths = []
+    for i in range(queue.MAX_ACTIVE + 3):
+        p = tmp_path / f"concurrent_{i}.mp4"
+        p.write_bytes(raw)
+        paths.append(str(p))
+
+    with ThreadPoolExecutor(max_workers=len(paths)) as pool:
+        results = list(pool.map(lambda p: client.post("/videos/local", json={"path": p}), paths))
+
+    ok = [r for r in results if r.status_code == 200 and r.json().get("job_id")]
+    rejected = [r for r in results if r.status_code == 409]
+    assert len(ok) == queue.MAX_ACTIVE
+    assert len(rejected) == 3
+    db = StateDB(data_dir / "state.db")
+    try:
+        assert queue.active_count(db) == queue.MAX_ACTIVE
+    finally:
+        db.conn.close()

@@ -641,7 +641,92 @@ def find_clips(
 
     kept = finalists[:max_clips] if max_clips > 0 else finalists
     rejections += [Rejection(c, "over_limit") for c in finalists[len(kept):]]
+    for c in kept:
+        c.subscores = dict(c.subscores or {})
+        c.subscores["momento_chave"] = _momento_chave(
+            c,
+            audio_excitement=audio_excitement,
+            audience=audience,
+            chat=chat,
+            chat_curve=chat_curve,
+            voice=voice,
+            game_sound=game_sound,
+            people_sound=people_sound,
+        )
     return kept, rejections
+
+
+def _momento_chave(
+    c: ClipCandidate,
+    *,
+    audio_excitement: np.ndarray,
+    audience: "np.ndarray | None",
+    chat,
+    chat_curve: np.ndarray,
+    voice: np.ndarray,
+    game_sound: np.ndarray,
+    people_sound: np.ndarray,
+) -> dict:
+    """0-1 key-moment score and human-readable Portuguese reasons for auto-posting."""
+    sub = c.subscores or {}
+    base = max(0.0, min(1.0, float(c.score or 0) / 100.0))
+
+    meta = None
+    meta_list = getattr(chat, "event_meta", None) or [] if chat is not None else []
+    overlapping = [
+        ev for ev in meta_list
+        if (c.start - 2.0) <= float(ev.get("t", -999.0)) <= (c.end + 2.0)
+    ]
+    if overlapping:
+        meta = max(overlapping, key=lambda ev: float(ev.get("score", 0.0)))
+
+    chat_pk = _window_max(chat_curve, c.start, c.end) if chat_curve.size else 0.0
+    if meta is not None:
+        chat_pk = max(chat_pk, float(meta.get("score", 0.0)))
+    hype_mean = _window_mean(audience, c.start, c.end) if (audience is not None and audience.size) else 0.0
+    aud_pk = _window_max(audio_excitement, c.start, c.end) if audio_excitement.size else (sub.get("audio", 50) / 100.0)
+    vox_pk = _window_max(voice, c.start, c.end) if voice.size else 0.0
+    gs_pk = _window_max(game_sound, c.start, c.end) if game_sound.size else 0.0
+    ps_pk = _window_max(people_sound, c.start, c.end) if people_sound.size else 0.0
+    vis_score = float(sub.get("visual", 50)) / 100.0
+    audio_signal = max(aud_pk, vox_pk, ps_pk)
+
+    if chat_pk > 0.1 or (audience is not None and audience.size and hype_mean >= 0.6):
+        aud_or_chat = max(chat_pk, hype_mean * 0.85)
+        raw = 0.42 * base + 0.30 * aud_or_chat + 0.16 * audio_signal + 0.12 * min(1.0, gs_pk + 0.4 * vis_score)
+        if aud_or_chat >= 0.45 and (aud_pk >= 0.70 or vox_pk >= 0.45 or gs_pk >= 0.45):
+            raw += 0.08
+    else:
+        raw = 0.62 * base + 0.23 * audio_signal + 0.15 * max(gs_pk, vis_score)
+    score = round(max(0.0, min(1.0, raw)), 2)
+
+    motivos: list[str] = []
+    if meta is not None and float(meta.get("ratio", 0.0)) >= 1.5:
+        motivos.append(f"chat {float(meta['ratio']):.1f}x".replace(".", ","))
+    elif chat_pk >= 0.45:
+        motivos.append("pico no chat")
+    elif audience is not None and audience.size and hype_mean >= 0.75:
+        motivos.append("pico de audiência")
+
+    if meta is not None:
+        for word in (meta.get("words") or [])[:2]:
+            tok = str(word).strip()
+            if tok and tok not in motivos:
+                motivos.append(tok)
+
+    if aud_pk >= 0.80 or float(sub.get("audio", 0)) >= 75:
+        motivos.append("áudio alto")
+    if vox_pk >= 0.50 or ps_pk >= 0.50:
+        motivos.append("reação do streamer")
+    if gs_pk >= 0.50:
+        motivos.append("som do jogo")
+    if not motivos and float(sub.get("text", 0)) >= 70:
+        motivos.append("fala marcante")
+    if not motivos and vis_score >= 0.60:
+        motivos.append("ação na tela")
+
+    deduped = list(dict.fromkeys(motivos))[:4]
+    return {"score": score, "motivos": deduped}
 
 
 def _clip_text(c: ClipCandidate, segments: list[Segment]) -> str:

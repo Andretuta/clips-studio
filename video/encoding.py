@@ -363,19 +363,23 @@ def import_local_source(src, dest, codec: str) -> bool:
 
         tmp = dest.with_name(f"{dest.stem}.importing-{uuid.uuid4().hex[:8]}.mp4")
         copy = [ffmpeg(), "-y", "-v", "error", "-i", str(src)]
-        commands = []
+        commands: list[tuple[list[str], int]] = []
         if codec == "h264" or codec in SLOW_SOURCE_CODECS:
-            commands.append([*copy, "-c", "copy"])
-            commands.append([*copy, "-c:v", "copy", "-c:a", "aac", "-b:a", "160k"])
+            commands.append(([*copy, "-c", "copy"], 120))
+            commands.append(([*copy, "-c:v", "copy", "-c:a", "aac", "-b:a", "160k"], 120))
         # -pix_fmt yuv420p: 10-bit sources (phone HDR, HEVC main10) aren't
         # accepted by h264_nvenc, so normalize to 8-bit.
-        commands.append([ffmpeg(), "-y", "-v", "error", *hwaccel_input_args(), "-i", str(src),
-                         *video_encoder_args(), "-pix_fmt", "yuv420p",
-                         "-c:a", "aac", "-b:a", "160k"])
+        commands.append(([ffmpeg(), "-y", "-v", "error", *hwaccel_input_args(), "-i", str(src),
+                          *video_encoder_args(), "-pix_fmt", "yuv420p",
+                          "-c:a", "aac", "-b:a", "160k"], 600))
         try:
-            for command in commands:
-                r = subprocess.run([*command, "-movflags", "+faststart", str(tmp)],
-                                   capture_output=True, text=True)
+            for command, limit in commands:
+                try:
+                    r = subprocess.run([*command, "-movflags", "+faststart", str(tmp)],
+                                       capture_output=True, text=True, timeout=limit)
+                except subprocess.TimeoutExpired:
+                    discard(tmp)
+                    continue
                 if r.returncode == 0 and readable_video(tmp):
                     tmp.replace(dest)
                     return True

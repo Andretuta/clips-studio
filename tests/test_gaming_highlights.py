@@ -399,3 +399,47 @@ def test_a_gaming_stream_scores_its_windows_in_batches_matched_by_time():
         assert c.score == 50 and c.hook == "High-energy moment"
     c = next(c for c in got if c.start == 30)
     assert c.hook == "at 30" and c.score == 70
+
+
+def test_momento_chave_exposes_score_and_motivos_for_autopublish(fusing):
+    np, fusion, _seen = fusing
+    from analysis.chat_moments import chat_signal
+
+    segments, signals = _quiet_stream(np, shout_at=300)
+    msgs = _chat(bursts=[(303, "kkkk clipa isso KEKW", 45)])
+    msgs = [(t, u, txt, 2 if t >= 303 and t <= 308 else 0) for t, u, txt in msgs]
+    k = gaming.knowledge()
+    chat = chat_signal(msgs, 600, k["chat_classes"], k["chat_live_lag_seconds"], k.get("chat_ignore") or [])
+    profile = gaming.profile_for({"clips": {"gaming_scoring": True}}, [{"name": "Grand Theft Auto V"}], "")
+    kept, _ = fusion.find_clips("v.mp4", segments, _NoLLM(), CFG, signals=signals, gaming=profile, chat=chat)
+    moment = next(c for c in kept if c.start <= 300 <= c.end)
+    mk = moment.subscores.get("momento_chave")
+    assert isinstance(mk, dict)
+    assert 0.0 < mk["score"] <= 1.0
+    assert isinstance(mk["motivos"], list) and mk["motivos"]
+    assert any("chat " in m for m in mk["motivos"])
+    assert any(w in mk["motivos"] for w in ("kkkk", "KEKW", "clipa", "áudio alto", "pico de voz"))
+
+
+def test_chat_signal_resists_low_unique_user_copypasta_and_boosts_emotes_and_pt_lexicon():
+    np = pytest.importorskip("numpy")
+    from analysis.chat_moments import _matchers, chat_signal, classify
+
+    k = gaming.knowledge()
+    m = _matchers(k["chat_classes"])
+    assert "funny" in classify("kkkkk", m)
+    assert "clip" in classify("clipa isso chat", m)
+    assert "surprise" in classify("?????", m)
+    assert "hype" in classify("W", m) and "fail" in classify("L", m)
+
+    # Background steady chatter
+    rng = random.Random(42)
+    base = [(t + rng.random(), f"u{rng.randint(0, 40)}", "oi chat", 0) for t in range(600)]
+    # 25 messages from only 2 spammers around t=150 vs 25 unique viewers with emotes at t=350
+    spam = [(150.0 + i * 0.15, f"bot{i % 2}", "KEKW KEKW", 0) for i in range(25)]
+    real = [(350.0 + i * 0.15, f"viewer{i}", "kkkk clipa isso", 3) for i in range(25)]
+    sig = chat_signal(sorted(base + spam + real), 600, k["chat_classes"], lag=3.0, ignore=k.get("chat_ignore") or [])
+    assert sig is not None
+    # Real diverse spike dominates the copypasta spike
+    assert float(sig.curve[344:351].max()) >= 0.7
+    assert float(sig.curve[144:151].max()) < float(sig.curve[344:351].max())
