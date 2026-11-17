@@ -60,10 +60,13 @@ def _probe_cuda_filters() -> bool:
         "[m2][o2]overlay_cuda=0:0:shortest=1,hwdownload,format=yuv420p[v2]",
         "-map", "[v1]", "-map", "[v2]", "-f", "null", "-",
     ]
+    proc = None
     try:
         proc = subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         return proc.wait(timeout=15) == 0
     except Exception:
+        if proc is not None:
+            proc.kill()   # a hung probe must not outlive the answer
         return False
 
 
