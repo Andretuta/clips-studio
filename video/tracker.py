@@ -128,6 +128,9 @@ def _get_model(model_name: str):
                                    device="cuda", verbose=False)
                 except Exception as e:
                     _model.to("cpu")
+                    # The hardware probe may still say CUDA is usable. Keep
+                    # this model's failed kernel probe authoritative at inference.
+                    _model._tracking_cpu = True
                     print(f"  Tracking: GPU unusable ({str(e)[:90]}) — using CPU")
                 else:
                     print(f"  Tracking: GPU (CUDA) active — {reason}")
@@ -1449,7 +1452,8 @@ def _detect(model, frame, min_confidence) -> list[tuple]:
         # select_device(''), which auto-selects the first available GPU and
         # silently undoes the CPU decision _get_model just made.
         results = model.predict(frame, classes=[0], conf=min_confidence,
-                                device=torch_device(), verbose=False)
+                                device="cpu" if getattr(model, "_tracking_cpu", False) else torch_device(),
+                                verbose=False)
     out = []
     for r in results:
         kp = getattr(r, "keypoints", None)

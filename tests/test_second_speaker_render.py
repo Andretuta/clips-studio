@@ -113,7 +113,15 @@ def _render(pipeline, monkeypatch, tmp_path, style=None, opts=None, source=None,
 
 
 def _events(ass: str) -> list[str]:
-    return [line.split(",,", 2)[-1] for line in ass.splitlines() if line.startswith("Dialogue:")]
+    # Wrapping is independent of the speaker's words and colour. Keep colour
+    # overrides intact so these assertions still catch the wrong speaker.
+    return [line.split(",,", 2)[-1].removeprefix(r"{\q2}")
+            for line in ass.splitlines() if line.startswith("Dialogue:")]
+
+
+def test_event_reader_ignores_only_the_wrap_override():
+    assert _events(r"Dialogue: 0,0,0,Default,,0,0,0,,{\q2}{\1c&HFFE15C&}WORDS") == [
+        r"{\1c&HFFE15C&}WORDS"]
 
 
 # ---- off ----------------------------------------------------------------------------
