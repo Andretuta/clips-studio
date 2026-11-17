@@ -35,8 +35,10 @@ kanban-plugin: board
 ## Fazendo
 
 
+
 ## Feito
 
+- [x] Legenda menor (82 -> 62); na tela dividida fica na linha entre streamer e jogo, sem divisão fica embaixo, também na legenda traduzida em PT (vale após reiniciar o motor) #P0 #claude @{2026-11-16} clips-kitty 4fabbc0 [spec](../03-Producao-de-clips/06-editor-e-render.md)
 - [x] RAM do render: -shortest guardava 10 s de quadros crus; agora 1 s (1 render 2,9 -> 1,36 GiB; 3 em paralelo 6,8 -> 3,7 GiB) #P0 #claude @{2026-11-16} clips-kitty 9773616 [spec](../03-Producao-de-clips/06-editor-e-render.md)
 - [x] Mesa publica em público pelo Composio (YouTube público, categoria Jogos; TikTok direto quando a conta aceitar público, senão rascunho) #P0 #claude @{2026-11-16} clips-kitty ce7b3a1 [spec](../04-Mesa-e-publicacao/09-publicacao-e-contas.md)
 - [x] [Motor] Chat do bloco entra na pontuação (`lag=3 s`), pontuação `momento_chave` validada contra 64 clipes reais de 15 VODs GTA V/RP, Whisper separado por duração (`>=120 s` → beam 1/VAD 0,5/T=0 em 7,6 s) e R05/R08 #P0 #antigravity-motor #R05 #R08 [spec](../03-Producao-de-clips/05-ia-e-transcricao.md) (`5ba4541`) @{2026-11-16}

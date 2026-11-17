@@ -90,3 +90,28 @@ O ensaio de 5 min do cartão [Motor] chegou a 99,5% de RAM (15,9 GiB na máquina
 - **Ganhos menores que ficaram de fora:**
   - `-rc-lookahead 8` em vez de 32 tira mais ~300 MiB por render, mas mexe no controle de taxa do NVENC.
   - Os 99,5% do ensaio também somaram dois motores carregados ao mesmo tempo (o vivo na 8765 e o de ensaio na 8766).
+
+### Posição e tamanho da legenda (Claude, 16/11, 23h55)
+
+Pedido do usuário: legenda menor; com a tela dividida (streamer + jogo), exatamente na divisão; sem divisão, embaixo.
+
+**O que estava errado.** Nos 8 cortes de `saida/pendentes` de 16/11, a legenda em PT ficava no centro da tela (y = 960). No corte dividido da JennaEmbers, ela caía por cima do rosto da streamer, e a divisão estava em y ≈ 1132. Isso acontecia porque a Cola pede a tradução com `burn: True`. A legenda traduzida é queimada por `multilingual/burn.py` numa base re-renderizada sem legenda, e esse caminho não sabia do layout. O layout gamer só calculava `caption_y` quando reservava faixa, com a posição `middle`.
+
+**Decisão (`4fabbc0`).**
+- **Plano em pilha** (`split`, `half`, `basecam`, `game_ui`, `mosaic`, `duo_split`): sempre devolve `caption_y` na linha entre a primeira e a segunda fileira. A legenda fica centrada nela com `\an5\pos`, qualquer que seja a posição do estilo.
+- **Sem divisão** (`blurred`, `fullscreen` e as de webcam pequena `small_cam`/`circle_cam`/`dual_cam`): vale a posição do estilo. A config local agora usa `bottom`, ou seja, alinhamento 2 com 440 px de margem, acima da interface do TikTok/Shorts.
+- **`render_opts.gaming.caption_y`** guarda a posição. `clean_base` devolve o `caption_y` da própria base re-renderizada, e `burn()` centra a legenda traduzida nele. O split de reserva do `video/cropper.py` também centra na divisão (y = 672, ou 1248 com a webcam embaixo).
+- **Tamanho:** `config/settings.yaml` local (não versionado) passou de `font_size: 82, position: middle` para `62, bottom`, cerca de 24% menor. Com `bottom`, o layout não reserva faixa, e a legenda fica por cima da linha, sem encolher a webcam.
+
+**Teste.**
+- Novos: `test_split_captions_sit_on_the_dividing_line_without_a_band` (cam em cima e embaixo; `blurred` dá `None`) e `test_translated_captions_go_on_the_split_line` (o ASS queimado traz `\an5\pos(540,728)`).
+- Suítes de legenda, layout gamer, cropper, saída final, tradução e seleção: **325 aprovados**.
+- Render real de 2 s de um clipe da Twitch com Bebas Neue karaokê verde:
+  - dividido: legenda em y = 728, na linha entre a webcam e o jogo;
+  - `blurred`: legenda embaixo do jogo.
+- Comparação conferida na imagem.
+
+**Limitações.**
+- O `settings.yaml` só é lido quando o motor sobe. Tamanho, posição e código novos valem depois do próximo reinício do motor, que fica com o operador.
+- Cortes já renderizados guardam o estilo antigo (82, `middle`) em `render_opts.caption_style`. Se forem re-traduzidos, mantêm o tamanho antigo, mas já vão para a divisão.
+- Webcam pequena sobre o jogo (PIP) não conta como tela dividida: a legenda fica embaixo.
