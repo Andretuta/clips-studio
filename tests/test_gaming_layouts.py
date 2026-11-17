@@ -67,6 +67,16 @@ def test_centered_captions_have_their_own_space_between_webcam_and_game(order):
     assert abs(game.dest[3] - 1080 * game.src[3] / game.src[2]) <= 2
 
 
+@pytest.mark.parametrize("order", ["cam_top", "game_top"])
+def test_split_captions_sit_on_the_dividing_line_without_a_band(order):
+    """Bottom captions, nothing reserved: on a split they still go on the line
+    between webcam and game; with no split there is no line, the style decides."""
+    p = layout.plan(W, H, {"preset": "split", "cam": CAM, "order": order})
+    top = min((e.dest for e in p.elements if e.role in ("cam", "game")), key=lambda d: d[1])
+    assert p.caption_y == top[1] + top[3]
+    assert layout.plan(W, H, {"preset": "blurred", "game_box": [0, 0, 1, 1]}).caption_y is None
+
+
 def test_the_divider_sets_the_camera_band_within_the_layouts_range():
     assert _plan("split", divider=0.3).element("cam").dest[3] == 576
     assert _plan("split", divider=0.9).element("cam").dest[3] == 960      # capped at half

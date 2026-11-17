@@ -210,6 +210,30 @@ def test_a_languages_subtitled_clip_is_written_with_the_final_flags(commands, mo
     assert cmd[-1] == str(out.resolve())
 
 
+def test_translated_captions_go_on_the_split_line(commands, monkeypatch, tmp_path):
+    """The translated burn puts its captions where the clip's split put them."""
+    import video.captions
+    from multilingual import burn
+
+    lines = [{"start": 0.0, "end": 1.0, "text": "Hola amigos todos."}]
+    written = {}
+    real_run = subprocess.run
+
+    def run(cmd, *a, **k):
+        [ass] = Path(k["cwd"]).glob("*.ass")
+        written["ass"] = ass.read_text(encoding="utf-8")
+        return real_run(cmd, *a, **k)
+
+    monkeypatch.setattr(subprocess, "run", run)
+    out = tmp_path / "clip.es.mp4"
+    assert burn.burn(tmp_path / "base.mp4", lines, "es", out, {"position": "bottom"}, {}, 728) == out
+    events = [l for l in written["ass"].splitlines() if l.startswith("Dialogue:")]
+    assert events and all(r"\an5\pos(540,728)" in e for e in events)
+    assert burn.caption_y_of({"gaming": {"caption_y": 728}}) == 728
+    assert burn.caption_y_of({"gaming": {"used_preset": "blurred", "caption_y": None}}) is None
+    assert video.captions.place_middle_captions("x", 1, 2) == "x"
+
+
 def _speaking(monkeypatch, dub, speak):
     """dub() with Piper stood in for by `speak`."""
     from multilingual import voices

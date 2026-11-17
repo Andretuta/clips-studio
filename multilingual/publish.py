@@ -133,6 +133,7 @@ def publish(
     # the video the dub is laid over.
     base = None
     caption_style = None
+    caption_y = None  # a split screen's dividing line, where the captions go
     if (burn or dub) and clip_row is not None and config is not None and data_dir is not None:
         import json as _json
 
@@ -142,6 +143,9 @@ def publish(
         # Subtitles get their own look when one was chosen in the editor;
         # otherwise they inherit the clip's caption style.
         caption_style = style or opts.get("caption_style")
+        from multilingual.burn import caption_y_of
+
+        caption_y = caption_y_of(opts)
         try:
             if opts.get("captions") is False and clip_path is not None and clip_path.exists():
                 # The clip has no captions burned into it, so it IS the clean
@@ -154,7 +158,7 @@ def publish(
             else:
                 print("      Rendering a caption-free base for burned languages…")
                 step("Preparing the video")
-                base = burner.clean_base(clip_row, config, data_dir, out_dir / ".ml_work")
+                base, caption_y = burner.clean_base(clip_row, config, data_dir, out_dir / ".ml_work") or (None, caption_y)
                 step("Prepared the video", 3)
         except Exception as e:
             print(f"      (could not build the caption-free base: {e})")
@@ -224,7 +228,7 @@ def publish(
                 step(f"Adding {english_name(code)} subtitles to the video")
                 burned = burner.burn(
                     base, translated, code, out_dir / f"{stem}.{code}.mp4",
-                    caption_style, config or {},
+                    caption_style, config or {}, caption_y,
                 )
                 step(f"Subtitled {english_name(code)}", 1)
                 if burned is not None:

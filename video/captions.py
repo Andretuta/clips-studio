@@ -113,9 +113,9 @@ def middle_caption_band(style: dict | None) -> int:
 
 
 def place_middle_captions(ass: str, x: int, y: int) -> str:
-    """Move the caption events to the space reserved by the gaming plan."""
+    """Centre the caption events on (x, y): the split screen's dividing line."""
     prefix = f",Default,,0,0,0,,{_NO_WRAP}"
-    return ass.replace(prefix, prefix + rf"\pos({x},{y})")
+    return ass.replace(prefix, prefix + rf"\an5\pos({x},{y})")
 
 
 def _caption_font(opts: dict) -> str:

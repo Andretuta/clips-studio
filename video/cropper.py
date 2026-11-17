@@ -24,6 +24,7 @@ import threading
 from bisect import bisect_left
 from functools import cache
 from pathlib import Path
+from tempfile import TemporaryDirectory
 
 import cv2
 import numpy as np
@@ -526,9 +527,23 @@ def _render_split(
     )
     if vf_extra:
         filters += f";[v]{vf_extra}[v]"
-    if ass_path is not None:
-        filters += f";[v]{subtitles_filter(ass_path.name)}[v]"
+    if ass_path is None:
+        return _split_encode(clip_path, filters, output_path, None, normalize)
+    from video.captions import place_middle_captions
 
+    # Captions on the line between webcam and game; a copy, so the clip's own
+    # ASS stays as it was for any later render.
+    with TemporaryDirectory(prefix="split-caption-", dir=ass_path.parent) as folder:
+        placed = Path(folder) / "captions.ass"
+        placed.write_text(place_middle_captions(ass_path.read_text(encoding="utf-8"), 540,
+                                                GAME_H if cam_position == "bottom" else CAM_H),
+                          encoding="utf-8")
+        filters += f";[v]{subtitles_filter(placed.name)}[v]"
+        return _split_encode(clip_path, filters, output_path, placed, normalize)
+
+
+def _split_encode(clip_path: Path, filters: str, output_path: Path, ass_path: Path | None,
+                  normalize: bool) -> Path:
     cmd = [
         ffmpeg(), "-y",
         # CPU decode for the filter graph — keeps A/V locked (see _render_fit_blur).

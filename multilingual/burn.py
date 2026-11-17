@@ -34,10 +34,11 @@ def _canvas_of(path: Path) -> tuple[int, int]:
         return (1080, 1920)
 
 
-def clean_base(clip_row, config: dict, data_dir: Path, work_dir: Path) -> Path | None:
+def clean_base(clip_row, config: dict, data_dir: Path, work_dir: Path) -> tuple[Path, int | None] | None:
     """The clip re-rendered WITHOUT captions, so translated ones can be
-    burned on cleanly. Returns None when the source is gone (then the
-    caller falls back to burning onto the existing clip)."""
+    burned on cleanly, and where its captions go (the split screen's
+    dividing line, else None). Returns None when the source is gone (then
+    the caller falls back to burning onto the existing clip)."""
     import json
 
     from core.models import ClipCandidate, Segment
@@ -60,8 +61,15 @@ def clean_base(clip_row, config: dict, data_dir: Path, work_dir: Path) -> Path |
         score=clip_row["score"] or 0, hook=clip_row["hook"] or "",
     )
     work_dir.mkdir(parents=True, exist_ok=True)
-    rendered, _ = _render_files(source, candidate, segments, work_dir, config, opts)
-    return rendered
+    rendered, kept = _render_files(source, candidate, segments, work_dir, config, opts)
+    return rendered, caption_y_of(json.loads(kept))
+
+
+def caption_y_of(render_opts: dict) -> int | None:
+    """Where a rendered clip's captions sit: its split's dividing line, or None."""
+    gaming = render_opts.get("gaming")
+    y = gaming.get("caption_y") if isinstance(gaming, dict) else None
+    return int(y) if isinstance(y, (int, float)) else None
 
 
 def burn(
@@ -71,10 +79,12 @@ def burn(
     out_path: Path,
     caption_style: dict | None,
     config: dict,
+    caption_y: int | None = None,
 ) -> Path | None:
-    """One language: translated captions burned into `base_video`."""
+    """One language: translated captions burned into `base_video`, centred
+    on `caption_y` (a split screen's dividing line) when given."""
     from core.models import ClipCandidate
-    from video.captions import build_captions
+    from video.captions import build_captions, place_middle_captions
     from video.encoding import final_movflags, video_encoder_args
     from video.filters import subtitles_filter
 
@@ -87,6 +97,9 @@ def burn(
     )
     if built is None:
         return None
+    if caption_y is not None:
+        built.write_text(place_middle_captions(built.read_text(encoding="utf-8"), canvas[0] // 2, caption_y),
+                         encoding="utf-8")
     cmd = [
         ffmpeg(), "-y", "-v", "error",
         "-i", str(base_video.resolve()),

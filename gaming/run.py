@@ -249,4 +249,7 @@ def render(intermediate: Path, output: Path, g: dict, config: dict, ass_path: Pa
                                   framing.safe_zone(p.safe))
     return {**(settings if whole else g), "layout": p.kind, "used_preset": p.preset,
             "used_cam": [round(v, 4) for v in use] if use else None,
+            # Where the captions went (the split's dividing line), so translated
+            # captions burned later land in the same place.
+            "caption_y": p.caption_y,
             **({"face": face} if face is not None else {})}

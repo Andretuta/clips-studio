@@ -454,9 +454,10 @@ def plan(src_w: int, src_h: int, settings: dict, heads: dict | None = None, *, c
                                      gap=caption_band)
             if regions[0][1][1] > 0 or regions[-1][1][1] + regions[-1][1][3] < OUT_H:
                 elements.append(Element("bg", whole, (0, 0, OUT_W, OUT_H), "blur"))
-        if caption_band:
-            _, first_y, _, first_h = regions[0][1]
-            caption_y = first_y + first_h + caption_band // 2
+        # Split screen: captions sit on the line between the rows (in the
+        # band, when one was reserved), whatever position the style asks for.
+        _, first_y, _, first_h = regions[0][1]
+        caption_y = first_y + first_h + caption_band // 2
         for role, dest, anchor in regions:
             if role == "game":
                 game(dest, anchor, whole)
