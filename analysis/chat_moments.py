@@ -19,8 +19,7 @@ from dataclasses import dataclass, field
 import numpy as np
 
 WINDOW = 5            # seconds a burst is counted over
-BASELINE = 180        # seconds of chat before the pre-burst gap that set the normal rate
-BASELINE_GAP = 15     # gap before the burst so early reactions don't inflate the baseline
+BASELINE = 180        # seconds of chat before the burst that set the normal rate
 SPIKE = 3.0           # a burst this many times the normal rate is a moment
 MIN_BURST = 4         # ...and at least this many unique-chatter messages
 # A burst with no reaction in it (no emote or word a class knows) is weaker
@@ -29,7 +28,7 @@ PLAIN_SPIKE = 4.0
 PLAIN_MIN_BURST = 6
 MIN_UNIQUE_RATIO = 0.55  # reject bursts dominated by spam / copypasta from a few accounts
 MAX_EVENTS = 60
-MERGE_SECONDS = 15    # bursts this close together are one moment
+MERGE_SECONDS = 10    # bursts this close together are one moment
 
 _EMOJI_RE = re.compile(r"[\U0001F300-\U0001FAFF]")
 
@@ -174,11 +173,11 @@ def chat_signal(messages: list, duration: float, classes: dict, lag: float = 6.0
         return (c[idx + 1] - c[np.maximum(idx + 1 - width, 0)]).astype(np.float32)
 
     burst = window_sum(rate, WINDOW)                     # messages in (t-5, t]
-    # Normal rate over BASELINE seconds ending BASELINE_GAP before the burst so
-    # an early reaction ramp doesn't inflate the denominator. Floor adapts to
+    # Normal rate over the BASELINE seconds before the burst. A 15 s gap before it
+    # and merging bursts 15 s apart both lowered F1 on the tune split (16/11). Floor adapts to
     # chat size so quiet channels keep sensitivity and busy channels resist chatter.
     before = np.concatenate([[0.0], np.cumsum(rate, dtype=np.float64)])
-    hi = np.maximum(idx + 1 - WINDOW - BASELINE_GAP, 0)
+    hi = np.maximum(idx + 1 - WINDOW, 0)
     lo = np.maximum(hi - BASELINE, 0)
     span = np.maximum(hi - lo, 1)
     normal = ((before[hi] - before[lo]) / span * WINDOW).astype(np.float32)
