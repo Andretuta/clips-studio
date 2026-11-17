@@ -31,8 +31,9 @@ Bibliotecas que juntam os três, só para referência: `emotes-api`, `@mkody/twi
 ## Kick
 
 - **Webhook oficial `chat.message.sent`.** Exige app registrado e servidor público para receber. Há relatos de atraso de horas e de mensagens fora de ordem em chats cheios. Não serve para a máquina local.
-- **WebSocket Pusher, não oficial.** Não precisa de login: busca o `chatroom.id` em `kick.com/api/v2/channels/{slug}` e assina `chatrooms.{id}.v2`. Pode quebrar sem aviso.
-- **Uso aqui:** fica para depois da Twitch. O Pusher é o caminho viável na máquina local.
+- **WebSocket Pusher, não oficial.** Era o caminho das bibliotecas antigas: buscava o `chatroom.id` em `kick.com/api/v2/channels/{slug}` e assinava `chatrooms.{id}.v2`. No ensaio de 16/11, o Hydrogen recebeu o erro `4001` e concluiu que a Kick desligou esse caminho em outubro de 2026.
+- **Transporte atual (Centrifugo), também não oficial.** Pede token e endereço por POST na API da Kick e abre um WebSocket em `realtime.*.platform.kick.com`. O passo a passo está em [03-gravacao-e-entrega.md](../02-Captura-e-fila/03-gravacao-e-entrega.md).
+- **Uso aqui:** fica para depois da Twitch. Pode mudar de novo sem aviso.
 
 ## Detecção de momento
 
