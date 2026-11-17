@@ -131,7 +131,7 @@ Os testes UI inicialmente expuseram perfil/cache compartilhado no C: e corrida n
 
 Commits da entrega (16/11/2026, 21h36 de Brasília): `clips-kitty 7a1380e` (transporte/recibos), `0dc1a7a` (OAuth, API da Mesa e revisão editorial), `9427328` (Electron, testes UI e R03); `cola e1183d3` (entrega/autonomia). Sem push. Nenhuma alteração nos arquivos de captura, análise, transcrição, core/pipeline.py ou server/api.py dos agentes Antigravity.
 
-### Revisão do Claude (16/11, 22h05)
+### Revisão do Claude (16/11, 21h40)
 
 - **Defeito corrigido (Cola `55b756c`):** a automação da Mesa roda dentro do tique da entrega. A Cola executa entrega, gravador e garimpeiro em fila. Com a revisão pela IA ligada e o acervo de 107 cortes pendentes, cada tique podia fazer até 20 chamadas de até 240 s. Isso seguraria o gravador (envio de blocos, guarda de disco, início e fim de live) por muito tempo.
 - **Correção:** a automação para depois de 45 s por tique, cada chamada tem prazo de 120 s, e o que sobrar fica para o tique seguinte.

@@ -108,7 +108,7 @@ Suíte completa da Cola em `D:\clipador-gta6\cola` (`pytest -p no:cacheprovider 
 Relaciona-se aos achados **R04, R06, R07 e R08** em [rev-code-review](../90-Auditorias/rev-code-review.md). Pasta temporária de ensaio (`D:\clipador-gta6\cache\ensaio-gravacao`) removida após extração das métricas.
 
 
-### Revisão do Claude (16/11, 21h50)
+### Revisão do Claude (16/11, 21h40)
 
 - **Defeito corrigido (Cola `f2249f1`):** quando o `_concat` passava do prazo de 120 s, o gravador tratava o caso como segmento corrompido. Se o ffprobe não achava nenhum segmento ruim, movia o primeiro segmento para `corrompidos/` mesmo assim. No flush final, apagava todos os segmentos restantes. O ensaio mediu 66 s de concat com Whisper e VMAF na mesma máquina, perto do prazo. Numa live com motor carregado, 1 minuto bom seria descartado a cada estouro, e o fim da live inteiro no flush.
 - **Correção:**
