@@ -6,7 +6,6 @@ kanban-plugin: board
 
 ## Depende do usuário
 
-- [ ] Na recarga do motor, com ele parado: trocar onnxruntime por onnxruntime-directml==1.24.4 (2 comandos uv na spec) para o OCR rodar na GPU #P0 [spec](../03-Producao-de-clips/05-ia-e-transcricao.md)
 - [ ] Conectar YouTube e TikTok pelo Composio e aprovar um corte na Mesa: sai público. Conferir no canal se o YouTube manteve público e se o TikTok publicou ou caiu em rascunho #P0 [spec](../04-Mesa-e-publicacao/09-publicacao-e-contas.md)
 - [ ] Ligar a autorização de automação do plano ChatGPT se a Cola for processar sozinha #P1 [spec](../03-Producao-de-clips/05-ia-e-transcricao.md)
 - [ ] R01: rodar os 3 comandos `icacls` do estado operacional (dá controle total ao `andre`, corta a herança do D: e tira `Usuários autenticados` e `Usuários`) #P0 #R01 [estado](ESTADO-OPERACIONAL.md)
@@ -40,6 +39,7 @@ kanban-plugin: board
 
 ## Feito
 
+- [x] Motor recarregado às 09h10 com os 5 cartões de desempenho e onnxruntime-directml 1.24.4 (OCR na GPU) #P0 #claude @{2026-11-17} [spec](../03-Producao-de-clips/05-ia-e-transcricao.md)
 - [x] Desempenho 5/5: filtros do render em CUDA nos 11 presets + cropper, com fallback CPU; 1 render 33,9 → 15,3 s, 3 em paralelo 46 → 32,3 s, corte gamer 72,9 → 23 s; SSIM 0,945–0,995 #P0 #antigravity @{2026-11-17} clips-kitty dc9f9cb c8447bf [spec](../03-Producao-de-clips/06-editor-e-render.md)
 - [x] Desempenho 4/5: YOLO em lotes de 8 (YOLO por clipe 2,5–5x mais rápido, corte final ≤ 0,09 px); Codex recusou pelo critério estrito, usuário aprovou aplicar #P0 #codex @{2026-11-17} clips-kitty 903e8fc 67e6aaf [spec](../03-Producao-de-clips/06-editor-e-render.md)
 - [x] Desempenho 1/5: Whisper fica carregado na VRAM entre blocos: 2ª transcrição do bloco ~10 s, +2,1 GiB fixos (vale após recarregar o motor) #P0 #claude @{2026-11-17} clips-kitty 312bec4 [spec](../03-Producao-de-clips/05-ia-e-transcricao.md)

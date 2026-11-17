@@ -183,6 +183,7 @@ O texto muda demais, e não há gabarito para saber qual erra mais. O ganho seri
 - **Ativação (operador, com o motor parado):** as DLLs ficam presas enquanto o motor roda. Na pasta `clips-kitty`, com `UV_CACHE_DIR=D:\clipador-gta6\cache\uv`:
   1. `uv pip uninstall --python .venv\Scripts\python.exe onnxruntime`
   2. `uv pip install --python .venv\Scripts\python.exe onnxruntime-directml==1.24.4`
-- **Limitação:** o `requirements.txt` continua pedindo `onnxruntime` (CPU). Uma reinstalação pelo requirements volta o OCR para a CPU sem quebrar nada. A cópia de teste está em `D:\clipador-gta6\cache\ort-dml`.
+- **Feito às 09h10 de 17/11** (Claude, a pedido do usuário, fila vazia). Antes de subir o motor: provedores `DmlExecutionProvider` e `CPUExecutionProvider`; o OCR leu "VICTORY ROYALE" num quadro de teste em 3,3 s na primeira vez e 0,08 s depois; o VAD Silero carrega. Os modelos de voz (`wespeaker_resnet34_lm.onnx`, `pyannote_segmentation_3.onnx`) não estão em `models/` nesta máquina, então a cor do segundo falante já não rodava e não foi conferida no 1.24.4.
+- **Limitação:** o `requirements.txt` continua pedindo `onnxruntime` (CPU), e uma reinstalação por ele põe o build comum por cima, na mesma pasta. Nesse caso, desinstalar os dois e repetir o passo 2. A cópia de teste está em `D:\clipador-gta6\cache\ort-dml`.
 
 **4 e 5.** O YOLO em lote (Codex, aplicado em `67e6aaf`) e os filtros do render em CUDA (Antigravity, `dc9f9cb`) estão na [spec 06](06-editor-e-render.md).
