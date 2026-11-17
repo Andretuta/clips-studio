@@ -317,7 +317,7 @@ def dub(
         "-c:v", "copy", "-c:a", "aac", "-b:a", "160k",
         # A language's own clip, posted as it is: its first frame at 0 with or
         # without the edit list (a plain remux puts the B-frames' delay back).
-        "-shortest", *final_movflags(),
+        "-shortest", "-shortest_buf_duration", "1", *final_movflags(),
         str(out_path.resolve()),
     ]
     # errors="replace": ffmpeg's stderr is bytes, and the locale codec has

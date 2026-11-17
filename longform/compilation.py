@@ -72,7 +72,7 @@ def assemble(sources: list[Path], output: Path, video_id: str, *,
                 *picture, "-map", "1:a:0" if silence else "0:a:0", *encoder, "-pix_fmt", "yuv420p", "-video_track_timescale", "90000",
                 "-af", "aresample=async=1:first_pts=0,apad", "-c:a", "aac",
                 "-b:a", "160k", "-ar", "48000", "-ac", "2",
-                "-t", f"{_video_duration(media):.6f}", "-shortest", str(part),
+                "-t", f"{_video_duration(media):.6f}", "-shortest", "-shortest_buf_duration", "1", str(part),
             ])
             if result.returncode != 0:
                 detail = result.stderr.decode("utf-8", errors="replace").strip()[-400:]

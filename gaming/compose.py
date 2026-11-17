@@ -111,7 +111,7 @@ def _render(clip_path: Path, output_path: Path, p: Plan, ass_path: Path | None,
         "-fps_mode", "cfr",
         # The clip itself: its first frame at 0 with or without the edit list.
         *final_movflags(),
-        "-shortest",
+        "-shortest", "-shortest_buf_duration", "1",
         str(output_path.resolve()),
     ]
     # cwd is the captions' folder so the subtitles filter gets a bare name,

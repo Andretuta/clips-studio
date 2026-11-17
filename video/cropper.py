@@ -135,7 +135,7 @@ def _render_fit_blur(
         *audio_filter_args(normalize),  # sync + loudness normalise (final encode)
         "-fps_mode", "cfr",          # constant output frame rate
         *final_movflags(),
-        "-shortest",
+        "-shortest", "-shortest_buf_duration", "1",
         str(output_path.resolve()),
     ]
     _run_ffmpeg(cmd, ass_path)
@@ -321,7 +321,7 @@ def _render_tracked(
                 *audio_filter_args(normalize),
                 "-fps_mode", "cfr",
                 *final_movflags(),
-                "-shortest",
+                "-shortest", "-shortest_buf_duration", "1",
                 str(output_path.resolve()),
             ]
             _run_ffmpeg_piped(cmd, ass_path, produce)
@@ -348,7 +348,7 @@ def _render_tracked(
             *audio_filter_args(normalize),             # sync + loudness normalise
             "-fps_mode", "cfr",
             *final_movflags(),
-            "-shortest",
+            "-shortest", "-shortest_buf_duration", "1",
             str(output_path.resolve()),
         ]
         _run_ffmpeg_piped(cmd, ass_path, produce)
@@ -540,7 +540,7 @@ def _render_split(
         *audio_filter_args(normalize),
         "-fps_mode", "cfr",
         *final_movflags(),
-        "-shortest",
+        "-shortest", "-shortest_buf_duration", "1",
         str(output_path.resolve()),
     ]
     _run_ffmpeg(cmd, ass_path)

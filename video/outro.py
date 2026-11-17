@@ -1053,7 +1053,7 @@ def _render(fmt: dict, dst: Path) -> None:
             # The clip's own container timescale, so concat has nothing to
             # rescale when it appends this.
             "-video_track_timescale", str(fmt.get("timescale") or 30000),
-            "-shortest", "-movflags", "+faststart", str(tmp_mp4),
+            "-shortest", "-shortest_buf_duration", "1", "-movflags", "+faststart", str(tmp_mp4),
         ], capture_output=True, text=True)
         if r.returncode != 0 or not tmp_mp4.exists():
             raise RuntimeError(f"outro encode failed: {r.stderr.strip()[-400:]}")
