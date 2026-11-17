@@ -35,13 +35,13 @@ kanban-plugin: board
 
 ## Fazendo
 
-- [ ] Desempenho 4/5: YOLO em lote no rastreamento #P0 #codex [spec](../03-Producao-de-clips/05-ia-e-transcricao.md)
-- [ ] Desempenho 5/5: filtros do render na GPU (menos RAM e CPU por render) #P0 #antigravity [spec](../03-Producao-de-clips/06-editor-e-render.md)
 
 
 
 ## Feito
 
+- [x] Desempenho 5/5: filtros do render em CUDA nos 11 presets + cropper, com fallback CPU; 1 render 33,9 → 15,3 s, 3 em paralelo 46 → 32,3 s, corte gamer 72,9 → 23 s; SSIM 0,945–0,995 #P0 #antigravity @{2026-11-17} clips-kitty dc9f9cb c8447bf [spec](../03-Producao-de-clips/06-editor-e-render.md)
+- [x] Desempenho 4/5: YOLO em lotes de 8 (YOLO por clipe 2,5–5x mais rápido, corte final ≤ 0,09 px); Codex recusou pelo critério estrito, usuário aprovou aplicar #P0 #codex @{2026-11-17} clips-kitty 903e8fc 67e6aaf [spec](../03-Producao-de-clips/06-editor-e-render.md)
 - [x] Desempenho 1/5: Whisper fica carregado na VRAM entre blocos: 2ª transcrição do bloco ~10 s, +2,1 GiB fixos (vale após recarregar o motor) #P0 #claude @{2026-11-17} clips-kitty 312bec4 [spec](../03-Producao-de-clips/05-ia-e-transcricao.md)
 - [x] Desempenho 2/5: Whisper em lote medido e descartado para a estreia (texto 42–58% igual ao atual, ganho ~5 s) #P0 #claude @{2026-11-17} [spec](../03-Producao-de-clips/05-ia-e-transcricao.md)
 - [x] Desempenho 3/5: OCR no DirectML 0,93 → 0,20 s/quadro, mesmo texto; ativa com a troca do onnxruntime (cartão em Depende do usuário) #P0 #claude @{2026-11-17} clips-kitty 46f03fb [spec](../03-Producao-de-clips/05-ia-e-transcricao.md)

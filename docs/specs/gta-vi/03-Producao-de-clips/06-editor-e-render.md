@@ -142,3 +142,97 @@ O usuário pediu um ajustador da fonte que passe a valer assim que ele salva, co
 - O executável do Tauri também foi recompilado (`cache/tauri-target/release/clipador-tauri.exe`, 17/11 00h42).
   - A cópia antiga ficou como `clipador-tauri.anterior.exe`, porque a janela aberta pelo Codex (pid 19304, de outra conta, acesso negado) ainda a usa.
   - Apagar a cópia antiga depois que essa janela fechar.
+
+## Render e rastreamento na GPU (Antigravity, Codex e Claude, 17/11, 07h36)
+
+Estes são os cartões 4 e 5 da rodada de desempenho com a VRAM livre. Os cartões 1 a 3 (Whisper e OCR) estão na [spec 05](05-ia-e-transcricao.md).
+
+### Filtros do render em CUDA (Antigravity, Gemini 4 Hydrogen, `dc9f9cb`; Claude `c8447bf`)
+
+`video/gpu_filters.py` testa o CUDA uma vez por processo: roda um grafo sintético de 0,1 s com `hwupload_cuda`, `scale_cuda`, `pad_cuda`, `overlay_cuda` e `hwdownload` e guarda o resultado.
+
+Com CUDA disponível:
+- `gaming/compose.gpu_filter_graph()` cobre os 11 presets.
+- `video/cropper` também passa para a GPU: `_render_fit_blur`, `_render_split` e o ramo `top_safe` de `_render_tracked`.
+
+**Como cada etapa roda:**
+- **Decodificação:** NVDEC.
+- **Escala, recorte e composição:** `scale_cuda`, `pad_cuda` e `overlay_cuda`, com coordenadas inteiras calculadas em Python. As expressões `(W-w)/2` saíam deslocadas no `overlay_cuda` do FFmpeg 8.0.1.
+- **Fundo desfocado:** o quadro reduzido a 1/8 (136x240) recebe `gblur` na CPU e é ampliado na GPU.
+- **Máscara do `circle_cam` e do `dual_cam`:** passou a ser estática, em vez do `geq` calculado a cada quadro.
+- **Legenda:** libass na CPU depois de `hwdownload`. O caminho com `overlay_cuda` da legenda foi medido e descartado: SSIM 0,917, o dobro de VRAM e uma barra verde de 8 px.
+- **Threads:** o FFmpeg roda com 1 thread de filtro, o que economiza ~130 MiB por processo.
+
+**Regras que continuam valendo:**
+- A legenda fica na linha da tela dividida, com `\an5\pos`.
+- O `-shortest -shortest_buf_duration 1` foi mantido.
+
+**Fallback:** se a sonda falhar, ou se o render na GPU falhar num clipe, roda o grafo de CPU de antes. Claude corrigiu a sonda para matar o ffmpeg que estoura o prazo de 15 s.
+
+**Qualidade, CPU contra GPU, em um clipe de 6 s por caso.** Os 3 quadros lado a lado de cada caso estão em `D:\clipador-gta6\cache\ensaio-vram\antigravity\frames\`:
+
+| Caso | SSIM | PSNR |
+|---|---|---|
+| `blurred` | 0,995 | 41,4 dB |
+| `fullscreen` | 0,994 | 46,2 dB |
+| `split` | 0,989 | 33,0 dB |
+| `half` | 0,987 | 31,2 dB |
+| `basecam` | 0,988 | 31,2 dB |
+| `game_ui` | 0,967 | 27,9 dB |
+| `mosaic` | 0,989 | 33,2 dB |
+| `duo_split` | 0,986 | 31,9 dB |
+| `small_cam` | 0,993 | 37,4 dB |
+| `circle_cam` | 0,994 | 46,4 dB |
+| `dual_cam` | 0,994 | 46,3 dB |
+| `cropper_fit_blur` | 0,995 | 40,8 dB |
+| `cropper_split` (em cima) | 0,981 | 30,5 dB |
+| `cropper_split` (embaixo) | 0,983 | 31,1 dB |
+| `cropper_top_safe` | 0,945 | 25,6 dB |
+
+O Claude conferiu a olho os casos `cropper_top_safe`, `game_ui` e `half`: são iguais dos dois lados, com a legenda no mesmo lugar (na divisão no `half`, embaixo no `top_safe`).
+
+### YOLO em lote (Codex, `903e8fc`; protótipo aplicado pelo Claude, `67e6aaf`)
+
+**Perfil de tempo antes do lote (Codex):** no c0, o YOLO era 65% do rastreamento (6,9 de 10,6 s). No gamer, era 9%.
+
+**Como funciona:** os quadros amostrados vão em lotes de 8, em FP32, numa só aquisição do lock, e na mesma ordem. O detector de cortes tem captura própria (`cut_cap`), por isso ler adiante não o afeta. Na CPU continua quadro a quadro. Um lote que falha tenta quadro a quadro e depois a CPU.
+
+**Tempo do YOLO por clipe:**
+
+| Clipe | Antes | Em lote |
+|---|---|---|
+| c0 | 6,9 s | 2,8 s |
+| c1 | 9,9 s | 2,2 s |
+| c2 | 9,6 s | 2,1 s |
+| Twitch | 7,3 s | 1,5 s |
+
+**Diferença no resultado:** as detecções brutas mudam pelo arredondamento do lote (caixa até 1,8 px, cabeça intermediária até 20 px). O corte final muda no máximo 0,09 px. O layout gamer ficou o mesmo: `half`, mesma webcam, `caption_y` 1140.
+
+**Decisões:**
+- O Codex recusou o lote pelo critério de igualdade estrita. O usuário aprovou aplicar, porque o corte final é o mesmo.
+- O FP16 ficou de fora: não ganha nada.
+- A correção `903e8fc`, também do Codex, faz o rastreamento respeitar a CPU quando o aquecimento CUDA falha. Ela também conserta o teste `test_second_speaker_render`, que quebrou com o prefixo `{\q2}` da legenda.
+
+**Evidência:** `D:\clipador-gta6\cache\ensaio-vram\codex\RELATORIO-YOLO.md`.
+
+### Medição combinada (Claude, código atual, fora do motor 8765)
+
+Script `vram.py`, uma etapa por processo, com o tempo de iniciar o processo incluído.
+
+| Etapa | Antes | Depois | VRAM antes → depois |
+|---|---|---|---|
+| 1 render (c0, `blurred`) | 33,9 s | **15,3 s** | +393 → +620 MiB |
+| 3 renders em paralelo | 46 s | **32,3 s** | +1.177 → +1.861 MiB |
+| Corte gamer (Twitch, `half`) | 72,9 s | **~23 s** (22,6 e 23,0) | +582 → +1.006 MiB |
+
+A primeira medição do gamer, logo depois dos 3 renders, deu 64,3 s com tudo frio. Repetida, deu 23 s.
+
+**RAM:** o Antigravity mediu a RAM do sistema com 3 renders: 89,4% antes, 81,9% depois. Com 4 renders foram 89,8%. A recomendação é manter `parallel_renders: 3`. Cada ffmpeg ainda segura ~1 GiB por causa do NVDEC, do NVENC com lookahead e do libass.
+
+**VRAM no pior caso:** Whisper residente (2,1 GiB), mais YOLO e PANNs (0,25 GiB), mais 3 renders (1,9 GiB), mais a área de trabalho (~2 GiB): cerca de 6–7 GiB dos 12.
+
+**Testes:**
+- 305 testes de render, legenda e gamer verdes (`test_gpu_filters`, `test_gaming*`, `test_final_writes`, `test_caption_style_settings`, `test_cropper_zoom`, `test_subtitles_filter`, `test_render_length`, `test_second_speaker_render`).
+- ~925 testes de tracker e gamer verdes com o lote.
+
+**Vale depois de recarregar o motor.**

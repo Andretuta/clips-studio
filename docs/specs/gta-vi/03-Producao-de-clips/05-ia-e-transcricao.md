@@ -185,4 +185,4 @@ O texto muda demais, e não há gabarito para saber qual erra mais. O ganho seri
   2. `uv pip install --python .venv\Scripts\python.exe onnxruntime-directml==1.24.4`
 - **Limitação:** o `requirements.txt` continua pedindo `onnxruntime` (CPU). Uma reinstalação pelo requirements volta o OCR para a CPU sem quebrar nada. A cópia de teste está em `D:\clipador-gta6\cache\ort-dml`.
 
-**4 e 5.** O YOLO em lote (Codex) e os filtros do render na GPU (Antigravity) estão na [spec 06](06-editor-e-render.md), quando concluídos.
+**4 e 5.** O YOLO em lote (Codex, aplicado em `67e6aaf`) e os filtros do render em CUDA (Antigravity, `dc9f9cb`) estão na [spec 06](06-editor-e-render.md).
